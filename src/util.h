@@ -18,3 +18,6 @@ inline double reldist(numeric x, numeric y, double eps)
 double uniform_distance(int n, const numeric* x, const numeric* y);
 
 double relative_distance(int n, const numeric* x, const numeric* y, double eps);
+
+
+void inverse_permutation(int n, const int* restrict perm, int* restrict inv_perm);

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "parallel_gates.h"
+#include "util.h"
 
 
 //________________________________________________________________________________________________________________________
@@ -69,4 +70,40 @@ void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct st
 			}
 		}
 	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Apply a parallel sequence of two-qubit gates V to state psi,
+/// optionally using a permutation of quantum wires.
+///
+int apply_parallel_gates(const struct two_qubit_gate* V, const struct statevector* restrict psi, const int* perm,
+	struct statevector* restrict psi_out)
+{
+	assert(psi->nqubits == psi_out->nqubits);
+	const int L = psi->nqubits;
+	assert(L % 2 == 0);
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(int));
+	inverse_permutation(L, perm, inv_perm);
+
+	// temporary statevector
+	struct statevector tmp = { 0 };
+	if (allocate_statevector(L, &tmp) < 0) {
+		return -1;
+	}
+
+	for (int i = 0; i < L; i += 2)
+	{
+		int p = ((L - i) / 2) % 2;
+		const struct statevector* psi0 = (i == 0 ? psi : (p == 0 ? psi_out : &tmp));
+		struct statevector* psi1 = (p == 0 ? &tmp : psi_out);
+		apply_gate(V, inv_perm[i], inv_perm[i + 1], psi0, psi1);
+	}
+
+	free_statevector(&tmp);
+	aligned_free(inv_perm);
+
+	return 0;
 }

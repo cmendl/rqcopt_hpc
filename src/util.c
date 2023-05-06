@@ -31,3 +31,16 @@ double relative_distance(int n, const numeric* x, const numeric* y, double eps)
 
 	return d;
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the inverse of 'perm', a permutation of the numbers 0, 1, ..., n-1.
+///
+void inverse_permutation(int n, const int* restrict perm, int* restrict inv_perm)
+{
+	for (int i = 0; i < n; i++)
+	{
+		inv_perm[perm[i]] = i;
+	}
+}
