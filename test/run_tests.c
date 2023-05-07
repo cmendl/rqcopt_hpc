@@ -13,13 +13,15 @@ struct test
 
 char* test_apply_gate();
 char* test_apply_parallel_gates();
+char* test_apply_parallel_gates_directed_grad();
 
 
 int main()
 {
 	struct test tests[] = {
-		{ .func = test_apply_gate,           .name = "test_apply_gate" },
-		{ .func = test_apply_parallel_gates, .name = "test_apply_parallel_gates" },
+		{ .func = test_apply_gate,                         .name = "test_apply_gate" },
+		{ .func = test_apply_parallel_gates,               .name = "test_apply_parallel_gates" },
+		{ .func = test_apply_parallel_gates_directed_grad, .name = "test_apply_parallel_gates_directed_grad" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

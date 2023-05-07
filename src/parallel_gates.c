@@ -107,3 +107,58 @@ int apply_parallel_gates(const struct two_qubit_gate* V, const struct statevecto
 
 	return 0;
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Apply the gradient of V x ... x V in direction Z to state psi.
+///
+int apply_parallel_gates_directed_grad(const struct two_qubit_gate* V, const struct two_qubit_gate* Z,
+	const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_out)
+{
+	assert(psi->nqubits == psi_out->nqubits);
+	const int L = psi->nqubits;
+	assert(L % 2 == 0);
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(int));
+	inverse_permutation(L, perm, inv_perm);
+
+	// temporary statevectors
+	struct statevector chi = { 0 };
+	if (allocate_statevector(L, &chi) < 0) {
+		return -1;
+	}
+	struct statevector tmp = { 0 };
+	if (allocate_statevector(L, &tmp) < 0) {
+		return -1;
+	}
+
+	for (int i = 0; i < L; i += 2)
+	{
+		struct statevector* phi = (i == 0 ? psi_out : &chi);
+
+		for (int j = 0; j < L; j += 2)
+		{
+			int p = ((L - j) / 2) % 2;
+			const struct statevector* psi0 = (j == 0 ? psi : (p == 0 ? phi : &tmp));
+			struct statevector* psi1 = (p == 0 ? &tmp : phi);
+			apply_gate(i == j ? Z : V, inv_perm[j], inv_perm[j + 1], psi0, psi1);
+		}
+
+		if (i > 0)
+		{
+			// accumulate statevectors
+			const int n = 1 << L;
+			for (int j = 0; j < n; j++)
+			{
+				psi_out->data[j] += chi.data[j];
+			}
+		}
+	}
+
+	free_statevector(&tmp);
+	free_statevector(&chi);
+	aligned_free(inv_perm);
+
+	return 0;
+}

@@ -51,9 +51,35 @@ def apply_parallel_gates_data():
         chi.tofile(f"test_apply_parallel_gates_chi{i}.dat")
 
 
+def apply_parallel_gates_directed_grad_data():
+
+    # random number generator
+    rng = np.random.default_rng(44)
+
+    # general random 4x4 matrix (does not need to be unitary for this test)
+    V = rng.standard_normal((4, 4))
+    V.tofile("test_apply_parallel_gates_directed_grad_V.dat")
+    # general random 4x4 gradient direction
+    Z = rng.standard_normal((4, 4))
+    Z.tofile("test_apply_parallel_gates_directed_grad_Z.dat")
+
+    for i, L in enumerate([6, 8, 10]):
+        # random input statevector
+        psi = rng.standard_normal(2**L)
+        psi /= np.linalg.norm(psi)
+        psi.tofile(f"test_apply_parallel_gates_directed_grad_psi{i}.dat")
+        # random permutation
+        perm = rng.permutation(L)
+        perm.tofile(f"test_apply_parallel_gates_directed_grad_perm{i}.dat")
+        # apply parallel gates
+        chi = oc.apply_parallel_gates_directed_grad(V, L, Z, psi, perm)
+        chi.tofile(f"test_apply_parallel_gates_directed_grad_chi{i}.dat")
+
+
 def main():
     apply_gate_data()
     apply_parallel_gates_data()
+    apply_parallel_gates_directed_grad_data()
 
 
 if __name__ == "__main__":
