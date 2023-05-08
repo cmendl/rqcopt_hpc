@@ -11,17 +11,21 @@ struct test
 };
 
 
+char* test_transpose_statevector();
 char* test_apply_gate();
 char* test_apply_parallel_gates();
 char* test_apply_parallel_gates_directed_grad();
+char* test_parallel_gates_grad_matfree();
 
 
 int main()
 {
 	struct test tests[] = {
+		{ .func = test_transpose_statevector,              .name = "test_transpose_statevector" },
 		{ .func = test_apply_gate,                         .name = "test_apply_gate" },
 		{ .func = test_apply_parallel_gates,               .name = "test_apply_parallel_gates" },
 		{ .func = test_apply_parallel_gates_directed_grad, .name = "test_apply_parallel_gates_directed_grad" },
+		{ .func = test_parallel_gates_grad_matfree,        .name = "test_parallel_gates_grad_matfree" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include "config.h"
 #include "gate.h"
 #include "statevector.h"
@@ -97,6 +98,7 @@ char* test_apply_parallel_gates()
 			return "quantum state after applying parallel gates does not match reference";
 		}
 
+		aligned_free(perm);
 		free_statevector(&chiref);
 		free_statevector(&chi);
 		free_statevector(&psi);
@@ -104,7 +106,6 @@ char* test_apply_parallel_gates()
 
 	return 0;
 }
-
 
 
 char* test_apply_parallel_gates_directed_grad()
@@ -148,9 +149,66 @@ char* test_apply_parallel_gates_directed_grad()
 			return "quantum state after applying parallel gates in gradient direction does not match reference";
 		}
 
+		aligned_free(perm);
 		free_statevector(&chiref);
 		free_statevector(&chi);
 		free_statevector(&psi);
+	}
+
+	return 0;
+}
+
+
+static int Ufunc(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out)
+{
+	assert(psi->nqubits == psi_out->nqubits);
+
+	const intqs n = (intqs)1 << psi->nqubits;
+	for (intqs i = 0; i < n; i++)
+	{
+		psi_out->data[i] = 0.7 * psi->data[((i + 5) * 83) % n] - 0.2 * psi->data[i] + 1.3 * psi->data[((i + 1) * 181) % n] + 0.4 * psi->data[((i + 7) * 197) % n];
+	}
+
+	return 0;
+}
+
+
+char* test_parallel_gates_grad_matfree()
+{
+	struct two_qubit_gate V;
+	if (read_data("../../../test/data/test_parallel_gates_grad_matfree_V.dat", V.data, sizeof(numeric), 16) < 0) {
+		return "reading two-qubit quantum gate entries from disk failed";
+	}
+	int idpm[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+	int flpm[2] = { 1, 0 };
+	int perm[8];
+	if (read_data("../../../test/data/test_parallel_gates_grad_matfree_perm.dat", perm, sizeof(int), 8) < 0) {
+		return "reading permutation data from disk failed";
+	}
+	int* perms[2][2] = { { idpm, flpm }, { idpm, perm } };
+
+	const int Llist[3] = { 2, 8 };
+	for (int j = 0; j < 2; j++)
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			struct two_qubit_gate dV;
+			if (parallel_gates_grad_matfree(&V, Llist[j], Ufunc, NULL, perms[j][i], &dV) < 0) {
+				return "'parallel_gates_grad_matfree' failed internally";
+			}
+
+			struct two_qubit_gate dVref;
+			char filename[1024];
+			sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_grad_matfree_dV%iL%i.dat", i, Llist[j]);
+			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
+				return "reading reference gradient data from disk failed";
+			}
+
+			// compare with reference
+			if (relative_distance(16, dV.data, dVref.data, 1e-8) > 1e-12) {
+				return "computed gradient for parallel gates does not match reference";
+			}
+		}
 	}
 
 	return 0;

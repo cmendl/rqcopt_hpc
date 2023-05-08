@@ -31,3 +31,7 @@ inline void aligned_free(void* memblock)
 }
 
 #endif
+
+
+/// \brief integer type for addressing entries of a quantum statevector 
+typedef long int intqs;

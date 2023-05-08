@@ -1,3 +1,5 @@
+#include <memory.h>
+#include <stdbool.h>
 #include <assert.h>
 #include "parallel_gates.h"
 #include "util.h"
@@ -30,11 +32,11 @@ void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct st
 	else if (j == i + 1)
 	{
 		// special case: neighboring wires
-		const int m = 1 << i;
-		const int n = 1 << (psi->nqubits - 1 - j);
-		for (int a = 0; a < m; a++)
+		const intqs m = (intqs)1 << i;
+		const intqs n = (intqs)1 << (psi->nqubits - 1 - j);
+		for (intqs a = 0; a < m; a++)
 		{
-			for (int b = 0; b < n; b++)
+			for (intqs b = 0; b < n; b++)
 			{
 				numeric x = psi->data[a*(4*n) +        b ];
 				numeric y = psi->data[a*(4*n) + (  n + b)];
@@ -49,14 +51,14 @@ void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct st
 	}
 	else
 	{
-		const int m = 1 << i;
-		const int n = 1 << (j - i - 1);
-		const int o = 1 << (psi->nqubits - 1 - j);
-		for (int a = 0; a < m; a++)
+		const intqs m = (intqs)1 << i;
+		const intqs n = (intqs)1 << (j - i - 1);
+		const intqs o = (intqs)1 << (psi->nqubits - 1 - j);
+		for (intqs a = 0; a < m; a++)
 		{
-			for (int b = 0; b < n; b++)
+			for (intqs b = 0; b < n; b++)
 			{
-				for (int c = 0; c < o; c++)
+				for (intqs c = 0; c < o; c++)
 				{
 					numeric x = psi->data[a*(4*n*o) +      b *(2*o) +      c ];
 					numeric y = psi->data[a*(4*n*o) +      b *(2*o) + (o + c)];
@@ -148,8 +150,8 @@ int apply_parallel_gates_directed_grad(const struct two_qubit_gate* V, const str
 		if (i > 0)
 		{
 			// accumulate statevectors
-			const int n = 1 << L;
-			for (int j = 0; j < n; j++)
+			const intqs n = (intqs)1 << L;
+			for (intqs j = 0; j < n; j++)
 			{
 				psi_out->data[j] += chi.data[j];
 			}
@@ -158,6 +160,144 @@ int apply_parallel_gates_directed_grad(const struct two_qubit_gate* V, const str
 
 	free_statevector(&tmp);
 	free_statevector(&chi);
+	aligned_free(inv_perm);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the gradient of Re tr[U^{\dagger} (V x ... x V)] with respect to V,
+/// using the provided matrix-free application of U to a state.
+///
+int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_func Ufunc, void* fdata, const int* perm, struct two_qubit_gate* G)
+{
+	assert(L >= 2);
+	assert(L % 2 == 0);
+
+	bool is_identity_perm = true;
+	for (int i = 0; i < L; i++) {
+		if (perm[i] != i) {
+			is_identity_perm = false;
+			break;
+		}
+	}
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
+	inverse_permutation(L, perm, inv_perm);
+
+	struct statevector psi0 = { 0 };
+	struct statevector psi1 = { 0 };
+	if (allocate_statevector(L, &psi0) < 0) { return -1; }
+	if (allocate_statevector(L, &psi1) < 0) { return -1; }
+
+	memset(G->data, 0, sizeof(G->data));
+
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << L;
+	for (intqs b = 0; b < n; b++)
+	{
+		memset(psi0.data, 0, n * sizeof(numeric));
+		if (is_identity_perm)
+		{
+			psi0.data[b] = 1;
+		}
+		else
+		{		
+			// transpose unit vector with entry 1 at b
+			intqs k = 0;
+			for (int i = 0; i < L; i++) {
+				k += ((b >> i) & 1) * ((intqs)1 << (L - 1 - inv_perm[L - 1 - i]));
+			}
+			psi0.data[k] = 1;
+		}
+		// apply U
+		int ret = Ufunc(&psi0, fdata, &psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		struct statevector* psi;
+		struct statevector* chi;
+		if (is_identity_perm) {
+			psi = &psi1;
+			chi = &psi0;
+		}
+		else {
+			transpose_statevector(&psi1, inv_perm, &psi0);
+			psi = &psi0;
+			chi = &psi1;
+		}
+		for (int i = 0; i < L; i += 2)
+		{
+			// use chi->data as temporary memory
+			numeric* r = chi->data;
+			numeric* s = psi->data;
+
+			// inner product with (V x ... x V) |b>, where the i-th V is omitted
+			for (int j = 0; j < i; j += 2)
+			{
+				// TODO: complex conjugation
+				numeric x = V->data[     ((b >> j) & 3)];
+				numeric y = V->data[ 4 + ((b >> j) & 3)];
+				numeric z = V->data[ 8 + ((b >> j) & 3)];
+				numeric w = V->data[12 + ((b >> j) & 3)];
+
+				const intqs m = (intqs)1 << (L - j - 2);
+				for (intqs k = 0; k < m; k++)
+				{
+					r[k] = (
+						s[4*k    ] * x +
+						s[4*k + 1] * y +
+						s[4*k + 2] * z +
+						s[4*k + 3] * w);
+				}
+				// avoid overwriting psi->data
+				if (s == psi->data) {
+					s = chi->data + (n >> 2);
+				}
+				// swap pointers r <-> s
+				numeric* t = r;
+				r = s;
+				s = t;
+			}
+			for (int j = i + 2; j < L; j += 2)
+			{
+				// TODO: complex conjugation
+				numeric x = V->data[     ((b >> j) & 3)];
+				numeric y = V->data[ 4 + ((b >> j) & 3)];
+				numeric z = V->data[ 8 + ((b >> j) & 3)];
+				numeric w = V->data[12 + ((b >> j) & 3)];
+
+				const intqs m = (intqs)1 << (L - j - 2);
+				for (intqs k = 0; k < m; k++)
+				{
+					for (intqs l = 0; l < 4; l++)
+					{
+						r[4*k + l] = (
+							s[4*(4*k    ) + l] * x +
+							s[4*(4*k + 1) + l] * y +
+							s[4*(4*k + 2) + l] * z +
+							s[4*(4*k + 3) + l] * w);
+					}
+				}
+				// avoid overwriting psi->data
+				if (s == psi->data) {
+					s = chi->data + (n >> 2);
+				}
+				// swap pointers r <-> s
+				numeric* t = r;
+				r = s;
+				s = t;
+			}
+			G->data[     ((b >> i) & 3)] += s[0];
+			G->data[ 4 + ((b >> i) & 3)] += s[1];
+			G->data[ 8 + ((b >> i) & 3)] += s[2];
+			G->data[12 + ((b >> i) & 3)] += s[3];
+		}
+	}
+
+	free_statevector(&psi1);
+	free_statevector(&psi0);
 	aligned_free(inv_perm);
 
 	return 0;
