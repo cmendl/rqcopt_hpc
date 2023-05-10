@@ -1,13 +1,15 @@
 import numpy as np
+from scipy.stats import ortho_group
 import rqcopt_matfree as oc
 
 
 def apply_gate_data():
 
-    L = 9
-
     # random number generator
     rng = np.random.default_rng(42)
+
+    # system size
+    L = 9
 
     # general random 4x4 matrix (does not need to be unitary for this test)
     V = rng.standard_normal((4, 4))
@@ -83,6 +85,7 @@ def _Ufunc(x):
                      + 1.3 * x[((i + 1) * 181) % n]
                      + 0.4 * x[((i + 7) * 197) % n] for i in range(n)])
 
+
 def parallel_gates_grad_matfree_data():
 
     # random number generator
@@ -102,11 +105,38 @@ def parallel_gates_grad_matfree_data():
             dV.tofile(f"data/test_parallel_gates_grad_matfree_dV{i}L{L}.dat")
 
 
+def parallel_gates_hess_matfree_data():
+
+    # random number generator
+    rng = np.random.default_rng(46)
+
+    # system size
+    L = 8
+
+    # random unitary
+    V = ortho_group.rvs(4, random_state=rng)
+    V.tofile("data/test_parallel_gates_hess_matfree_V.dat")
+
+    # random permutation
+    perm = rng.permutation(L)
+    perm.tofile("data/test_parallel_gates_hess_matfree_perm.dat")
+
+    # gradient direction
+    rZ = 0.5 * rng.standard_normal((4, 4))
+    for i, Z in enumerate([rZ, oc.project_unitary_tangent(V, rZ)]):
+        Z.tofile(f"data/test_parallel_gates_hess_matfree_Z{i}.dat")
+        for uproj in [False, True]:
+            dV = oc.parallel_gates_hess_matfree(V, L, Z, _Ufunc, perm, unitary_proj=uproj)
+            ul = "proj" if uproj else ""
+            dV.tofile(f"data/test_parallel_gates_hess_matfree_dV{i}{ul}.dat")
+
+
 def main():
     apply_gate_data()
     apply_parallel_gates_data()
     apply_parallel_gates_directed_grad_data()
     parallel_gates_grad_matfree_data()
+    parallel_gates_hess_matfree_data()
 
 
 if __name__ == "__main__":

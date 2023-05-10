@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "config.h"
-#include "gate.h"
+#include "matrix.h"
 #include "statevector.h"
 #include "parallel_gates.h"
 #include "util.h"
@@ -21,7 +21,7 @@ char* test_apply_gate()
 	if (allocate_statevector(L, &chi3)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chi3ref) < 0) { return "memory allocation failed"; }
 
-	struct two_qubit_gate V;
+	struct mat4x4 V;
 	if (read_data("../../../test/data/test_apply_gate_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
@@ -63,7 +63,7 @@ char* test_apply_gate()
 
 char* test_apply_parallel_gates()
 {
-	struct two_qubit_gate V;
+	struct mat4x4 V;
 	if (read_data("../../../test/data/test_apply_parallel_gates_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
@@ -110,11 +110,11 @@ char* test_apply_parallel_gates()
 
 char* test_apply_parallel_gates_directed_grad()
 {
-	struct two_qubit_gate V;
+	struct mat4x4 V;
 	if (read_data("../../../test/data/test_apply_parallel_gates_directed_grad_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
-	struct two_qubit_gate Z;
+	struct mat4x4 Z;
 	if (read_data("../../../test/data/test_apply_parallel_gates_directed_grad_Z.dat", Z.data, sizeof(numeric), 16) < 0) {
 		return "reading gradient direction data from disk failed";
 	}
@@ -175,7 +175,7 @@ static int Ufunc(const struct statevector* restrict psi, void* fdata, struct sta
 
 char* test_parallel_gates_grad_matfree()
 {
-	struct two_qubit_gate V;
+	struct mat4x4 V;
 	if (read_data("../../../test/data/test_parallel_gates_grad_matfree_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
@@ -185,19 +185,19 @@ char* test_parallel_gates_grad_matfree()
 	if (read_data("../../../test/data/test_parallel_gates_grad_matfree_perm.dat", perm, sizeof(int), 8) < 0) {
 		return "reading permutation data from disk failed";
 	}
-	int* perms[2][2] = { { idpm, flpm }, { idpm, perm } };
+	const int* perms[2][2] = { { idpm, flpm }, { idpm, perm } };
 
 	const int Llist[3] = { 2, 8 };
 	for (int j = 0; j < 2; j++)
 	{
 		for (int i = 0; i < 2; i++)
 		{
-			struct two_qubit_gate dV;
+			struct mat4x4 dV;
 			if (parallel_gates_grad_matfree(&V, Llist[j], Ufunc, NULL, perms[j][i], &dV) < 0) {
 				return "'parallel_gates_grad_matfree' failed internally";
 			}
 
-			struct two_qubit_gate dVref;
+			struct mat4x4 dVref;
 			char filename[1024];
 			sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_grad_matfree_dV%iL%i.dat", i, Llist[j]);
 			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
@@ -207,6 +207,53 @@ char* test_parallel_gates_grad_matfree()
 			// compare with reference
 			if (relative_distance(16, dV.data, dVref.data, 1e-8) > 1e-12) {
 				return "computed gradient for parallel gates does not match reference";
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+char* test_parallel_gates_hess_matfree()
+{
+	int L = 8;
+
+	struct mat4x4 V;
+	if (read_data("../../../test/data/test_parallel_gates_hess_matfree_V.dat", V.data, sizeof(numeric), 16) < 0) {
+		return "reading two-qubit quantum gate entries from disk failed";
+	}
+
+	int perm[8];
+	if (read_data("../../../test/data/test_parallel_gates_hess_matfree_perm.dat", perm, sizeof(int), 8) < 0) {
+		return "reading permutation data from disk failed";
+	}
+
+	for (int i = 0; i < 2; i++)
+	{
+		char filename[1024];
+		struct mat4x4 Z;
+		sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_hess_matfree_Z%i.dat", i);
+		if (read_data(filename, Z.data, sizeof(numeric), 16) < 0) {
+			return "reading gradient direction data from disk failed";
+		}
+
+		for (int uproj = 0; uproj < 2; uproj++)
+		{
+			struct mat4x4 dV;
+			if (parallel_gates_hess_matfree(&V, L, &Z, Ufunc, NULL, perm, uproj, &dV) < 0) {
+				return "'parallel_gates_hess_matfree' failed internally";
+			}
+
+			struct mat4x4 dVref;
+			sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_hess_matfree_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
+			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
+				return "reading reference Hessian data from disk failed";
+			}
+
+			// compare with reference
+			if (relative_distance(16, dV.data, dVref.data, 1e-8) > 1e-12) {
+				return "computed Hessian for parallel gates does not match reference";
 			}
 		}
 	}

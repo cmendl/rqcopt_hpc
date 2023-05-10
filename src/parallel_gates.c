@@ -1,5 +1,4 @@
 #include <memory.h>
-#include <stdbool.h>
 #include <assert.h>
 #include "parallel_gates.h"
 #include "util.h"
@@ -9,7 +8,7 @@
 ///
 /// \brief Apply a two-qubit gate to qubits 'i' and 'j' of a statevector.
 ///
-void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct statevector* restrict psi, struct statevector* restrict psi_out)
+void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi, struct statevector* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
 	assert(0 <= i && i < psi->nqubits);
@@ -18,7 +17,7 @@ void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct st
 	if (j < i)
 	{
 		// transpose first and second qubit wire of gate
-		const struct two_qubit_gate gate_perm = { .data =
+		const struct mat4x4 gate_perm = { .data =
 			{
 				gate->data[ 0], gate->data[ 2], gate->data[ 1], gate->data[ 3],
 				gate->data[ 8], gate->data[10], gate->data[ 9], gate->data[11],
@@ -80,7 +79,7 @@ void apply_gate(const struct two_qubit_gate* gate, int i, int j, const struct st
 /// \brief Apply a parallel sequence of two-qubit gates V to state psi,
 /// optionally using a permutation of quantum wires.
 ///
-int apply_parallel_gates(const struct two_qubit_gate* V, const struct statevector* restrict psi, const int* perm,
+int apply_parallel_gates(const struct mat4x4* V, const struct statevector* restrict psi, const int* perm,
 	struct statevector* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
@@ -115,7 +114,7 @@ int apply_parallel_gates(const struct two_qubit_gate* V, const struct statevecto
 ///
 /// \brief Apply the gradient of V x ... x V in direction Z to state psi.
 ///
-int apply_parallel_gates_directed_grad(const struct two_qubit_gate* V, const struct two_qubit_gate* Z,
+int apply_parallel_gates_directed_grad(const struct mat4x4* V, const struct mat4x4* Z,
 	const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
@@ -171,7 +170,7 @@ int apply_parallel_gates_directed_grad(const struct two_qubit_gate* V, const str
 /// \brief Compute the gradient of Re tr[U^{\dagger} (V x ... x V)] with respect to V,
 /// using the provided matrix-free application of U to a state.
 ///
-int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_func Ufunc, void* fdata, const int* perm, struct two_qubit_gate* G)
+int parallel_gates_grad_matfree(const struct mat4x4* restrict V, int L, unitary_func Ufunc, void* fdata, const int* perm, struct mat4x4* restrict G)
 {
 	assert(L >= 2);
 	assert(L % 2 == 0);
@@ -203,13 +202,13 @@ int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_f
 			psi0.data[b] = 1;
 		}
 		else
-		{		
+		{
 			// transpose unit vector with entry 1 at b
-			intqs k = 0;
+			intqs a = 0;
 			for (int i = 0; i < L; i++) {
-				k += ((b >> i) & 1) * ((intqs)1 << (L - 1 - inv_perm[L - 1 - i]));
+				a += ((b >> i) & 1) * ((intqs)1 << (L - 1 - inv_perm[L - 1 - i]));
 			}
-			psi0.data[k] = 1;
+			psi0.data[a] = 1;
 		}
 		// apply U
 		int ret = Ufunc(&psi0, fdata, &psi1);
@@ -243,13 +242,13 @@ int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_f
 				numeric w = V->data[12 + ((b >> j) & 3)];
 
 				const intqs m = (intqs)1 << (L - j - 2);
-				for (intqs k = 0; k < m; k++)
+				for (intqs a = 0; a < m; a++)
 				{
-					r[k] = (
-						s[4*k    ] * x +
-						s[4*k + 1] * y +
-						s[4*k + 2] * z +
-						s[4*k + 3] * w);
+					r[a] = (
+						s[4*a    ] * x +
+						s[4*a + 1] * y +
+						s[4*a + 2] * z +
+						s[4*a + 3] * w);
 				}
 				// avoid overwriting psi->data
 				if (s == psi->data) {
@@ -269,15 +268,15 @@ int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_f
 				numeric w = V->data[12 + ((b >> j) & 3)];
 
 				const intqs m = (intqs)1 << (L - j - 2);
-				for (intqs k = 0; k < m; k++)
+				for (intqs a = 0; a < m; a++)
 				{
 					for (intqs l = 0; l < 4; l++)
 					{
-						r[4*k + l] = (
-							s[4*(4*k    ) + l] * x +
-							s[4*(4*k + 1) + l] * y +
-							s[4*(4*k + 2) + l] * z +
-							s[4*(4*k + 3) + l] * w);
+						r[4*a + l] = (
+							s[4*(4*a    ) + l] * x +
+							s[4*(4*a + 1) + l] * y +
+							s[4*(4*a + 2) + l] * z +
+							s[4*(4*a + 3) + l] * w);
 					}
 				}
 				// avoid overwriting psi->data
@@ -293,6 +292,202 @@ int parallel_gates_grad_matfree(const struct two_qubit_gate* V, int L, unitary_f
 			G->data[ 4 + ((b >> i) & 3)] += s[1];
 			G->data[ 8 + ((b >> i) & 3)] += s[2];
 			G->data[12 + ((b >> i) & 3)] += s[3];
+		}
+	}
+
+	free_statevector(&psi1);
+	free_statevector(&psi0);
+	aligned_free(inv_perm);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute (a @ b @ c + c @ b @ a) / 2.
+///
+static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, const struct mat4x4* restrict b, const struct mat4x4* restrict c, struct mat4x4* restrict ret)
+{
+	struct mat4x4 u, v;
+
+	multiply(a, b, &u);
+	multiply(&u, c, ret);
+
+	multiply(c, b, &u);
+	multiply(&u, a, &v);
+
+	add_matrix(ret, &v);
+	scale_matrix(ret, 0.5);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the Hessian of V -> Re tr[U^{\dagger} (V x ... x V)] in direction Z,
+/// using the provided matrix-free application of U to a state.
+///
+int parallel_gates_hess_matfree(const struct mat4x4* restrict V, int L, const struct mat4x4* restrict Z,
+	unitary_func Ufunc, void* fdata, const int* perm, bool unitary_proj, struct mat4x4* restrict G)
+{
+	assert(L >= 2);
+	assert(L % 2 == 0);
+
+	bool is_identity_perm = true;
+	for (int i = 0; i < L; i++) {
+		if (perm[i] != i) {
+			is_identity_perm = false;
+			break;
+		}
+	}
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
+	inverse_permutation(L, perm, inv_perm);
+	
+	struct statevector psi0 = { 0 };
+	struct statevector psi1 = { 0 };
+	if (allocate_statevector(L, &psi0) < 0) { return -1; }
+	if (allocate_statevector(L, &psi1) < 0) { return -1; }
+
+	memset(G->data, 0, sizeof(G->data));
+
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << L;
+	for (intqs b = 0; b < n; b++)
+	{
+		memset(psi0.data, 0, n * sizeof(numeric));
+		if (is_identity_perm)
+		{
+			psi0.data[b] = 1;
+		}
+		else
+		{		
+			// transpose unit vector with entry 1 at b
+			intqs a = 0;
+			for (int i = 0; i < L; i++) {
+				a += ((b >> i) & 1) * ((intqs)1 << (L - 1 - inv_perm[L - 1 - i]));
+			}
+			psi0.data[a] = 1;
+		}
+		// apply U
+		int ret = Ufunc(&psi0, fdata, &psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		struct statevector* psi;
+		struct statevector* chi;
+		if (is_identity_perm) {
+			psi = &psi1;
+			chi = &psi0;
+		}
+		else {
+			transpose_statevector(&psi1, inv_perm, &psi0);
+			psi = &psi0;
+			chi = &psi1;
+		}
+		for (int i = 0; i < L; i += 2)
+		{
+			for (int j = 0; j < L; j += 2)
+			{
+				if (j == i) {
+					continue;
+				}
+
+				// use chi->data as temporary memory
+				numeric* r = chi->data;
+				numeric* s = psi->data;
+
+				for (int k = 0; k < i; k += 2)
+				{
+					const numeric* data = (k == j ? Z->data : V->data);
+					// TODO: complex conjugation
+					numeric x = data[     ((b >> k) & 3)];
+					numeric y = data[ 4 + ((b >> k) & 3)];
+					numeric z = data[ 8 + ((b >> k) & 3)];
+					numeric w = data[12 + ((b >> k) & 3)];
+
+					const intqs m = (intqs)1 << (L - k - 2);
+					for (intqs a = 0; a < m; a++)
+					{
+						r[a] = (
+							s[4*a    ] * x +
+							s[4*a + 1] * y +
+							s[4*a + 2] * z +
+							s[4*a + 3] * w);
+					}
+					// avoid overwriting psi->data
+					if (s == psi->data) {
+						s = chi->data + (n >> 2);
+					}
+					// swap pointers r <-> s
+					numeric* t = r;
+					r = s;
+					s = t;
+				}
+				for (int k = i + 2; k < L; k += 2)
+				{
+					const numeric* data = (k == j ? Z->data : V->data);
+					// TODO: complex conjugation
+					numeric x = data[     ((b >> k) & 3)];
+					numeric y = data[ 4 + ((b >> k) & 3)];
+					numeric z = data[ 8 + ((b >> k) & 3)];
+					numeric w = data[12 + ((b >> k) & 3)];
+
+					const intqs m = (intqs)1 << (L - k - 2);
+					for (intqs a = 0; a < m; a++)
+					{
+						for (intqs l = 0; l < 4; l++)
+						{
+							r[4*a + l] = (
+								s[4*(4*a    ) + l] * x +
+								s[4*(4*a + 1) + l] * y +
+								s[4*(4*a + 2) + l] * z +
+								s[4*(4*a + 3) + l] * w);
+						}
+					}
+					// avoid overwriting psi->data
+					if (s == psi->data) {
+						s = chi->data + (n >> 2);
+					}
+					// swap pointers r <-> s
+					numeric* t = r;
+					r = s;
+					s = t;
+				}
+				G->data[     ((b >> i) & 3)] += s[0];
+				G->data[ 4 + ((b >> i) & 3)] += s[1];
+				G->data[ 8 + ((b >> i) & 3)] += s[2];
+				G->data[12 + ((b >> i) & 3)] += s[3];
+			}
+		}
+	}
+
+	if (unitary_proj)
+	{
+		struct mat4x4 Gproj;
+		project_unitary_tangent(V, G, &Gproj);
+		memcpy(G->data, Gproj.data, sizeof(G->data));
+		// additional terms resulting from the projection of the gradient
+		// onto the Stiefel manifold (unitary matrices)
+		struct mat4x4 grad;
+		parallel_gates_grad_matfree(V, L, Ufunc, fdata, perm, &grad);
+		struct mat4x4 gradh;
+		adjoint(&grad, &gradh);
+		// G -= 0.5 * (Z @ grad^{\dagger} @ V + V @ grad^{\dagger} @ Z)
+		struct mat4x4 T;
+		symmetric_triple_matrix_product(Z, &gradh, V, &T);
+		sub_matrix(G, &T);
+
+		struct mat4x4 Zproj;
+		project_unitary_tangent(V, Z, &Zproj);
+		if (uniform_distance(16, Z->data, Zproj.data) > 1e-14)
+		{
+			// G -= 0.5 * (Z @ V^{\dagger} + V @ Z^{\dagger}) @ grad
+			struct mat4x4 W;
+			adjoint(V, &W);
+			multiply(Z, &W, &T);
+			symm(&T, &W);
+			multiply(&W, &grad, &T);
+			sub_matrix(G, &T);
 		}
 	}
 

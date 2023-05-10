@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include "config.h"
+#include "matrix.h"
+#include "util.h"
+#include "file_io.h"
+
+
+char* test_symm()
+{
+	struct mat4x4 w;
+	for (int i = 0; i < 16; i++)
+	{
+		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+	}
+
+	struct mat4x4 z;
+	symm(&w, &z);
+
+	// reference calculation
+	// add adjoint matrix to 'w'
+	struct mat4x4 wh;
+	adjoint(&w, &wh);
+	add_matrix(&w, &wh);
+	scale_matrix(&w, 0.5);
+
+	// compare
+	if (uniform_distance(16, z.data, w.data) > 1e-14) {
+		return "symmetrized matrix does not agree with reference";
+	}
+
+	return 0;
+}
+
+
+char* test_antisymm()
+{
+	struct mat4x4 w;
+	for (int i = 0; i < 16; i++)
+	{
+		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+	}
+
+	struct mat4x4 z;
+	antisymm(&w, &z);
+
+	// reference calculation
+	// subtract adjoint matrix from 'w'
+	struct mat4x4 wh;
+	adjoint(&w, &wh);
+	sub_matrix(&w, &wh);
+	scale_matrix(&w, 0.5);
+
+	// compare
+	if (uniform_distance(16, z.data, w.data) > 1e-14) {
+		return "anti-symmetrized matrix does not agree with reference";
+	}
+
+	return 0;
+}
+
+
+char* test_multiply()
+{
+	struct mat4x4 a;
+	if (read_data("../../../test/data/test_multiply_a.dat", a.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 b;
+	if (read_data("../../../test/data/test_multiply_b.dat", b.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 cref;
+	if (read_data("../../../test/data/test_multiply_c.dat", cref.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 c;
+	multiply(&a, &b, &c);
+	// compare
+	if (uniform_distance(16, c.data, cref.data) > 1e-12) {
+		return "matrix product does not agree with reference";
+	}
+
+	return 0;
+}
+
+
+char* test_project_unitary_tangent()
+{
+	struct mat4x4 u;
+	if (read_data("../../../test/data/test_project_unitary_tangent_u.dat", u.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 z;
+	if (read_data("../../../test/data/test_project_unitary_tangent_z.dat", z.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 pref;
+	if (read_data("../../../test/data/test_project_unitary_tangent_p.dat", pref.data, sizeof(numeric), 16) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 p;
+	project_unitary_tangent(&u, &z, &p);
+	// compare
+	if (uniform_distance(16, p.data, pref.data) > 1e-12) {
+		return "projected matrix does not agree with reference";
+	}
+
+	return 0;
+}

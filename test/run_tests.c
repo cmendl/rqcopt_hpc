@@ -11,21 +11,31 @@ struct test
 };
 
 
+char* test_symm();
+char* test_antisymm();
+char* test_multiply();
+char* test_project_unitary_tangent();
 char* test_transpose_statevector();
 char* test_apply_gate();
 char* test_apply_parallel_gates();
 char* test_apply_parallel_gates_directed_grad();
 char* test_parallel_gates_grad_matfree();
+char* test_parallel_gates_hess_matfree();
 
 
 int main()
 {
 	struct test tests[] = {
+		{ .func = test_symm,                               .name = "test_symm" },
+		{ .func = test_antisymm,                           .name = "test_antisymm" },
+		{ .func = test_multiply,                           .name = "test_multiply" },
+		{ .func = test_project_unitary_tangent,            .name = "test_project_unitary_tangent" },
 		{ .func = test_transpose_statevector,              .name = "test_transpose_statevector" },
 		{ .func = test_apply_gate,                         .name = "test_apply_gate" },
 		{ .func = test_apply_parallel_gates,               .name = "test_apply_parallel_gates" },
 		{ .func = test_apply_parallel_gates_directed_grad, .name = "test_apply_parallel_gates_directed_grad" },
 		{ .func = test_parallel_gates_grad_matfree,        .name = "test_parallel_gates_grad_matfree" },
+		{ .func = test_parallel_gates_hess_matfree,        .name = "test_parallel_gates_hess_matfree" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 
