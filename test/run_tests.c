@@ -21,6 +21,8 @@ char* test_apply_parallel_gates();
 char* test_apply_parallel_gates_directed_grad();
 char* test_parallel_gates_grad_matfree();
 char* test_parallel_gates_hess_matfree();
+char* test_apply_brickwall_unitary();
+char* test_apply_adjoint_brickwall_unitary();
 
 
 int main()
@@ -36,6 +38,8 @@ int main()
 		{ .func = test_apply_parallel_gates_directed_grad, .name = "test_apply_parallel_gates_directed_grad" },
 		{ .func = test_parallel_gates_grad_matfree,        .name = "test_parallel_gates_grad_matfree" },
 		{ .func = test_parallel_gates_hess_matfree,        .name = "test_parallel_gates_hess_matfree" },
+		{ .func = test_apply_brickwall_unitary,            .name = "test_apply_brickwall_unitary" },
+		{ .func = test_apply_adjoint_brickwall_unitary,    .name = "test_apply_adjoint_brickwall_unitary" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 
