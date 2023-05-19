@@ -25,7 +25,7 @@ inline void aligned_free(void* memblock)
 
 #else
 
-inline void aligned_free(void* memblock)
+static inline void aligned_free(void* memblock)
 {
 	free(memblock);
 }

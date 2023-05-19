@@ -62,15 +62,15 @@ char* test_antisymm()
 char* test_multiply()
 {
 	struct mat4x4 a;
-	if (read_data("../../../test/data/test_multiply_a.dat", a.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply_a.dat", a.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 b;
-	if (read_data("../../../test/data/test_multiply_b.dat", b.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply_b.dat", b.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 cref;
-	if (read_data("../../../test/data/test_multiply_c.dat", cref.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply_c.dat", cref.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 
@@ -88,15 +88,15 @@ char* test_multiply()
 char* test_project_unitary_tangent()
 {
 	struct mat4x4 u;
-	if (read_data("../../../test/data/test_project_unitary_tangent_u.dat", u.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent_u.dat", u.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 z;
-	if (read_data("../../../test/data/test_project_unitary_tangent_z.dat", z.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent_z.dat", z.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 pref;
-	if (read_data("../../../test/data/test_project_unitary_tangent_p.dat", pref.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent_p.dat", pref.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 

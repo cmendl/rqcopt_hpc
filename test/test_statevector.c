@@ -14,15 +14,15 @@ char* test_transpose_statevector()
 	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-	if (read_data("../../../test/data/test_transpose_statevector_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_transpose_statevector_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading input statevector data from disk failed";
 	}
-	if (read_data("../../../test/data/test_transpose_statevector_chi.dat", chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_transpose_statevector_chi.dat", chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading output statevector data from disk failed";
 	}
 
 	int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-	if (read_data("../../../test/data/test_transpose_statevector_perm.dat", perm, sizeof(int), L) < 0) {
+	if (read_data("../test/data/test_transpose_statevector_perm.dat", perm, sizeof(int), L) < 0) {
 		return "reading permutation data from disk failed";
 	}
 

@@ -8,7 +8,7 @@
 ///
 /// \brief Relative distance (deviation) of two numbers.
 ///
-inline double reldist(numeric x, numeric y, double eps)
+static inline double reldist(numeric x, numeric y, double eps)
 {
 	// TODO: complex abs in case 'numeric' is a complex number
 	return fabs(x - y) / fmax(fabs(x) + fabs(y), eps);
