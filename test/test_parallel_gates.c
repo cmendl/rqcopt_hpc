@@ -80,13 +80,13 @@ char* test_apply_parallel_gates()
 
 		char filename[1024];
 
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_psi%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_psi%i.dat", i);
 		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_chi%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_chi%i.dat", i);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_perm%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_perm%i.dat", i);
 		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates(&V, &psi, perm, &chi) < 0) {
@@ -131,13 +131,13 @@ char* test_apply_parallel_gates_directed_grad()
 
 		char filename[1024];
 
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_directed_grad_psi%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_directed_grad_psi%i.dat", i);
 		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_directed_grad_chi%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_directed_grad_chi%i.dat", i);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf_s(filename, 1024, "../../../test/data/test_apply_parallel_gates_directed_grad_perm%i.dat", i);
+		sprintf(filename, "../../../test/data/test_apply_parallel_gates_directed_grad_perm%i.dat", i);
 		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates_directed_grad(&V, &Z, &psi, perm, &chi) < 0) {
@@ -199,7 +199,7 @@ char* test_parallel_gates_grad_matfree()
 
 			struct mat4x4 dVref;
 			char filename[1024];
-			sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_grad_matfree_dV%iL%i.dat", i, Llist[j]);
+			sprintf(filename, "../../../test/data/test_parallel_gates_grad_matfree_dV%iL%i.dat", i, Llist[j]);
 			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
 				return "reading reference gradient data from disk failed";
 			}
@@ -233,7 +233,7 @@ char* test_parallel_gates_hess_matfree()
 	{
 		char filename[1024];
 		struct mat4x4 Z;
-		sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_hess_matfree_Z%i.dat", i);
+		sprintf(filename, "../../../test/data/test_parallel_gates_hess_matfree_Z%i.dat", i);
 		if (read_data(filename, Z.data, sizeof(numeric), 16) < 0) {
 			return "reading gradient direction data from disk failed";
 		}
@@ -246,7 +246,7 @@ char* test_parallel_gates_hess_matfree()
 			}
 
 			struct mat4x4 dVref;
-			sprintf_s(filename, 1024, "../../../test/data/test_parallel_gates_hess_matfree_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
+			sprintf(filename, "../../../test/data/test_parallel_gates_hess_matfree_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
 			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
 				return "reading reference Hessian data from disk failed";
 			}

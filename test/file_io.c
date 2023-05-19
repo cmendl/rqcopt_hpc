@@ -7,11 +7,10 @@
 ///
 int read_data(const char* filename, void* data, const size_t size, const size_t n)
 {
-	FILE* fd;
-	errno_t ret = fopen_s(&fd, filename, "rb");
-	if (ret != 0)
+	FILE* fd = fopen(filename, "rb");
+	if (fd == NULL)
 	{
-		fprintf(stderr, "'fopen_s' failed during call of 'read_data', error code %d\n", ret);
+		fprintf(stderr, "'fopen' failed during call of 'read_data'\n");
 		return -1;
 	}
 
@@ -46,11 +45,10 @@ int write_data(const char* filename, const void* data, const size_t size, const 
 {
 	const char* mode = append ? "ab" : "wb";
 
-	FILE* fd;
-	fopen_s(&fd, filename, mode);
+	FILE* fd = fopen(filename, mode);
 	if (fd == NULL)
 	{
-		fprintf(stderr, "'fopen_s' failed during call of 'write_data'\n");
+		fprintf(stderr, "'fopen' failed during call of 'write_data'\n");
 		return -1;
 	}
 
