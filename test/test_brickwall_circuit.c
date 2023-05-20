@@ -8,6 +8,13 @@
 #include "file_io.h"
 
 
+#ifdef COMPLEX_CIRCUIT
+#define CDATA_LABEL "_cplx"
+#else
+#define CDATA_LABEL "_real"
+#endif
+
+
 char* test_apply_brickwall_unitary()
 {
 	int L = 8;
@@ -17,7 +24,7 @@ char* test_apply_brickwall_unitary()
 	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-	if (read_data("../test/data/test_apply_brickwall_unitary_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading input statevector data from disk failed";
 	}
 
@@ -25,7 +32,7 @@ char* test_apply_brickwall_unitary()
 	for (int i = 0; i < 4; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary_V%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_V%i.dat", i);
 		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
@@ -35,7 +42,7 @@ char* test_apply_brickwall_unitary()
 	for (int i = 0; i < 4; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary_perm%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_perm%i.dat", i);
 		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
 			return "reading permutation data from disk failed";
 		}
@@ -50,7 +57,7 @@ char* test_apply_brickwall_unitary()
 		}
 
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary_chi%i.dat", nlayers - 3);
+		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_chi%i.dat", nlayers - 3);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 			return "reading output statevector data from disk failed";
 		}
@@ -78,7 +85,7 @@ char* test_apply_adjoint_brickwall_unitary()
 	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-	if (read_data("../test/data/test_apply_adjoint_brickwall_unitary_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading input statevector data from disk failed";
 	}
 
@@ -86,7 +93,7 @@ char* test_apply_adjoint_brickwall_unitary()
 	for (int i = 0; i < 4; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary_V%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_V%i.dat", i);
 		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
@@ -96,7 +103,7 @@ char* test_apply_adjoint_brickwall_unitary()
 	for (int i = 0; i < 4; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary_perm%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_perm%i.dat", i);
 		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
 			return "reading permutation data from disk failed";
 		}
@@ -111,7 +118,7 @@ char* test_apply_adjoint_brickwall_unitary()
 		}
 
 		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary_chi%i.dat", nlayers - 3);
+		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_chi%i.dat", nlayers - 3);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 			return "reading output statevector data from disk failed";
 		}
@@ -152,7 +159,7 @@ char* test_brickwall_unitary_grad_matfree()
 	for (int i = 0; i < 5; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree_V%i.dat", i);
+		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_V%i.dat", i);
 		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
@@ -162,7 +169,7 @@ char* test_brickwall_unitary_grad_matfree()
 	for (int i = 0; i < 5; i++)
 	{
 		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree_perm%i.dat", i);
+		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_perm%i.dat", i);
 		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
 			return "reading permutation data from disk failed";
 		}
@@ -178,7 +185,7 @@ char* test_brickwall_unitary_grad_matfree()
 		}
 
 		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree_dVlist%i.dat", i);
+		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_dVlist%i.dat", i);
 		struct mat4x4 dVlist_ref[5];
 		if (read_data(filename, dVlist_ref, sizeof(numeric), nlayers[i] * 16) < 0) {
 			return "reading reference gradient data from disk failed";

@@ -5,12 +5,23 @@
 #include "file_io.h"
 
 
+#ifdef COMPLEX_CIRCUIT
+#define CDATA_LABEL "_cplx"
+#else
+#define CDATA_LABEL "_real"
+#endif
+
+
 char* test_symm()
 {
 	struct mat4x4 w;
 	for (int i = 0; i < 16; i++)
 	{
+		#ifdef COMPLEX_CIRCUIT
+		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1 + ((((11 + i) * 3571) % 541) / 270.0 - 1) * I;
+		#else
 		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+		#endif
 	}
 
 	struct mat4x4 z;
@@ -37,7 +48,11 @@ char* test_antisymm()
 	struct mat4x4 w;
 	for (int i = 0; i < 16; i++)
 	{
+		#ifdef COMPLEX_CIRCUIT
+		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1 + ((((11 + i) * 3571) % 541) / 270.0 - 1) * I;
+		#else
 		w.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+		#endif
 	}
 
 	struct mat4x4 z;
@@ -62,15 +77,15 @@ char* test_antisymm()
 char* test_multiply()
 {
 	struct mat4x4 a;
-	if (read_data("../test/data/test_multiply_a.dat", a.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply" CDATA_LABEL "_a.dat", a.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 b;
-	if (read_data("../test/data/test_multiply_b.dat", b.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply" CDATA_LABEL "_b.dat", b.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 cref;
-	if (read_data("../test/data/test_multiply_c.dat", cref.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_multiply" CDATA_LABEL "_c.dat", cref.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 
@@ -88,15 +103,15 @@ char* test_multiply()
 char* test_project_unitary_tangent()
 {
 	struct mat4x4 u;
-	if (read_data("../test/data/test_project_unitary_tangent_u.dat", u.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_u.dat", u.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 z;
-	if (read_data("../test/data/test_project_unitary_tangent_z.dat", z.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_z.dat", z.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 pref;
-	if (read_data("../test/data/test_project_unitary_tangent_p.dat", pref.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_p.dat", pref.data, sizeof(numeric), 16) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 

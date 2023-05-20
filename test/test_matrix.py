@@ -7,13 +7,14 @@ def multiply_data():
     # random number generator
     rng = np.random.default_rng(42)
 
-    a = rng.standard_normal((4, 4))
-    b = rng.standard_normal((4, 4))
-    c = a @ b
-    # save to disk
-    a.tofile("data/test_multiply_a.dat")
-    b.tofile("data/test_multiply_b.dat")
-    c.tofile("data/test_multiply_c.dat")
+    for ctype in ["real", "cplx"]:
+        a = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
+        b = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
+        c = a @ b
+        # save to disk
+        a.tofile(f"data/test_multiply_{ctype}_a.dat")
+        b.tofile(f"data/test_multiply_{ctype}_b.dat")
+        c.tofile(f"data/test_multiply_{ctype}_c.dat")
 
 
 def project_unitary_tangent_data():
@@ -21,15 +22,16 @@ def project_unitary_tangent_data():
     # random number generator
     rng = np.random.default_rng(43)
 
-    u = rng.standard_normal((4, 4))
-    z = rng.standard_normal((4, 4))
+    for ctype in ["real", "cplx"]:
+        u = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
+        z = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
 
-    p = oc.project_unitary_tangent(u, z)
+        p = oc.project_unitary_tangent(u, z)
 
-    # save to disk
-    u.tofile("data/test_project_unitary_tangent_u.dat")
-    z.tofile("data/test_project_unitary_tangent_z.dat")
-    p.tofile("data/test_project_unitary_tangent_p.dat")
+        # save to disk
+        u.tofile(f"data/test_project_unitary_tangent_{ctype}_u.dat")
+        z.tofile(f"data/test_project_unitary_tangent_{ctype}_z.dat")
+        p.tofile(f"data/test_project_unitary_tangent_{ctype}_p.dat")
 
 
 def main():

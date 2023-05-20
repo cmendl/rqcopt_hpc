@@ -235,11 +235,10 @@ int parallel_gates_grad_matfree(const struct mat4x4* restrict V, int L, unitary_
 			// inner product with (V x ... x V) |b>, where the i-th V is omitted
 			for (int j = 0; j < i; j += 2)
 			{
-				// TODO: complex conjugation
-				numeric x = V->data[     ((b >> j) & 3)];
-				numeric y = V->data[ 4 + ((b >> j) & 3)];
-				numeric z = V->data[ 8 + ((b >> j) & 3)];
-				numeric w = V->data[12 + ((b >> j) & 3)];
+				numeric x = conj(V->data[     ((b >> j) & 3)]);
+				numeric y = conj(V->data[ 4 + ((b >> j) & 3)]);
+				numeric z = conj(V->data[ 8 + ((b >> j) & 3)]);
+				numeric w = conj(V->data[12 + ((b >> j) & 3)]);
 
 				const intqs m = (intqs)1 << (L - j - 2);
 				for (intqs a = 0; a < m; a++)
@@ -261,11 +260,10 @@ int parallel_gates_grad_matfree(const struct mat4x4* restrict V, int L, unitary_
 			}
 			for (int j = i + 2; j < L; j += 2)
 			{
-				// TODO: complex conjugation
-				numeric x = V->data[     ((b >> j) & 3)];
-				numeric y = V->data[ 4 + ((b >> j) & 3)];
-				numeric z = V->data[ 8 + ((b >> j) & 3)];
-				numeric w = V->data[12 + ((b >> j) & 3)];
+				numeric x = conj(V->data[     ((b >> j) & 3)]);
+				numeric y = conj(V->data[ 4 + ((b >> j) & 3)]);
+				numeric z = conj(V->data[ 8 + ((b >> j) & 3)]);
+				numeric w = conj(V->data[12 + ((b >> j) & 3)]);
 
 				const intqs m = (intqs)1 << (L - j - 2);
 				for (intqs a = 0; a < m; a++)
@@ -399,11 +397,10 @@ int parallel_gates_hess_matfree(const struct mat4x4* restrict V, int L, const st
 				for (int k = 0; k < i; k += 2)
 				{
 					const numeric* data = (k == j ? Z->data : V->data);
-					// TODO: complex conjugation
-					numeric x = data[     ((b >> k) & 3)];
-					numeric y = data[ 4 + ((b >> k) & 3)];
-					numeric z = data[ 8 + ((b >> k) & 3)];
-					numeric w = data[12 + ((b >> k) & 3)];
+					numeric x = conj(data[     ((b >> k) & 3)]);
+					numeric y = conj(data[ 4 + ((b >> k) & 3)]);
+					numeric z = conj(data[ 8 + ((b >> k) & 3)]);
+					numeric w = conj(data[12 + ((b >> k) & 3)]);
 
 					const intqs m = (intqs)1 << (L - k - 2);
 					for (intqs a = 0; a < m; a++)
@@ -426,11 +423,10 @@ int parallel_gates_hess_matfree(const struct mat4x4* restrict V, int L, const st
 				for (int k = i + 2; k < L; k += 2)
 				{
 					const numeric* data = (k == j ? Z->data : V->data);
-					// TODO: complex conjugation
-					numeric x = data[     ((b >> k) & 3)];
-					numeric y = data[ 4 + ((b >> k) & 3)];
-					numeric z = data[ 8 + ((b >> k) & 3)];
-					numeric w = data[12 + ((b >> k) & 3)];
+					numeric x = conj(data[     ((b >> k) & 3)]);
+					numeric y = conj(data[ 4 + ((b >> k) & 3)]);
+					numeric z = conj(data[ 8 + ((b >> k) & 3)]);
+					numeric w = conj(data[12 + ((b >> k) & 3)]);
 
 					const intqs m = (intqs)1 << (L - k - 2);
 					for (intqs a = 0; a < m; a++)

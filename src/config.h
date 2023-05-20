@@ -4,8 +4,25 @@
 #include <malloc.h>
 
 
-/// \brief numeric scalar type
+#ifdef COMPLEX_CIRCUIT
+
+#include <complex.h>
+
+/// \brief numeric scalar type (used for quantum gates and statevectors)
+typedef double complex numeric;
+
+#define _abs cabs
+
+#else
+
+/// \brief numeric scalar type (used for quantum gates and statevectors)
 typedef double numeric;
+
+#define _abs fabs
+#define creal
+#define conj
+
+#endif
 
 
 #define MEM_DATA_ALIGN 64

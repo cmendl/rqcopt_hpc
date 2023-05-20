@@ -10,8 +10,7 @@
 ///
 static inline double reldist(numeric x, numeric y, double eps)
 {
-	// TODO: complex abs in case 'numeric' is a complex number
-	return fabs(x - y) / fmax(fabs(x) + fabs(y), eps);
+	return _abs(x - y) / fmax(_abs(x) + _abs(y), eps);
 }
 
 

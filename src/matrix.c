@@ -77,8 +77,7 @@ void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah)
 	{
 		for (int j = 0; j < 4; j++)
 		{
-			// TODO: complex conjugation
-			ah->data[4*i + j] = a->data[4*j + i];
+			ah->data[4*i + j] = conj(a->data[4*j + i]);
 		}
 	}
 }
@@ -90,29 +89,27 @@ void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah)
 ///
 void symm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 {
-	// copy diagonal entries
-	z->data[ 0] = w->data[ 0];
-	z->data[ 5] = w->data[ 5];
-	z->data[10] = w->data[10];
-	z->data[15] = w->data[15];
+	// diagonal entries
+	z->data[ 0] = creal(w->data[ 0]);
+	z->data[ 5] = creal(w->data[ 5]);
+	z->data[10] = creal(w->data[10]);
+	z->data[15] = creal(w->data[15]);
 
 	// upper triangular part
-	// TODO: complex conjugation
-	z->data[ 1] = 0.5 * (w->data[ 1] + w->data[ 4]);
-	z->data[ 2] = 0.5 * (w->data[ 2] + w->data[ 8]);
-	z->data[ 3] = 0.5 * (w->data[ 3] + w->data[12]);
-	z->data[ 6] = 0.5 * (w->data[ 6] + w->data[ 9]);
-	z->data[ 7] = 0.5 * (w->data[ 7] + w->data[13]);
-	z->data[11] = 0.5 * (w->data[11] + w->data[14]);
+	z->data[ 1] = 0.5 * (w->data[ 1] + conj(w->data[ 4]));
+	z->data[ 2] = 0.5 * (w->data[ 2] + conj(w->data[ 8]));
+	z->data[ 3] = 0.5 * (w->data[ 3] + conj(w->data[12]));
+	z->data[ 6] = 0.5 * (w->data[ 6] + conj(w->data[ 9]));
+	z->data[ 7] = 0.5 * (w->data[ 7] + conj(w->data[13]));
+	z->data[11] = 0.5 * (w->data[11] + conj(w->data[14]));
 
 	// lower triangular part
-	// TODO: complex conjugation
-	z->data[ 4] = z->data[ 1];
-	z->data[ 8] = z->data[ 2];
-	z->data[ 9] = z->data[ 6];
-	z->data[12] = z->data[ 3];
-	z->data[13] = z->data[ 7];
-	z->data[14] = z->data[11];
+	z->data[ 4] = conj(z->data[ 1]);
+	z->data[ 8] = conj(z->data[ 2]);
+	z->data[ 9] = conj(z->data[ 6]);
+	z->data[12] = conj(z->data[ 3]);
+	z->data[13] = conj(z->data[ 7]);
+	z->data[14] = conj(z->data[11]);
 }
 
 
@@ -123,29 +120,33 @@ void symm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 {
 	// diagonal entries
-	// TODO: imaginary part
+	#ifdef COMPLEX_CIRCUIT
+	z->data[ 0] = I * cimag(w->data[ 0]);
+	z->data[ 5] = I * cimag(w->data[ 5]);
+	z->data[10] = I * cimag(w->data[10]);
+	z->data[15] = I * cimag(w->data[15]);
+	#else
 	z->data[ 0] = 0;
 	z->data[ 5] = 0;
 	z->data[10] = 0;
 	z->data[15] = 0;
+	#endif
 
 	// upper triangular part
-	// TODO: complex conjugation
-	z->data[ 1] = 0.5 * (w->data[ 1] - w->data[ 4]);
-	z->data[ 2] = 0.5 * (w->data[ 2] - w->data[ 8]);
-	z->data[ 3] = 0.5 * (w->data[ 3] - w->data[12]);
-	z->data[ 6] = 0.5 * (w->data[ 6] - w->data[ 9]);
-	z->data[ 7] = 0.5 * (w->data[ 7] - w->data[13]);
-	z->data[11] = 0.5 * (w->data[11] - w->data[14]);
+	z->data[ 1] = 0.5 * (w->data[ 1] - conj(w->data[ 4]));
+	z->data[ 2] = 0.5 * (w->data[ 2] - conj(w->data[ 8]));
+	z->data[ 3] = 0.5 * (w->data[ 3] - conj(w->data[12]));
+	z->data[ 6] = 0.5 * (w->data[ 6] - conj(w->data[ 9]));
+	z->data[ 7] = 0.5 * (w->data[ 7] - conj(w->data[13]));
+	z->data[11] = 0.5 * (w->data[11] - conj(w->data[14]));
 
 	// lower triangular part
-	// TODO: complex conjugation
-	z->data[ 4] = -z->data[ 1];
-	z->data[ 8] = -z->data[ 2];
-	z->data[ 9] = -z->data[ 6];
-	z->data[12] = -z->data[ 3];
-	z->data[13] = -z->data[ 7];
-	z->data[14] = -z->data[11];
+	z->data[ 4] = -conj(z->data[ 1]);
+	z->data[ 8] = -conj(z->data[ 2]);
+	z->data[ 9] = -conj(z->data[ 6]);
+	z->data[12] = -conj(z->data[ 3]);
+	z->data[13] = -conj(z->data[ 7]);
+	z->data[14] = -conj(z->data[11]);
 }
 
 

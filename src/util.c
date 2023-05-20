@@ -10,7 +10,7 @@ double uniform_distance(size_t n, const numeric* x, const numeric* y)
 	double d = 0;
 	for (size_t i = 0; i < n; i++)
 	{
-		d = fmax(d, fabs(x[i] - y[i]));
+		d = fmax(d, _abs(x[i] - y[i]));
 	}
 
 	return d;

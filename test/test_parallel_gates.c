@@ -8,6 +8,13 @@
 #include "file_io.h"
 
 
+#ifdef COMPLEX_CIRCUIT
+#define CDATA_LABEL "_cplx"
+#else
+#define CDATA_LABEL "_real"
+#endif
+
+
 char* test_apply_gate()
 {
 	int L = 9;
@@ -22,20 +29,20 @@ char* test_apply_gate()
 	if (allocate_statevector(L, &chi3ref) < 0) { return "memory allocation failed"; }
 
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_gate_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
-	if (read_data("../test/data/test_apply_gate_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading input statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate_chi1.dat", chi1ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi1.dat", chi1ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading output statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate_chi2.dat", chi2ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi2.dat", chi2ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading output statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate_chi3.dat", chi3ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi3.dat", chi3ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
 		return "reading output statevector data from disk failed";
 	}
 
@@ -64,7 +71,7 @@ char* test_apply_gate()
 char* test_apply_parallel_gates()
 {
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_parallel_gates_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_apply_parallel_gates" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
@@ -80,13 +87,13 @@ char* test_apply_parallel_gates()
 
 		char filename[1024];
 
-		sprintf(filename, "../test/data/test_apply_parallel_gates_psi%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_psi%i.dat", i);
 		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf(filename, "../test/data/test_apply_parallel_gates_chi%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_chi%i.dat", i);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf(filename, "../test/data/test_apply_parallel_gates_perm%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_perm%i.dat", i);
 		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates(&V, &psi, perm, &chi) < 0) {
@@ -111,11 +118,11 @@ char* test_apply_parallel_gates()
 char* test_apply_parallel_gates_directed_grad()
 {
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_parallel_gates_directed_grad_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 	struct mat4x4 Z;
-	if (read_data("../test/data/test_apply_parallel_gates_directed_grad_Z.dat", Z.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_Z.dat", Z.data, sizeof(numeric), 16) < 0) {
 		return "reading gradient direction data from disk failed";
 	}
 
@@ -131,13 +138,13 @@ char* test_apply_parallel_gates_directed_grad()
 
 		char filename[1024];
 
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad_psi%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_psi%i.dat", i);
 		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad_chi%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_chi%i.dat", i);
 		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad_perm%i.dat", i);
+		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_perm%i.dat", i);
 		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates_directed_grad(&V, &Z, &psi, perm, &chi) < 0) {
@@ -176,13 +183,13 @@ static int Ufunc(const struct statevector* restrict psi, void* fdata, struct sta
 char* test_parallel_gates_grad_matfree()
 {
 	struct mat4x4 V;
-	if (read_data("../test/data/test_parallel_gates_grad_matfree_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 	int idpm[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	int flpm[2] = { 1, 0 };
 	int perm[8];
-	if (read_data("../test/data/test_parallel_gates_grad_matfree_perm.dat", perm, sizeof(int), 8) < 0) {
+	if (read_data("../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_perm.dat", perm, sizeof(int), 8) < 0) {
 		return "reading permutation data from disk failed";
 	}
 	const int* perms[2][2] = { { idpm, flpm }, { idpm, perm } };
@@ -199,7 +206,7 @@ char* test_parallel_gates_grad_matfree()
 
 			struct mat4x4 dVref;
 			char filename[1024];
-			sprintf(filename, "../test/data/test_parallel_gates_grad_matfree_dV%iL%i.dat", i, Llist[j]);
+			sprintf(filename, "../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_dV%iL%i.dat", i, Llist[j]);
 			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
 				return "reading reference gradient data from disk failed";
 			}
@@ -220,12 +227,12 @@ char* test_parallel_gates_hess_matfree()
 	int L = 8;
 
 	struct mat4x4 V;
-	if (read_data("../test/data/test_parallel_gates_hess_matfree_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_data("../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
 	int perm[8];
-	if (read_data("../test/data/test_parallel_gates_hess_matfree_perm.dat", perm, sizeof(int), 8) < 0) {
+	if (read_data("../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_perm.dat", perm, sizeof(int), 8) < 0) {
 		return "reading permutation data from disk failed";
 	}
 
@@ -233,7 +240,7 @@ char* test_parallel_gates_hess_matfree()
 	{
 		char filename[1024];
 		struct mat4x4 Z;
-		sprintf(filename, "../test/data/test_parallel_gates_hess_matfree_Z%i.dat", i);
+		sprintf(filename, "../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_Z%i.dat", i);
 		if (read_data(filename, Z.data, sizeof(numeric), 16) < 0) {
 			return "reading gradient direction data from disk failed";
 		}
@@ -246,7 +253,7 @@ char* test_parallel_gates_hess_matfree()
 			}
 
 			struct mat4x4 dVref;
-			sprintf(filename, "../test/data/test_parallel_gates_hess_matfree_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
+			sprintf(filename, "../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
 			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
 				return "reading reference Hessian data from disk failed";
 			}

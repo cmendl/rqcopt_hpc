@@ -10,26 +10,27 @@ def apply_brickwall_unitary_data():
     # system size
     L = 8
 
-    # random input statevector
-    psi = rng.standard_normal(2**L)
-    psi /= np.linalg.norm(psi)
-    psi.tofile("data/test_apply_brickwall_unitary_psi.dat")
+    for ctype in ["real", "cplx"]:
+        # random input statevector
+        psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
+        psi /= np.linalg.norm(psi)
+        psi.tofile(f"data/test_apply_brickwall_unitary_{ctype}_psi.dat")
 
-    max_nlayers = 4
+        max_nlayers = 4
 
-    # general random 4x4 matrices (do not need to be unitary for this test)
-    Vlist = [0.5 * rng.standard_normal((4, 4)) for _ in range(max_nlayers)]
-    for i in range(max_nlayers):
-        Vlist[i].tofile(f"data/test_apply_brickwall_unitary_V{i}.dat")
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        Vlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            Vlist[i].tofile(f"data/test_apply_brickwall_unitary_{ctype}_V{i}.dat")
 
-    # random permutations
-    perms = [rng.permutation(L) for _ in range(max_nlayers)]
-    for i in range(max_nlayers):
-        perms[i].tofile(f"data/test_apply_brickwall_unitary_perm{i}.dat")
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            perms[i].tofile(f"data/test_apply_brickwall_unitary_{ctype}_perm{i}.dat")
 
-    for i, nlayers in enumerate([3, 4]):
-        chi = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
-        chi.tofile(f"data/test_apply_brickwall_unitary_chi{i}.dat")
+        for i, nlayers in enumerate([3, 4]):
+            chi = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
+            chi.tofile(f"data/test_apply_brickwall_unitary_{ctype}_chi{i}.dat")
 
 
 def apply_adjoint_brickwall_unitary_data():
@@ -40,26 +41,27 @@ def apply_adjoint_brickwall_unitary_data():
     # system size
     L = 8
 
-    # random input statevector
-    psi = rng.standard_normal(2**L)
-    psi /= np.linalg.norm(psi)
-    psi.tofile("data/test_apply_adjoint_brickwall_unitary_psi.dat")
-
     max_nlayers = 4
 
-    # general random 4x4 matrices (do not need to be unitary for this test)
-    Vlist = [0.5 * rng.standard_normal((4, 4)) for _ in range(max_nlayers)]
-    for i in range(max_nlayers):
-        Vlist[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_V{i}.dat")
+    for ctype in ["real", "cplx"]:
+        # random input statevector
+        psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
+        psi /= np.linalg.norm(psi)
+        psi.tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_psi.dat")
 
-    # random permutations
-    perms = [rng.permutation(L) for _ in range(max_nlayers)]
-    for i in range(max_nlayers):
-        perms[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_perm{i}.dat")
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        Vlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            Vlist[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_V{i}.dat")
 
-    for i, nlayers in enumerate([3, 4]):
-        chi = oc.apply_adjoint_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
-        chi.tofile(f"data/test_apply_adjoint_brickwall_unitary_chi{i}.dat")
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            perms[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_perm{i}.dat")
+
+        for i, nlayers in enumerate([3, 4]):
+            chi = oc.apply_adjoint_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
+            chi.tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_chi{i}.dat")
 
 
 def _Ufunc(x):
@@ -80,19 +82,20 @@ def brickwall_unitary_grad_matfree_data():
 
     max_nlayers = 5
 
-    # general random 4x4 matrices (do not need to be unitary for this test)
-    Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) for _ in range(max_nlayers)])
-    for i in range(max_nlayers):
-        Vlist[i].tofile(f"data/test_brickwall_unitary_grad_matfree_V{i}.dat")
+    for ctype in ["real", "cplx"]:
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
+        for i in range(max_nlayers):
+            Vlist[i].tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_V{i}.dat")
 
-    # random permutations
-    perms = [rng.permutation(L) for _ in range(max_nlayers)]
-    for i in range(max_nlayers):
-        perms[i].tofile(f"data/test_brickwall_unitary_grad_matfree_perm{i}.dat")
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            perms[i].tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_perm{i}.dat")
 
-    for i, nlayers in enumerate([1, 4, 5]):
-        dVlist = oc.brickwall_unitary_grad_matfree(Vlist[:nlayers], L, _Ufunc, perms[:nlayers])
-        dVlist.tofile(f"data/test_brickwall_unitary_grad_matfree_dVlist{i}.dat")
+        for i, nlayers in enumerate([1, 4, 5]):
+            dVlist = oc.brickwall_unitary_grad_matfree(Vlist[:nlayers], L, _Ufunc, perms[:nlayers])
+            dVlist.tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_dVlist{i}.dat")
 
 
 def main():
