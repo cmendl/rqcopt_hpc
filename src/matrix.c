@@ -150,6 +150,53 @@ void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 }
 
 
+#ifdef COMPLEX_CIRCUIT
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map a real-valued square matrix to an anti-symmetric matrix of the same dimension.
+///
+void real_to_antisymm(const double* r, struct mat4x4* w)
+{
+	// diagonal entries
+	w->data[ 0] = I * r[ 0];
+	w->data[ 5] = I * r[ 5];
+	w->data[10] = I * r[10];
+	w->data[15] = I * r[15];
+
+	// upper triangular part
+	w->data[ 1] = 0.5*(r[ 1] - r[ 4]) + 0.5*I*(r[ 1] + r[ 4]);
+	w->data[ 2] = 0.5*(r[ 2] - r[ 8]) + 0.5*I*(r[ 2] + r[ 8]);
+	w->data[ 3] = 0.5*(r[ 3] - r[12]) + 0.5*I*(r[ 3] + r[12]);
+	w->data[ 6] = 0.5*(r[ 6] - r[ 9]) + 0.5*I*(r[ 6] + r[ 9]);
+	w->data[ 7] = 0.5*(r[ 7] - r[13]) + 0.5*I*(r[ 7] + r[13]);
+	w->data[11] = 0.5*(r[11] - r[14]) + 0.5*I*(r[11] + r[14]);
+
+	// lower triangular part
+	w->data[ 4] = -conj(w->data[ 1]);
+	w->data[ 8] = -conj(w->data[ 2]);
+	w->data[ 9] = -conj(w->data[ 6]);
+	w->data[12] = -conj(w->data[ 3]);
+	w->data[13] = -conj(w->data[ 7]);
+	w->data[14] = -conj(w->data[11]);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map an anti-symmetric matrix to a real-valued square matrix of the same dimension.
+///
+void antisymm_to_real(const struct mat4x4* w, double* r)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		r[i] = creal(w->data[i]) + cimag(w->data[i]);
+	}
+}
+
+#endif
+
+
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Multiply two 4x4 matrices.

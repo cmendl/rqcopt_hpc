@@ -74,6 +74,44 @@ char* test_antisymm()
 }
 
 
+#ifdef COMPLEX_CIRCUIT
+
+char* test_real_to_antisymm()
+{
+	double r[16];
+	for (int i = 0; i < 16; i++)
+	{
+		r[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+	}
+
+	struct mat4x4 w;
+	real_to_antisymm(r, &w);
+
+	// 'w' must indeed be anti-symmetric
+	struct mat4x4 z;
+	antisymm(&w, &z);
+	if (uniform_distance(16, w.data, z.data) > 1e-14) {
+		return "matrix returned by 'real_to_antisymm' is not anti-symmetric";
+	}
+
+	double s[16];
+	antisymm_to_real(&w, s);
+	// 's' must match 'r'
+	double d = 0;
+	for (int i = 0; i < 16; i++)
+	{
+		d = fmax(d, fabs(s[i] - r[i]));
+	}
+	if (d > 1e-14) {
+		return "converting from real to anti-symmetric matrix and back does not result in original matrix";
+	}
+
+	return 0;
+}
+
+#endif
+
+
 char* test_multiply()
 {
 	struct mat4x4 a;

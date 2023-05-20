@@ -98,10 +98,36 @@ def brickwall_unitary_grad_matfree_data():
             dVlist.tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_dVlist{i}.dat")
 
 
+def brickwall_unitary_gradient_vector_matfree_data():
+
+    # random number generator
+    rng = np.random.default_rng(45)
+
+    # system size
+    L = 6
+
+    # number of layers
+    nlayers = 3
+
+    # general random 4x4 matrices (do not need to be unitary for this test)
+    Vlist = np.stack([0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
+    for i in range(nlayers):
+        Vlist[i].tofile(f"data/test_brickwall_unitary_gradient_vector_matfree_V{i}.dat")
+
+    # random permutations
+    perms = [rng.permutation(L) for _ in range(nlayers)]
+    for i in range(nlayers):
+        perms[i].tofile(f"data/test_brickwall_unitary_gradient_vector_matfree_perm{i}.dat")
+
+    grad = oc.brickwall_unitary_gradient_vector_matfree(Vlist, L, _Ufunc, perms)
+    grad.tofile("data/test_brickwall_unitary_gradient_vector_matfree_grad.dat")
+
+
 def main():
     apply_brickwall_unitary_data()
     apply_adjoint_brickwall_unitary_data()
     brickwall_unitary_grad_matfree_data()
+    brickwall_unitary_gradient_vector_matfree_data()
 
 
 if __name__ == "__main__":

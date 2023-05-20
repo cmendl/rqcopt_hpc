@@ -13,6 +13,9 @@ struct test
 
 char* test_symm();
 char* test_antisymm();
+#ifdef COMPLEX_CIRCUIT
+char* test_real_to_antisymm();
+#endif
 char* test_multiply();
 char* test_project_unitary_tangent();
 char* test_transpose_statevector();
@@ -24,24 +27,33 @@ char* test_parallel_gates_hess_matfree();
 char* test_apply_brickwall_unitary();
 char* test_apply_adjoint_brickwall_unitary();
 char* test_brickwall_unitary_grad_matfree();
+#ifdef COMPLEX_CIRCUIT
+char* test_brickwall_unitary_gradient_vector_matfree();
+#endif
 
 
 int main()
 {
 	struct test tests[] = {
-		{ .func = test_symm,                               .name = "test_symm" },
-		{ .func = test_antisymm,                           .name = "test_antisymm" },
-		{ .func = test_multiply,                           .name = "test_multiply" },
-		{ .func = test_project_unitary_tangent,            .name = "test_project_unitary_tangent" },
-		{ .func = test_transpose_statevector,              .name = "test_transpose_statevector" },
-		{ .func = test_apply_gate,                         .name = "test_apply_gate" },
-		{ .func = test_apply_parallel_gates,               .name = "test_apply_parallel_gates" },
-		{ .func = test_apply_parallel_gates_directed_grad, .name = "test_apply_parallel_gates_directed_grad" },
-		{ .func = test_parallel_gates_grad_matfree,        .name = "test_parallel_gates_grad_matfree" },
-		{ .func = test_parallel_gates_hess_matfree,        .name = "test_parallel_gates_hess_matfree" },
-		{ .func = test_apply_brickwall_unitary,            .name = "test_apply_brickwall_unitary" },
-		{ .func = test_apply_adjoint_brickwall_unitary,    .name = "test_apply_adjoint_brickwall_unitary" },
-		{ .func = test_brickwall_unitary_grad_matfree,     .name = "test_brickwall_unitary_grad_matfree" },
+		{ .func = test_symm,                                      .name = "test_symm" },
+		{ .func = test_antisymm,                                  .name = "test_antisymm" },
+		#ifdef COMPLEX_CIRCUIT
+		{ .func = test_real_to_antisymm,                          .name = "test_real_to_antisymm" },
+		#endif
+		{ .func = test_multiply,                                  .name = "test_multiply" },
+		{ .func = test_project_unitary_tangent,                   .name = "test_project_unitary_tangent" },
+		{ .func = test_transpose_statevector,                     .name = "test_transpose_statevector" },
+		{ .func = test_apply_gate,                                .name = "test_apply_gate" },
+		{ .func = test_apply_parallel_gates,                      .name = "test_apply_parallel_gates" },
+		{ .func = test_apply_parallel_gates_directed_grad,        .name = "test_apply_parallel_gates_directed_grad" },
+		{ .func = test_parallel_gates_grad_matfree,               .name = "test_parallel_gates_grad_matfree" },
+		{ .func = test_parallel_gates_hess_matfree,               .name = "test_parallel_gates_hess_matfree" },
+		{ .func = test_apply_brickwall_unitary,                   .name = "test_apply_brickwall_unitary" },
+		{ .func = test_apply_adjoint_brickwall_unitary,           .name = "test_apply_adjoint_brickwall_unitary" },
+		{ .func = test_brickwall_unitary_grad_matfree,            .name = "test_brickwall_unitary_grad_matfree" },
+		#ifdef COMPLEX_CIRCUIT
+		{ .func = test_brickwall_unitary_gradient_vector_matfree, .name = "test_brickwall_unitary_gradient_vector_matfree" },
+		#endif
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

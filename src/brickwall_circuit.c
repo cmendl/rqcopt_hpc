@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <assert.h>
 #include "brickwall_circuit.h"
 
@@ -189,3 +190,45 @@ int brickwall_unitary_grad_matfree(const struct mat4x4 Vlist[], int nlayers, int
 
 	return 0;
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Represent the gradient of Re tr[U^{\dagger} W] as real vector,
+/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_gradient_vector_matfree(const struct mat4x4 Vlist[], int nlayers, int L, unitary_func Ufunc, void* fdata, const int* perms[], double* grad_vec)
+{
+	struct mat4x4* Glist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (Glist == NULL)
+	{
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed");
+		return -1;
+	}
+
+	int ret = brickwall_unitary_grad_matfree(Vlist, nlayers, L, Ufunc, fdata, perms, Glist);
+	if (ret < 0) {
+		return ret;
+	}
+
+	// project gradient onto unitary manifold, represent as anti-symmetric matrix
+	// and then convert to a vector
+	for (int j = 0; j < nlayers; j++)
+	{
+		struct mat4x4 W;
+		adjoint(&Vlist[j], &W);
+		struct mat4x4 T;
+		multiply(&W, &Glist[j], &T);
+		antisymm(&T, &W);
+		antisymm_to_real(&W, &grad_vec[j * 16]);
+	}
+
+	aligned_free(Glist);
+
+	return 0;
+}
+
+#endif

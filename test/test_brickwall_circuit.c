@@ -201,3 +201,57 @@ char* test_brickwall_unitary_grad_matfree()
 
 	return 0;
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+char* test_brickwall_unitary_gradient_vector_matfree()
+{
+	int L = 6;
+	int nlayers = 3;
+
+	struct mat4x4 Vlist[3];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_gradient_vector_matfree_V%i.dat", i);
+		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[3][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_gradient_vector_matfree_perm%i.dat", i);
+		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2] };
+
+	double grad[3 * 16];
+	if (brickwall_unitary_gradient_vector_matfree(Vlist, nlayers, L, Ufunc, NULL, pperms, grad) < 0) {
+		return "'brickwall_unitary_gradient_vector_matfree' failed internally";
+	}
+
+	double grad_ref[3 * 16];
+	if (read_data("../test/data/test_brickwall_unitary_gradient_vector_matfree_grad.dat", grad_ref, sizeof(double), nlayers * 16) < 0) {
+		return "reading reference gradient vector from disk failed";
+	}
+
+	// compare with reference
+	double d = 0;
+	for (int i = 0; i < nlayers * 16; i++)
+	{
+		d = fmax(d, fabs(grad[i] - grad_ref[i]));
+	}
+	if (d > 1e-14) {
+		return "computed brickwall circuit gradient vector does not match reference";
+	}
+
+	return 0;
+}
+
+#endif

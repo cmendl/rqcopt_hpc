@@ -26,6 +26,15 @@ void symm(const struct mat4x4* restrict w, struct mat4x4* restrict z);
 void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z);
 
 
+#ifdef COMPLEX_CIRCUIT
+
+void real_to_antisymm(const double* r, struct mat4x4* w);
+
+void antisymm_to_real(const struct mat4x4* w, double* r);
+
+#endif
+
+
 void multiply(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
 
 
