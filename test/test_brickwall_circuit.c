@@ -1,3 +1,4 @@
+#include <memory.h>
 #include <stdio.h>
 #include <assert.h>
 #include "config.h"
@@ -255,3 +256,75 @@ char* test_brickwall_unitary_gradient_vector_matfree()
 }
 
 #endif
+
+
+char* test_brickwall_unitary_hess_matfree()
+{
+	int L = 6;
+	int nlayers = 4;
+
+	struct mat4x4 Vlist[4];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_V%i.dat", i);
+		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[4][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_perm%i.dat", i);
+		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3] };
+
+	// gradient direction
+	struct mat4x4 rZ;
+	if (read_data("../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_rZ.dat", rZ.data, sizeof(numeric), 16) < 0) {
+		return "reading gradient direction data from disk failed";
+	}
+
+	for (int k = 0; k < nlayers; k++)
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			struct mat4x4 Z;
+			if (i == 0) {
+				memcpy(Z.data, rZ.data, sizeof(Z.data));
+			}
+			else {
+				project_unitary_tangent(&Vlist[k], &rZ, &Z);
+			}
+
+			for (int uproj = 0; uproj < 2; uproj++)
+			{
+				struct mat4x4 dVlist[4];
+				if (brickwall_unitary_hess_matfree(Vlist, nlayers, L, &Z, k, Ufunc, NULL, pperms, uproj, dVlist) < 0) {
+					return "'brickwall_unitary_hess_matfree' failed internally";
+				}
+
+				char filename[1024];
+				sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_dVlist%i%i%s.dat", k, i, uproj == 1 ? "proj" : "");
+				struct mat4x4 dVlist_ref[4];
+				if (read_data(filename, dVlist_ref, sizeof(numeric), nlayers * 16) < 0) {
+					return "reading reference Hessian data from disk failed";
+				}
+
+				// compare with reference
+				for (int j = 0; j < nlayers; j++) {
+					if (uniform_distance(16, dVlist[j].data, dVlist_ref[j].data) > 1e-12) {
+						return "computed brickwall circuit Hessian does not match reference";
+					}
+				}
+			}
+		}
+	}
+
+	return 0;
+}

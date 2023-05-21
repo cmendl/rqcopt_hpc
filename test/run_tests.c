@@ -30,6 +30,7 @@ char* test_brickwall_unitary_grad_matfree();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_gradient_vector_matfree();
 #endif
+char* test_brickwall_unitary_hess_matfree();
 
 
 int main()
@@ -54,6 +55,7 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_brickwall_unitary_gradient_vector_matfree, .name = "test_brickwall_unitary_gradient_vector_matfree" },
 		#endif
+		{ .func = test_brickwall_unitary_hess_matfree,            .name = "test_brickwall_unitary_hess_matfree" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

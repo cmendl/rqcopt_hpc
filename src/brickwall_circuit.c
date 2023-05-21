@@ -1,3 +1,4 @@
+#include <memory.h>
 #include <stdio.h>
 #include <assert.h>
 #include "brickwall_circuit.h"
@@ -92,7 +93,6 @@ struct ufunc_parallel_gates_data
 	int nlayers;
 	const struct mat4x4* Vlist;
 	const int** perms;
-	int L;
 	int j;
 };
 
@@ -174,7 +174,6 @@ int brickwall_unitary_grad_matfree(const struct mat4x4 Vlist[], int nlayers, int
 		.nlayers = nlayers,
 		.Vlist = Vlist,
 		.perms = perms,
-		.L = L,
 		.j = -1,
 	};
 
@@ -232,3 +231,283 @@ int brickwall_unitary_gradient_vector_matfree(const struct mat4x4 Vlist[], int n
 }
 
 #endif
+
+
+struct ufunc_parallel_gates_grad_data
+{
+	unitary_func Ufunc;
+	void* fdata;
+	int nlayers;
+	const struct mat4x4* Vlist;
+	const struct mat4x4* Z;
+	const int** perms;
+	int j, k;
+};
+
+
+static int ufunc_parallel_gates_grad_1(const struct statevector* restrict psi, void* fpggdata, struct statevector* restrict psi_out)
+{
+	struct ufunc_parallel_gates_grad_data* data = fpggdata;
+	assert(0 <= data->j && data->j < data->k && data->k < data->nlayers);
+
+	// temporary statevector
+	struct statevector chi = { 0 };
+	if (allocate_statevector(psi->nqubits, &chi) < 0) {
+		return -1;
+	}
+
+	int p = 0;
+	if (data->j > 0) { p++; }
+	if (data->nlayers - data->k - 1 > 0) { p++; }
+	if (data->k - data->j - 1 > 0) { p++; }
+	struct statevector* psi0 = (p % 2 == 1 ? &chi : psi_out);
+	struct statevector* psi1 = (p % 2 == 0 ? &chi : psi_out);
+
+	if (data->j > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist, data->j, psi, data->perms, psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	// apply U
+	{
+		int ret = data->Ufunc(data->j > 0 ? psi0 : psi, data->fdata, psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	if (data->nlayers - data->k - 1 > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist + (data->k + 1), data->nlayers - data->k - 1, psi0, data->perms + (data->k + 1), psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	// gradient direction Z for layer 'k'
+	{
+		struct mat4x4 Vkh;
+		adjoint(&data->Vlist[data->k], &Vkh);
+		struct mat4x4 Zh;
+		adjoint(data->Z, &Zh);
+		int ret = apply_parallel_gates_directed_grad(&Vkh, &Zh, psi0, data->perms[data->k], psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	if (data->k - data->j - 1 > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist + (data->j + 1), data->k - data->j - 1, psi0, data->perms + (data->j + 1), psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	free_statevector(&chi);
+
+	return 0;
+}
+
+
+static int ufunc_parallel_gates_grad_2(const struct statevector* restrict psi, void* fpggdata, struct statevector* restrict psi_out)
+{
+	struct ufunc_parallel_gates_grad_data* data = fpggdata;
+	assert(0 <= data->k && data->k < data->j && data->j < data->nlayers);
+
+	// temporary statevector
+	struct statevector chi = { 0 };
+	if (allocate_statevector(psi->nqubits, &chi) < 0) {
+		return -1;
+	}
+
+	int p = 0;
+	if (data->j - data->k - 1 > 0) { p++; }
+	if (data->k > 0) { p++; }
+	if (data->nlayers - data->j - 1 > 0) { p++; }
+	struct statevector* psi0 = (p % 2 == 1 ? &chi : psi_out);
+	struct statevector* psi1 = (p % 2 == 0 ? &chi : psi_out);
+	
+	if (data->j - data->k - 1 > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist + (data->k + 1), data->j - data->k - 1, psi, data->perms + (data->k + 1), psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	// gradient direction Z for layer 'k'
+	{
+		struct mat4x4 Vkh;
+		adjoint(&data->Vlist[data->k], &Vkh);
+		struct mat4x4 Zh;
+		adjoint(data->Z, &Zh);
+		int ret = apply_parallel_gates_directed_grad(&Vkh, &Zh, data->j - data->k - 1 > 0 ? psi0 : psi, data->perms[data->k], psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	if (data->k > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist, data->k, psi0, data->perms, psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	// apply U
+	{
+		int ret = data->Ufunc(psi0, data->fdata, psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	if (data->nlayers - data->j - 1 > 0)
+	{
+		int ret = apply_adjoint_brickwall_unitary(data->Vlist + (data->j + 1), data->nlayers - data->j - 1, psi0, data->perms + (data->j + 1), psi1);
+		if (ret < 0) {
+			return ret;
+		}
+		// swap psi0 <-> psi1 pointers
+		struct statevector* tmp = psi0;
+		psi0 = psi1;
+		psi1 = tmp;
+	}
+
+	free_statevector(&chi);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the Hessian of Re tr[U^{\dagger} W] in direction Z with respect to Vlist[k],
+/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_hess_matfree(const struct mat4x4 Vlist[], int nlayers, int L, const struct mat4x4* Z, int k, unitary_func Ufunc, void* fdata, const int* perms[], bool unitary_proj, struct mat4x4 dVlist[])
+{
+	assert(0 <= k && k < nlayers);
+
+	for (int j = 0; j < nlayers; j++)
+	{
+		memset(&dVlist[j], 0, sizeof(struct mat4x4));
+	}
+
+	struct ufunc_parallel_gates_grad_data gdata = {
+		.Ufunc = Ufunc,
+		.fdata = fdata,
+		.nlayers = nlayers,
+		.Vlist = Vlist,
+		.Z = Z,
+		.perms = perms,
+		.j = -1,
+		.k = k,
+	};
+
+	for (int j = 0; j < k; j++)
+	{
+		// j < k
+		// directed gradient with respect to Vlist[k] in direction Z
+		gdata.j = j;
+		struct mat4x4 dVj;
+		int ret = parallel_gates_grad_matfree(&Vlist[j], L, ufunc_parallel_gates_grad_1, &gdata, perms[j], &dVj);
+		if (ret < 0) {
+			return ret;
+		}
+		if (unitary_proj)
+		{
+			struct mat4x4 dVjproj;
+			project_unitary_tangent(&Vlist[j], &dVj, &dVjproj);
+			add_matrix(&dVlist[j], &dVjproj);
+		}
+		else
+		{
+			add_matrix(&dVlist[j], &dVj);
+		}
+	}
+
+	// Hessian for layer k
+	{
+		struct ufunc_parallel_gates_data hdata = {
+			.Ufunc = Ufunc,
+			.fdata = fdata,
+			.nlayers = nlayers,
+			.Vlist = Vlist,
+			.perms = perms,
+			.j = k,
+		};
+		struct mat4x4 dVk;
+		int ret = parallel_gates_hess_matfree(&Vlist[k], L, Z, ufunc_parallel_gates, &hdata, perms[k], unitary_proj, &dVk);
+		if (ret < 0) {
+			return ret;
+		}
+		add_matrix(&dVlist[k], &dVk);
+	}
+
+	for (int j = k + 1; j < nlayers; j++)
+	{
+		// k < j
+		// directed gradient with respect to Vlist[k] in direction Z
+		gdata.j = j;
+		struct mat4x4 dVj;
+		int ret = parallel_gates_grad_matfree(&Vlist[j], L, ufunc_parallel_gates_grad_2, &gdata, perms[j], &dVj);
+		if (ret < 0) {
+			return ret;
+		}
+		if (unitary_proj)
+		{
+			struct mat4x4 dVjproj;
+			project_unitary_tangent(&Vlist[j], &dVj, &dVjproj);
+			add_matrix(&dVlist[j], &dVjproj);
+		}
+		else
+		{
+			add_matrix(&dVlist[j], &dVj);
+		}
+	}
+
+	return 0;
+}
