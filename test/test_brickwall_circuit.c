@@ -328,3 +328,80 @@ char* test_brickwall_unitary_hess_matfree()
 
 	return 0;
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+char* test_brickwall_unitary_hessian_matrix_matfree()
+{
+	int L = 6;
+	int nlayers = 5;
+
+	struct mat4x4 Vlist[5];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_hessian_matrix_matfree_V%i.dat", i);
+		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[5][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char filename[1024];
+		sprintf(filename, "../test/data/test_brickwall_unitary_hessian_matrix_matfree_perm%i.dat", i);
+		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	const int m = nlayers * 16;
+	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	if (H == NULL) {
+		return "memory allocation for Hessian matrix failed";
+	}
+	if (brickwall_unitary_hessian_matrix_matfree(Vlist, nlayers, L, Ufunc, NULL, pperms, H) < 0) {
+		return "'brickwall_unitary_hessian_matrix_matfree' failed internally";
+	}
+
+	// check symmetry
+	double es = 0;
+	for (int i = 0; i < m; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			es = fmax(es, fabs(H[i * m + j] - H[j * m + i]));
+		}
+	}
+	if (es > 1e-13) {
+		return "computed brickwall circuit Hessian matrix is not symmetric";
+	}
+
+	double* H_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	if (H_ref == NULL) {
+		return "memory allocation for reference Hessian matrix failed";
+	}
+	if (read_data("../test/data/test_brickwall_unitary_hessian_matrix_matfree_H.dat", H_ref, sizeof(double), m * m) < 0) {
+		return "reading reference Hessian matrix from disk failed";
+	}
+
+	// compare with reference
+	double d = 0;
+	for (int i = 0; i < m * m; i++)
+	{
+		d = fmax(d, fabs(H[i] - H_ref[i]));
+	}
+	if (d > 1e-14) {
+		return "computed brickwall circuit Hessian matrix does not match reference";
+	}
+
+	aligned_free(H_ref);
+	aligned_free(H);
+
+	return 0;
+}
+
+#endif

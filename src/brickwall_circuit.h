@@ -23,3 +23,10 @@ int brickwall_unitary_gradient_vector_matfree(const struct mat4x4 Vlist[], int n
 
 int brickwall_unitary_hess_matfree(const struct mat4x4 Vlist[], int nlayers, int L,
 	const struct mat4x4* Z, int k, unitary_func Ufunc, void* fdata, const int* perms[], bool unitary_proj, struct mat4x4 dVlist[]);
+
+#ifdef COMPLEX_CIRCUIT
+
+int brickwall_unitary_hessian_matrix_matfree(const struct mat4x4 Vlist[], int nlayers, int L,
+	unitary_func Ufunc, void* fdata, const int* perms[], double* H);
+
+#endif

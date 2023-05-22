@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import unitary_group
 import rqcopt_matfree as oc
 
 
@@ -126,7 +127,7 @@ def brickwall_unitary_gradient_vector_matfree_data():
 def brickwall_unitary_hess_matfree_data():
 
     # random number generator
-    rng = np.random.default_rng(44)
+    rng = np.random.default_rng(46)
 
     # system size
     L = 6
@@ -156,12 +157,38 @@ def brickwall_unitary_hess_matfree_data():
                     dVlist.tofile(f"data/test_brickwall_unitary_hess_matfree_{ctype}_dVlist{k}{i}{ul}.dat")
 
 
+def brickwall_unitary_hessian_matrix_matfree_data():
+
+    # random number generator
+    rng = np.random.default_rng(47)
+
+    # system size
+    L = 6
+
+    # number of layers
+    nlayers = 5
+
+    # random unitaries (unitary property required for Hessian matrix to be symmetric)
+    Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
+    for i in range(nlayers):
+        Vlist[i].tofile(f"data/test_brickwall_unitary_hessian_matrix_matfree_V{i}.dat")
+
+    # random permutations
+    perms = [rng.permutation(L) for _ in range(nlayers)]
+    for i in range(nlayers):
+        perms[i].tofile(f"data/test_brickwall_unitary_hessian_matrix_matfree_perm{i}.dat")
+
+    H = oc.brickwall_unitary_hessian_matrix_matfree(Vlist, L, _Ufunc, perms)
+    H.tofile("data/test_brickwall_unitary_hessian_matrix_matfree_H.dat")
+
+
 def main():
     apply_brickwall_unitary_data()
     apply_adjoint_brickwall_unitary_data()
     brickwall_unitary_grad_matfree_data()
     brickwall_unitary_gradient_vector_matfree_data()
     brickwall_unitary_hess_matfree_data()
+    brickwall_unitary_hessian_matrix_matfree_data()
 
 
 if __name__ == "__main__":

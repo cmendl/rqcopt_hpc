@@ -511,3 +511,62 @@ int brickwall_unitary_hess_matfree(const struct mat4x4 Vlist[], int nlayers, int
 
 	return 0;
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Construct the Hessian matrix of Re tr[U^{\dagger} W] with respect to Vlist
+/// defining the layers of W,
+/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_hessian_matrix_matfree(const struct mat4x4 Vlist[], int nlayers, int L, unitary_func Ufunc, void* fdata, const int* perms[], double* H)
+{
+	int m = nlayers * 16;
+	memset(H, 0, m * m * sizeof(double));
+
+	struct mat4x4* dVZj = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+
+	for (int j = 0; j < nlayers; j++)
+	{
+		for (int k = 0; k < 16; k++)
+		{
+			// unit vector
+			double r[16] = { 0 };
+			r[k] = 1;
+			struct mat4x4 Ek;
+			real_to_antisymm(r, &Ek);
+			// Z = Vlist[j] @ Ek
+			struct mat4x4 Z;
+			multiply(&Vlist[j], &Ek, &Z);
+			int ret = brickwall_unitary_hess_matfree(Vlist, nlayers, L, &Z, j, Ufunc, fdata, perms, true, dVZj);
+			if (ret < 0) {
+				return ret;
+			}
+
+			for (int i = 0; i < nlayers; i++)
+			{
+				// Vlist[i]^{\dagger} @ dVZj[i])
+				struct mat4x4 W;
+				adjoint(&Vlist[i], &W);
+				struct mat4x4 T;
+				multiply(&W, &dVZj[i], &T);
+				antisymm(&T, &W);
+				double h[16];
+				antisymm_to_real(&W, h);
+				for (int l = 0; l < 16; l++)
+				{
+					H[((i * 16 + l) * nlayers + j) * 16 + k] = h[l];
+				}
+			}
+		}
+	}
+
+	aligned_free(dVZj);
+
+	return 0;
+}
+
+#endif
