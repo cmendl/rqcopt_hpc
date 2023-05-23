@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.stats import unitary_group
+import h5py
 import rqcopt_matfree as oc
+from io_util import interleave_complex
 
 
 def apply_brickwall_unitary_data():
@@ -12,26 +14,30 @@ def apply_brickwall_unitary_data():
     L = 8
 
     for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_apply_brickwall_unitary_{ctype}.hdf5", "w")
+
         # random input statevector
         psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
         psi /= np.linalg.norm(psi)
-        psi.tofile(f"data/test_apply_brickwall_unitary_{ctype}_psi.dat")
+        file["psi"] = interleave_complex(psi, ctype)
 
         max_nlayers = 4
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            Vlist[i].tofile(f"data/test_apply_brickwall_unitary_{ctype}_V{i}.dat")
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            perms[i].tofile(f"data/test_apply_brickwall_unitary_{ctype}_perm{i}.dat")
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([3, 4]):
             chi = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
-            chi.tofile(f"data/test_apply_brickwall_unitary_{ctype}_chi{i}.dat")
+            file[f"chi{i}"] = interleave_complex(chi, ctype)
+
+        file.close()
 
 
 def apply_adjoint_brickwall_unitary_data():
@@ -45,24 +51,28 @@ def apply_adjoint_brickwall_unitary_data():
     max_nlayers = 4
 
     for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_apply_adjoint_brickwall_unitary_{ctype}.hdf5", "w")
+
         # random input statevector
         psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
         psi /= np.linalg.norm(psi)
-        psi.tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_psi.dat")
+        file["psi"] = interleave_complex(psi, ctype)
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            Vlist[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_V{i}.dat")
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            perms[i].tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_perm{i}.dat")
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([3, 4]):
             chi = oc.apply_adjoint_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
-            chi.tofile(f"data/test_apply_adjoint_brickwall_unitary_{ctype}_chi{i}.dat")
+            file[f"chi{i}"] = interleave_complex(chi, ctype)
+
+        file.close()
 
 
 def _Ufunc(x):
@@ -84,19 +94,23 @@ def brickwall_unitary_grad_matfree_data():
     max_nlayers = 5
 
     for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_grad_matfree_{ctype}.hdf5", "w")
+
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
         for i in range(max_nlayers):
-            Vlist[i].tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_V{i}.dat")
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            perms[i].tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_perm{i}.dat")
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([1, 4, 5]):
             dVlist = oc.brickwall_unitary_grad_matfree(Vlist[:nlayers], L, _Ufunc, perms[:nlayers])
-            dVlist.tofile(f"data/test_brickwall_unitary_grad_matfree_{ctype}_dVlist{i}.dat")
+            file[f"dVlist{i}"] = interleave_complex(dVlist, ctype)
+
+        file.close()
 
 
 def brickwall_unitary_gradient_vector_matfree_data():
@@ -110,18 +124,24 @@ def brickwall_unitary_gradient_vector_matfree_data():
     # number of layers
     nlayers = 3
 
+    ctype = "cplx"
+
+    file = h5py.File(f"data/test_brickwall_unitary_gradient_vector_matfree_{ctype}.hdf5", "w")
+
     # general random 4x4 matrices (do not need to be unitary for this test)
     Vlist = np.stack([0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
     for i in range(nlayers):
-        Vlist[i].tofile(f"data/test_brickwall_unitary_gradient_vector_matfree_V{i}.dat")
+        file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        perms[i].tofile(f"data/test_brickwall_unitary_gradient_vector_matfree_perm{i}.dat")
+        file[f"perm{i}"] = perms[i]
 
     grad = oc.brickwall_unitary_gradient_vector_matfree(Vlist, L, _Ufunc, perms)
-    grad.tofile("data/test_brickwall_unitary_gradient_vector_matfree_grad.dat")
+    file["grad"] = grad
+
+    file.close()
 
 
 def brickwall_unitary_hess_matfree_data():
@@ -135,26 +155,30 @@ def brickwall_unitary_hess_matfree_data():
     nlayers = 4
 
     for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_hess_matfree_{ctype}.hdf5", "w")
+
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
         for i in range(nlayers):
-            Vlist[i].tofile(f"data/test_brickwall_unitary_hess_matfree_{ctype}_V{i}.dat")
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
         # random permutations
         perms = [rng.permutation(L) for _ in range(nlayers)]
         for i in range(nlayers):
-            perms[i].tofile(f"data/test_brickwall_unitary_hess_matfree_{ctype}_perm{i}.dat")
+            file[f"perm{i}"] = perms[i]
 
         # gradient direction
         rZ = 0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng)
-        rZ.tofile(f"data/test_brickwall_unitary_hess_matfree_{ctype}_rZ.dat")
+        file["rZ"] = interleave_complex(rZ, ctype)
 
         for k in range(nlayers):
             for i, Z in enumerate([rZ, oc.project_unitary_tangent(Vlist[k], rZ)]):
                 for uproj in [False, True]:
                     dVlist = oc.brickwall_unitary_hess_matfree(Vlist, L, Z, k, _Ufunc, perms, unitary_proj=uproj)
                     ul = "proj" if uproj else ""
-                    dVlist.tofile(f"data/test_brickwall_unitary_hess_matfree_{ctype}_dVlist{k}{i}{ul}.dat")
+                    file[f"dVlist{k}{i}{ul}"] = interleave_complex(dVlist, ctype)
+
+        file.close()
 
 
 def brickwall_unitary_hessian_matrix_matfree_data():
@@ -168,18 +192,24 @@ def brickwall_unitary_hessian_matrix_matfree_data():
     # number of layers
     nlayers = 5
 
+    ctype = "cplx"
+
+    file = h5py.File(f"data/test_brickwall_unitary_hessian_matrix_matfree_{ctype}.hdf5", "w")
+
     # random unitaries (unitary property required for Hessian matrix to be symmetric)
     Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
     for i in range(nlayers):
-        Vlist[i].tofile(f"data/test_brickwall_unitary_hessian_matrix_matfree_V{i}.dat")
+        file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
 
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        perms[i].tofile(f"data/test_brickwall_unitary_hessian_matrix_matfree_perm{i}.dat")
+        file[f"perm{i}"] = perms[i]
 
     H = oc.brickwall_unitary_hessian_matrix_matfree(Vlist, L, _Ufunc, perms)
-    H.tofile("data/test_brickwall_unitary_hessian_matrix_matfree_H.dat")
+    file["H"] = H
+
+    file.close()
 
 
 def main():

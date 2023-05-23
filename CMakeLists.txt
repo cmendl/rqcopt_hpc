@@ -5,11 +5,12 @@ cmake_minimum_required(VERSION 3.8)
 project(rqcopt_hpc)
 
 # add sources to this project's executable
-add_executable(rqcopt_hpc "src/matrix.c" "src/statevector.c" "src/parallel_gates.c" "src/brickwall_circuit.c" "src/util.c" "test/file_io.c" "test/test_matrix.c" "test/test_statevector.c" "test/test_parallel_gates.c" "test/test_brickwall_circuit.c" "test/run_tests.c")
+add_executable(rqcopt_hpc "src/matrix.c" "src/statevector.c" "src/parallel_gates.c" "src/brickwall_circuit.c" "src/util.c" "test/io_util.c" "test/test_matrix.c" "test/test_statevector.c" "test/test_parallel_gates.c" "test/test_brickwall_circuit.c" "test/run_tests.c")
 
-target_include_directories(rqcopt_hpc PUBLIC "src")
+find_package(HDF5 REQUIRED COMPONENTS C)
 
-# math library, required for complex number operations
-target_link_libraries(rqcopt_hpc m)
+target_include_directories(rqcopt_hpc PRIVATE "src" ${HDF5_INCLUDE_DIRS})
+
+target_link_libraries(rqcopt_hpc PRIVATE HDF5::HDF5)
 
 add_compile_definitions(COMPLEX_CIRCUIT)

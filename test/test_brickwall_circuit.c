@@ -1,12 +1,11 @@
 #include <memory.h>
-#include <stdio.h>
 #include <assert.h>
 #include "config.h"
 #include "matrix.h"
 #include "statevector.h"
 #include "brickwall_circuit.h"
 #include "util.h"
-#include "file_io.h"
+#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT
@@ -20,21 +19,26 @@ char* test_apply_brickwall_unitary()
 {
 	int L = 8;
 
+	hid_t file = H5Fopen("../test/data/test_apply_brickwall_unitary" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_brickwall_unitary failed";
+	}
+
 	struct statevector psi, chi, chiref;
 	if (allocate_statevector(L, &psi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-	if (read_data("../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
 	}
 
 	struct mat4x4 Vlist[4];
 	for (int i = 0; i < 4; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -42,9 +46,9 @@ char* test_apply_brickwall_unitary()
 	int perms[4][8];
 	for (int i = 0; i < 4; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -57,9 +61,9 @@ char* test_apply_brickwall_unitary()
 			return "'apply_brickwall_unitary' failed internally";
 		}
 
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_brickwall_unitary" CDATA_LABEL "_chi%i.dat", nlayers - 3);
-		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+		char varname[32];
+		sprintf(varname, "chi%i", nlayers - 3);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chiref.data) < 0) {
 			return "reading output statevector data from disk failed";
 		}
 
@@ -73,6 +77,8 @@ char* test_apply_brickwall_unitary()
 	free_statevector(&chi);
 	free_statevector(&psi);
 
+	H5Fclose(file);
+
 	return 0;
 }
 
@@ -81,21 +87,26 @@ char* test_apply_adjoint_brickwall_unitary()
 {
 	int L = 8;
 
+	hid_t file = H5Fopen("../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_adjoint_brickwall_unitary failed";
+	}
+
 	struct statevector psi, chi, chiref;
 	if (allocate_statevector(L, &psi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-	if (read_data("../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
 	}
 
 	struct mat4x4 Vlist[4];
 	for (int i = 0; i < 4; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -103,9 +114,9 @@ char* test_apply_adjoint_brickwall_unitary()
 	int perms[4][8];
 	for (int i = 0; i < 4; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -118,9 +129,9 @@ char* test_apply_adjoint_brickwall_unitary()
 			return "'apply_adjoint_brickwall_unitary' failed internally";
 		}
 
-		char filename[1024];
-		sprintf(filename, "../test/data/test_apply_adjoint_brickwall_unitary" CDATA_LABEL "_chi%i.dat", nlayers - 3);
-		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+		char varname[32];
+		sprintf(varname, "chi%i", nlayers - 3);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chiref.data) < 0) {
 			return "reading output statevector data from disk failed";
 		}
 
@@ -133,6 +144,8 @@ char* test_apply_adjoint_brickwall_unitary()
 	free_statevector(&chiref);
 	free_statevector(&chi);
 	free_statevector(&psi);
+
+	H5Fclose(file);
 
 	return 0;
 }
@@ -156,12 +169,17 @@ char* test_brickwall_unitary_grad_matfree()
 {
 	int L = 8;
 
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_grad_matfree failed";
+	}
+
 	struct mat4x4 Vlist[5];
 	for (int i = 0; i < 5; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -169,9 +187,9 @@ char* test_brickwall_unitary_grad_matfree()
 	int perms[5][8];
 	for (int i = 0; i < 5; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -185,10 +203,10 @@ char* test_brickwall_unitary_grad_matfree()
 			return "'brickwall_unitary_grad_matfree' failed internally";
 		}
 
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_grad_matfree" CDATA_LABEL "_dVlist%i.dat", i);
+		char varname[32];
+		sprintf(varname, "dVlist%i", i);
 		struct mat4x4 dVlist_ref[5];
-		if (read_data(filename, dVlist_ref, sizeof(numeric), nlayers[i] * 16) < 0) {
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVlist_ref) < 0) {
 			return "reading reference gradient data from disk failed";
 		}
 
@@ -199,6 +217,8 @@ char* test_brickwall_unitary_grad_matfree()
 			}
 		}
 	}
+
+	H5Fclose(file);
 
 	return 0;
 }
@@ -211,12 +231,17 @@ char* test_brickwall_unitary_gradient_vector_matfree()
 	int L = 6;
 	int nlayers = 3;
 
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_gradient_vector_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_gradient_vector_matfree failed";
+	}
+
 	struct mat4x4 Vlist[3];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_gradient_vector_matfree_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -224,9 +249,9 @@ char* test_brickwall_unitary_gradient_vector_matfree()
 	int perms[3][6];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_gradient_vector_matfree_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -238,7 +263,7 @@ char* test_brickwall_unitary_gradient_vector_matfree()
 	}
 
 	double grad_ref[3 * 16];
-	if (read_data("../test/data/test_brickwall_unitary_gradient_vector_matfree_grad.dat", grad_ref, sizeof(double), nlayers * 16) < 0) {
+	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
 		return "reading reference gradient vector from disk failed";
 	}
 
@@ -252,6 +277,8 @@ char* test_brickwall_unitary_gradient_vector_matfree()
 		return "computed brickwall circuit gradient vector does not match reference";
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
 
@@ -263,12 +290,17 @@ char* test_brickwall_unitary_hess_matfree()
 	int L = 6;
 	int nlayers = 4;
 
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_hess_matfree failed";
+	}
+
 	struct mat4x4 Vlist[4];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -276,9 +308,9 @@ char* test_brickwall_unitary_hess_matfree()
 	int perms[4][6];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -286,7 +318,7 @@ char* test_brickwall_unitary_hess_matfree()
 
 	// gradient direction
 	struct mat4x4 rZ;
-	if (read_data("../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_rZ.dat", rZ.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "rZ", H5T_NATIVE_DOUBLE, rZ.data) < 0) {
 		return "reading gradient direction data from disk failed";
 	}
 
@@ -309,10 +341,10 @@ char* test_brickwall_unitary_hess_matfree()
 					return "'brickwall_unitary_hess_matfree' failed internally";
 				}
 
-				char filename[1024];
-				sprintf(filename, "../test/data/test_brickwall_unitary_hess_matfree" CDATA_LABEL "_dVlist%i%i%s.dat", k, i, uproj == 1 ? "proj" : "");
+				char varname[32];
+				sprintf(varname, "dVlist%i%i%s", k, i, uproj == 1 ? "proj" : "");
 				struct mat4x4 dVlist_ref[4];
-				if (read_data(filename, dVlist_ref, sizeof(numeric), nlayers * 16) < 0) {
+				if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVlist_ref) < 0) {
 					return "reading reference Hessian data from disk failed";
 				}
 
@@ -326,6 +358,8 @@ char* test_brickwall_unitary_hess_matfree()
 		}
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
 
@@ -337,12 +371,17 @@ char* test_brickwall_unitary_hessian_matrix_matfree()
 	int L = 6;
 	int nlayers = 5;
 
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_hessian_matrix_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_hessian_matrix_matfree failed";
+	}
+
 	struct mat4x4 Vlist[5];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_hessian_matrix_matfree_V%i.dat", i);
-		if (read_data(filename, Vlist[i].data, sizeof(numeric), 16) < 0) {
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
 			return "reading two-qubit quantum gate entries from disk failed";
 		}
 	}
@@ -350,9 +389,9 @@ char* test_brickwall_unitary_hessian_matrix_matfree()
 	int perms[5][6];
 	for (int i = 0; i < nlayers; i++)
 	{
-		char filename[1024];
-		sprintf(filename, "../test/data/test_brickwall_unitary_hessian_matrix_matfree_perm%i.dat", i);
-		if (read_data(filename, perms[i], sizeof(int), L) < 0) {
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
 			return "reading permutation data from disk failed";
 		}
 	}
@@ -384,7 +423,7 @@ char* test_brickwall_unitary_hessian_matrix_matfree()
 	if (H_ref == NULL) {
 		return "memory allocation for reference Hessian matrix failed";
 	}
-	if (read_data("../test/data/test_brickwall_unitary_hessian_matrix_matfree_H.dat", H_ref, sizeof(double), m * m) < 0) {
+	if (read_hdf5_dataset(file, "H", H5T_NATIVE_DOUBLE, H_ref) < 0) {
 		return "reading reference Hessian matrix from disk failed";
 	}
 
@@ -400,6 +439,8 @@ char* test_brickwall_unitary_hessian_matrix_matfree()
 
 	aligned_free(H_ref);
 	aligned_free(H);
+
+	H5Fclose(file);
 
 	return 0;
 }

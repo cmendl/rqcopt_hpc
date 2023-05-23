@@ -1,8 +1,7 @@
-#include <stdio.h>
 #include "config.h"
 #include "matrix.h"
 #include "util.h"
-#include "file_io.h"
+#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT
@@ -114,16 +113,23 @@ char* test_real_to_antisymm()
 
 char* test_multiply()
 {
+	hid_t file = H5Fopen("../test/data/test_multiply" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_multiply failed";
+	}
+
 	struct mat4x4 a;
-	if (read_data("../test/data/test_multiply" CDATA_LABEL "_a.dat", a.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "a", H5T_NATIVE_DOUBLE, a.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
+
 	struct mat4x4 b;
-	if (read_data("../test/data/test_multiply" CDATA_LABEL "_b.dat", b.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "b", H5T_NATIVE_DOUBLE, b.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
+
 	struct mat4x4 cref;
-	if (read_data("../test/data/test_multiply" CDATA_LABEL "_c.dat", cref.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "c", H5T_NATIVE_DOUBLE, cref.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 
@@ -134,22 +140,29 @@ char* test_multiply()
 		return "matrix product does not agree with reference";
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
 
 
 char* test_project_unitary_tangent()
 {
+	hid_t file = H5Fopen("../test/data/test_project_unitary_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_project_unitary_tangent failed";
+	}
+
 	struct mat4x4 u;
-	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_u.dat", u.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "u", H5T_NATIVE_DOUBLE, u.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 z;
-	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_z.dat", z.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "z", H5T_NATIVE_DOUBLE, z.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 	struct mat4x4 pref;
-	if (read_data("../test/data/test_project_unitary_tangent" CDATA_LABEL "_p.dat", pref.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "p", H5T_NATIVE_DOUBLE, pref.data) < 0) {
 		return "reading matrix entries from disk failed";
 	}
 
@@ -159,6 +172,8 @@ char* test_project_unitary_tangent()
 	if (uniform_distance(16, p.data, pref.data) > 1e-12) {
 		return "projected matrix does not agree with reference";
 	}
+
+	H5Fclose(file);
 
 	return 0;
 }

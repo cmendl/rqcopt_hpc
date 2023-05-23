@@ -1,11 +1,10 @@
-#include <stdio.h>
 #include <assert.h>
 #include "config.h"
 #include "matrix.h"
 #include "statevector.h"
 #include "parallel_gates.h"
 #include "util.h"
-#include "file_io.h"
+#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT
@@ -19,6 +18,11 @@ char* test_apply_gate()
 {
 	int L = 9;
 
+	hid_t file = H5Fopen("../test/data/test_apply_gate" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_gate failed";
+	}
+
 	struct statevector psi, chi1, chi1ref, chi2, chi2ref, chi3, chi3ref;
 	if (allocate_statevector(L, &psi)     < 0) { return "memory allocation failed"; }
 	if (allocate_statevector(L, &chi1)    < 0) { return "memory allocation failed"; }
@@ -29,20 +33,20 @@ char* test_apply_gate()
 	if (allocate_statevector(L, &chi3ref) < 0) { return "memory allocation failed"; }
 
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "V", H5T_NATIVE_DOUBLE, V.data) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
-	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_psi.dat", psi.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi1.dat", chi1ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "chi1", H5T_NATIVE_DOUBLE, chi1ref.data) < 0) {
 		return "reading output statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi2.dat", chi2ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "chi2", H5T_NATIVE_DOUBLE, chi2ref.data) < 0) {
 		return "reading output statevector data from disk failed";
 	}
-	if (read_data("../test/data/test_apply_gate" CDATA_LABEL "_chi3.dat", chi3ref.data, sizeof(numeric), (size_t)1 << L) < 0) {
+	if (read_hdf5_dataset(file, "chi3", H5T_NATIVE_DOUBLE, chi3ref.data) < 0) {
 		return "reading output statevector data from disk failed";
 	}
 
@@ -64,14 +68,21 @@ char* test_apply_gate()
 	free_statevector(&chi1);
 	free_statevector(&psi);
 
+	H5Fclose(file);
+
 	return 0;
 }
 
 
 char* test_apply_parallel_gates()
 {
+	hid_t file = H5Fopen("../test/data/test_apply_parallel_gates" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_parallel_gates failed";
+	}
+
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_parallel_gates" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "V", H5T_NATIVE_DOUBLE, V.data) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
@@ -85,16 +96,16 @@ char* test_apply_parallel_gates()
 		if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 		if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-		char filename[1024];
+		char varname[32];
 
-		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_psi%i.dat", i);
-		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_chi%i.dat", i);
-		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
+		sprintf(varname, "psi%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, psi.data) < 0) { return "reading input statevector data from disk failed"; }
+		sprintf(varname, "chi%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chiref.data) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf(filename, "../test/data/test_apply_parallel_gates" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perm) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates(&V, &psi, perm, &chi) < 0) {
 			return "'apply_parallel_gates' failed internally";
@@ -111,18 +122,25 @@ char* test_apply_parallel_gates()
 		free_statevector(&psi);
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
 
 
 char* test_apply_parallel_gates_directed_grad()
 {
+	hid_t file = H5Fopen("../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_parallel_gates_directed_grad failed";
+	}
+
 	struct mat4x4 V;
-	if (read_data("../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "V", H5T_NATIVE_DOUBLE, V.data) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 	struct mat4x4 Z;
-	if (read_data("../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_Z.dat", Z.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "Z", H5T_NATIVE_DOUBLE, Z.data) < 0) {
 		return "reading gradient direction data from disk failed";
 	}
 
@@ -136,16 +154,16 @@ char* test_apply_parallel_gates_directed_grad()
 		if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
 		if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
 
-		char filename[1024];
+		char varname[32];
 
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_psi%i.dat", i);
-		if (read_data(filename, psi.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading input statevector data from disk failed"; }
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_chi%i.dat", i);
-		if (read_data(filename, chiref.data, sizeof(numeric), (size_t)1 << L) < 0) { return "reading output statevector data from disk failed"; }
+		sprintf(varname, "psi%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, psi.data) < 0) { return "reading input statevector data from disk failed"; }
+		sprintf(varname, "chi%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chiref.data) < 0) { return "reading output statevector data from disk failed"; }
 
 		int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
-		sprintf(filename, "../test/data/test_apply_parallel_gates_directed_grad" CDATA_LABEL "_perm%i.dat", i);
-		if (read_data(filename, perm, sizeof(int), L) < 0) { return "reading permutation data from disk failed"; }
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perm) < 0) { return "reading permutation data from disk failed"; }
 
 		if (apply_parallel_gates_directed_grad(&V, &Z, &psi, perm, &chi) < 0) {
 			return "'apply_parallel_gates_directed_grad' failed internally";
@@ -161,6 +179,8 @@ char* test_apply_parallel_gates_directed_grad()
 		free_statevector(&chi);
 		free_statevector(&psi);
 	}
+
+	H5Fclose(file);
 
 	return 0;
 }
@@ -182,14 +202,19 @@ static int Ufunc(const struct statevector* restrict psi, void* fdata, struct sta
 
 char* test_parallel_gates_grad_matfree()
 {
+	hid_t file = H5Fopen("../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_parallel_gates_grad_matfree failed";
+	}
+
 	struct mat4x4 V;
-	if (read_data("../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "V", H5T_NATIVE_DOUBLE, V.data) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 	int idpm[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	int flpm[2] = { 1, 0 };
 	int perm[8];
-	if (read_data("../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_perm.dat", perm, sizeof(int), 8) < 0) {
+	if (read_hdf5_dataset(file, "perm", H5T_NATIVE_INT, perm) < 0) {
 		return "reading permutation data from disk failed";
 	}
 	const int* perms[2][2] = { { idpm, flpm }, { idpm, perm } };
@@ -205,9 +230,9 @@ char* test_parallel_gates_grad_matfree()
 			}
 
 			struct mat4x4 dVref;
-			char filename[1024];
-			sprintf(filename, "../test/data/test_parallel_gates_grad_matfree" CDATA_LABEL "_dV%iL%i.dat", i, Llist[j]);
-			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
+			char varname[32];
+			sprintf(varname, "dV%iL%i", i, Llist[j]);
+			if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVref.data) < 0) {
 				return "reading reference gradient data from disk failed";
 			}
 
@@ -218,6 +243,8 @@ char* test_parallel_gates_grad_matfree()
 		}
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
 
@@ -226,22 +253,27 @@ char* test_parallel_gates_hess_matfree()
 {
 	int L = 8;
 
+	hid_t file = H5Fopen("../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_parallel_gates_hess_matfree failed";
+	}
+
 	struct mat4x4 V;
-	if (read_data("../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_V.dat", V.data, sizeof(numeric), 16) < 0) {
+	if (read_hdf5_dataset(file, "V", H5T_NATIVE_DOUBLE, V.data) < 0) {
 		return "reading two-qubit quantum gate entries from disk failed";
 	}
 
 	int perm[8];
-	if (read_data("../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_perm.dat", perm, sizeof(int), 8) < 0) {
+	if (read_hdf5_dataset(file, "perm", H5T_NATIVE_INT, perm) < 0) {
 		return "reading permutation data from disk failed";
 	}
 
 	for (int i = 0; i < 2; i++)
 	{
-		char filename[1024];
+		char varname[32];
 		struct mat4x4 Z;
-		sprintf(filename, "../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_Z%i.dat", i);
-		if (read_data(filename, Z.data, sizeof(numeric), 16) < 0) {
+		sprintf(varname, "Z%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Z.data) < 0) {
 			return "reading gradient direction data from disk failed";
 		}
 
@@ -253,8 +285,8 @@ char* test_parallel_gates_hess_matfree()
 			}
 
 			struct mat4x4 dVref;
-			sprintf(filename, "../test/data/test_parallel_gates_hess_matfree" CDATA_LABEL "_dV%i%s.dat", i, uproj == 1 ? "proj" : "");
-			if (read_data(filename, dVref.data, sizeof(numeric), 16) < 0) {
+			sprintf(varname, "dV%i%s", i, uproj == 1 ? "proj" : "");
+			if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVref.data) < 0) {
 				return "reading reference Hessian data from disk failed";
 			}
 
@@ -264,6 +296,8 @@ char* test_parallel_gates_hess_matfree()
 			}
 		}
 	}
+
+	H5Fclose(file);
 
 	return 0;
 }

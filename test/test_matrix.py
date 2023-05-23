@@ -1,5 +1,7 @@
 import numpy as np
+import h5py
 import rqcopt_matfree as oc
+from io_util import interleave_complex
 
 
 def multiply_data():
@@ -12,9 +14,10 @@ def multiply_data():
         b = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
         c = a @ b
         # save to disk
-        a.tofile(f"data/test_multiply_{ctype}_a.dat")
-        b.tofile(f"data/test_multiply_{ctype}_b.dat")
-        c.tofile(f"data/test_multiply_{ctype}_c.dat")
+        with h5py.File(f"data/test_multiply_{ctype}.hdf5", "w") as file:
+            file["a"] = interleave_complex(a, ctype)
+            file["b"] = interleave_complex(b, ctype)
+            file["c"] = interleave_complex(c, ctype)
 
 
 def project_unitary_tangent_data():
@@ -29,9 +32,10 @@ def project_unitary_tangent_data():
         p = oc.project_unitary_tangent(u, z)
 
         # save to disk
-        u.tofile(f"data/test_project_unitary_tangent_{ctype}_u.dat")
-        z.tofile(f"data/test_project_unitary_tangent_{ctype}_z.dat")
-        p.tofile(f"data/test_project_unitary_tangent_{ctype}_p.dat")
+        with h5py.File(f"data/test_project_unitary_tangent_{ctype}.hdf5", "w") as file:
+            file["u"] = interleave_complex(u, ctype)
+            file["z"] = interleave_complex(z, ctype)
+            file["p"] = interleave_complex(p, ctype)
 
 
 def main():
