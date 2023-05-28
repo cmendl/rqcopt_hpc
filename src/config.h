@@ -15,6 +15,8 @@ typedef double complex numeric;
 
 #else
 
+#include <math.h>
+
 /// \brief numeric scalar type (used for quantum gates and statevectors)
 typedef double numeric;
 

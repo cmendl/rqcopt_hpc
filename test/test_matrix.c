@@ -134,7 +134,7 @@ char* test_multiply()
 	}
 
 	struct mat4x4 c;
-	multiply(&a, &b, &c);
+	multiply_matrices(&a, &b, &c);
 	// compare
 	if (uniform_distance(16, c.data, cref.data) > 1e-12) {
 		return "matrix product does not agree with reference";
@@ -174,6 +174,46 @@ char* test_project_unitary_tangent()
 	}
 
 	H5Fclose(file);
+
+	return 0;
+}
+
+
+char* test_inverse_matrix()
+{
+	struct mat4x4 a;
+	for (int i = 0; i < 16; i++)
+	{
+		#ifdef COMPLEX_CIRCUIT
+		a.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1 + ((((11 + i) * 3571) % 541) / 270.0 - 1) * I;
+		#else
+		a.data[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+		#endif
+	}
+
+	struct mat4x4 ainv;
+	inverse_matrix(&a, &ainv);
+
+	struct mat4x4 prod;
+	multiply_matrices(&a, &ainv, &prod);
+
+	struct mat4x4 id;
+	identity_matrix(&id);
+
+	// must be (close to) identity matrix
+	if (uniform_distance(16, prod.data, id.data) > 1e-14) {
+		return "matrix times its inverse is not close to identity";
+	}
+
+	// generate a singular matrix
+	for (int j = 0; j < 4; j++)
+	{
+		a.data[4*2 + j] = a.data[j];
+	}
+	int ret = inverse_matrix(&a, &ainv);
+	if (ret != -1) {
+		return "missing singular matrix indicator";
+	}
 
 	return 0;
 }

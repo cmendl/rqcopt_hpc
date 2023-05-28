@@ -13,6 +13,11 @@ struct mat4x4
 };
 
 
+void zero_matrix(struct mat4x4* a);
+
+void identity_matrix(struct mat4x4* a);
+
+
 void add_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
 
 void sub_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
@@ -35,7 +40,10 @@ void antisymm_to_real(const struct mat4x4* w, double* r);
 #endif
 
 
-void multiply(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
+void multiply_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
 
 
 void project_unitary_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p);
+
+
+int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv);

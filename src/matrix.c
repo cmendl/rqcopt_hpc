@@ -1,5 +1,31 @@
 #include <memory.h>
+#include <stdio.h>
 #include "matrix.h"
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Set matrix 'a' to the zero matrix.
+///
+void zero_matrix(struct mat4x4* a)
+{
+	memset(a->data, 0, sizeof(a->data));
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Set matrix 'a' to the identity matrix.
+///
+void identity_matrix(struct mat4x4* a)
+{
+	zero_matrix(a);
+
+	a->data[ 0] = 1;
+	a->data[ 5] = 1;
+	a->data[10] = 1;
+	a->data[15] = 1;
+}
 
 
 //________________________________________________________________________________________________________________________
@@ -201,9 +227,9 @@ void antisymm_to_real(const struct mat4x4* w, double* r)
 ///
 /// \brief Multiply two 4x4 matrices.
 ///
-void multiply(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c)
+void multiply_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c)
 {
-	memset(c->data, 0, sizeof(c->data));
+	zero_matrix(c);
 
 	// straightforward implementation; not performance critical, so not switching to BLAS yet
 	for (int i = 0; i < 4; i++)
@@ -225,13 +251,100 @@ void multiply(const struct mat4x4* restrict a, const struct mat4x4* restrict b, 
 ///
 void project_unitary_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p)
 {
-    // formula remains valid for 'u' an isometry (element of the Stiefel manifold)
+	// formula remains valid for 'u' an isometry (element of the Stiefel manifold)
 
 	struct mat4x4 v, w;
 
 	adjoint(u, &v);
-	multiply(&v, z, &w);    // w = u^{\dagger} @ z
-	symm(&w, &v);           // v = symm(w)
-	multiply(u, &v, &w);    // w = u @ v
-	sub_matrices(z, &w, p); // p = z - w
+	multiply_matrices(&v, z, &w);   // w = u^{\dagger} @ z
+	symm(&w, &v);                   // v = symm(w)
+	multiply_matrices(u, &v, &w);   // w = u @ v
+	sub_matrices(z, &w, p);         // p = z - w
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Swap two rows of a matrix.
+///
+static inline void swap_rows(struct mat4x4* a, int i, int j)
+{
+	for (int k = 0; k < 4; k++)
+	{
+		numeric tmp      = a->data[4*i + k];
+		a->data[4*i + k] = a->data[4*j + k];
+		a->data[4*j + k] = tmp;
+	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the inverse matrix by Gaussian elimination, returning -1 if the matrix is singular.
+///
+int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv)
+{
+	// copy 'a' (for applying row operations)
+	struct mat4x4 m;
+	memcpy(m.data, a->data, sizeof(m.data));
+
+	identity_matrix(ainv);
+
+	for (int k = 0; k < 4; k++)
+	{
+		// search for pivot element in k-th column, starting from entry at (k, k)
+		int i_max = k;
+		double p = _abs(m.data[4*k + k]);
+		for (int i = k + 1; i < 4; i++) {
+			if (_abs(m.data[4*i + k]) > p) {
+				i_max = i;
+				p = _abs(m.data[4*i + k]);
+			}
+		}
+		if (p == 0) {
+			// matrix is singular
+			return -1;
+		}
+		if (p < 1e-12) {
+			fprintf(stderr, "warning: encountered an almost singular matrix in 'inverse_matrix', p = %g", p);
+		}
+
+		// swap pivot row with current row
+		if (i_max != k)
+		{
+			swap_rows(&m,   k, i_max);
+			swap_rows(ainv, k, i_max);
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (i == k) {
+				continue;
+			}
+
+			numeric s = m.data[4*i + k] / m.data[4*k + k];
+
+			// subtract 's' times of k-th row from i-th row
+			for (int j = k + 1; j < 4; j++) {
+				m.data[4*i + j] -= s * m.data[4*k + j];
+			}
+			m.data[4*i + k] = 0;
+
+			// apply same row operation to 'ainv'
+			for (int j = 0; j < 4; j++) {
+				ainv->data[4*i + j] -= s * ainv->data[4*k + j];
+			}
+		}
+
+		// divide k-th row by m[k, k]
+		for (int j = k + 1; j < 4; j++) {
+			m.data[4*k + j] /= m.data[4*k + k];
+		}
+		for (int j = 0; j < 4; j++) {
+			ainv->data[4*k + j] /= m.data[4*k + k];
+		}
+		m.data[4*k + k] = 1;
+	}
+
+	return 0;
 }

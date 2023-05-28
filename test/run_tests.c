@@ -18,6 +18,7 @@ char* test_real_to_antisymm();
 #endif
 char* test_multiply();
 char* test_project_unitary_tangent();
+char* test_inverse_matrix();
 char* test_transpose_statevector();
 char* test_apply_gate();
 char* test_apply_parallel_gates();
@@ -47,6 +48,7 @@ int main()
 		#endif
 		{ .func = test_multiply,                                  .name = "test_multiply" },
 		{ .func = test_project_unitary_tangent,                   .name = "test_project_unitary_tangent" },
+		{ .func = test_inverse_matrix,                            .name = "test_inverse_matrix" },
 		{ .func = test_transpose_statevector,                     .name = "test_transpose_statevector" },
 		{ .func = test_apply_gate,                                .name = "test_apply_gate" },
 		{ .func = test_apply_parallel_gates,                      .name = "test_apply_parallel_gates" },

@@ -220,7 +220,7 @@ int brickwall_unitary_gradient_vector_matfree(const struct mat4x4 Vlist[], int n
 		struct mat4x4 W;
 		adjoint(&Vlist[j], &W);
 		struct mat4x4 T;
-		multiply(&W, &Glist[j], &T);
+		multiply_matrices(&W, &Glist[j], &T);
 		antisymm(&T, &W);
 		antisymm_to_real(&W, &grad_vec[j * 16]);
 	}
@@ -540,7 +540,7 @@ int brickwall_unitary_hessian_matrix_matfree(const struct mat4x4 Vlist[], int nl
 			real_to_antisymm(r, &Ek);
 			// Z = Vlist[j] @ Ek
 			struct mat4x4 Z;
-			multiply(&Vlist[j], &Ek, &Z);
+			multiply_matrices(&Vlist[j], &Ek, &Z);
 			int ret = brickwall_unitary_hess_matfree(Vlist, nlayers, L, &Z, j, Ufunc, fdata, perms, true, dVZj);
 			if (ret < 0) {
 				return ret;
@@ -552,7 +552,7 @@ int brickwall_unitary_hessian_matrix_matfree(const struct mat4x4 Vlist[], int nl
 				struct mat4x4 W;
 				adjoint(&Vlist[i], &W);
 				struct mat4x4 T;
-				multiply(&W, &dVZj[i], &T);
+				multiply_matrices(&W, &dVZj[i], &T);
 				antisymm(&T, &W);
 				double h[16];
 				antisymm_to_real(&W, h);

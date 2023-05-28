@@ -309,11 +309,11 @@ static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, con
 {
 	struct mat4x4 u, v;
 
-	multiply(a, b, &u);
-	multiply(&u, c, ret);
+	multiply_matrices(a, b, &u);
+	multiply_matrices(&u, c, ret);
 
-	multiply(c, b, &u);
-	multiply(&u, a, &v);
+	multiply_matrices(c, b, &u);
+	multiply_matrices(&u, a, &v);
 
 	add_matrix(ret, &v);
 	scale_matrix(ret, 0.5);
@@ -480,9 +480,9 @@ int parallel_gates_hess_matfree(const struct mat4x4* restrict V, int L, const st
 			// G -= 0.5 * (Z @ V^{\dagger} + V @ Z^{\dagger}) @ grad
 			struct mat4x4 W;
 			adjoint(V, &W);
-			multiply(Z, &W, &T);
+			multiply_matrices(Z, &W, &T);
 			symm(&T, &W);
-			multiply(&W, &grad, &T);
+			multiply_matrices(&W, &grad, &T);
 			sub_matrix(G, &T);
 		}
 	}
