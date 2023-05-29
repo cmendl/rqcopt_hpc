@@ -217,3 +217,35 @@ char* test_inverse_matrix()
 
 	return 0;
 }
+
+
+char* test_polar_factor()
+{
+	hid_t file = H5Fopen("../test/data/test_polar_factor" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_polar_factor failed";
+	}
+
+	struct mat4x4 a;
+	if (read_hdf5_dataset(file, "a", H5T_NATIVE_DOUBLE, a.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 uref;
+	if (read_hdf5_dataset(file, "u", H5T_NATIVE_DOUBLE, uref.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 u;
+	polar_factor(&a, &u);
+
+	// compare
+	if (uniform_distance(16, u.data, uref.data) > 1e-12) {
+		return "polar factor does not agree with reference";
+	}
+
+	H5Fclose(file);
+
+	return 0;
+
+}

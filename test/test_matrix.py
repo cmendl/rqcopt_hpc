@@ -38,9 +38,24 @@ def project_unitary_tangent_data():
             file["p"] = interleave_complex(p, ctype)
 
 
+def polar_factor_data():
+
+    # random number generator
+    rng = np.random.default_rng(44)
+
+    for ctype in ["real", "cplx"]:
+        a = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
+        u, _ = oc.polar_decomp(a)
+        # save to disk
+        with h5py.File(f"data/test_polar_factor_{ctype}.hdf5", "w") as file:
+            file["a"] = interleave_complex(a, ctype)
+            file["u"] = interleave_complex(u, ctype)
+
+
 def main():
     multiply_data()
     project_unitary_tangent_data()
+    polar_factor_data()
 
 
 if __name__ == "__main__":

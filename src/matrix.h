@@ -18,11 +18,14 @@ void zero_matrix(struct mat4x4* a);
 void identity_matrix(struct mat4x4* a);
 
 
-void add_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
+void scale_matrix(struct mat4x4* restrict a, const double x);
 
+
+void add_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
 void sub_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
 
-void scale_matrix(struct mat4x4* restrict a, const numeric x);
+void add_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
+void sub_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
 
 
 void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah);
@@ -47,3 +50,6 @@ void project_unitary_tangent(const struct mat4x4* restrict u, const struct mat4x
 
 
 int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv);
+
+
+void polar_factor(const struct mat4x4* restrict a, struct mat4x4* restrict u);

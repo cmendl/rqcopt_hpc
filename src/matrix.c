@@ -1,6 +1,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include "matrix.h"
+#include "util.h"
 
 
 //________________________________________________________________________________________________________________________
@@ -25,6 +26,19 @@ void identity_matrix(struct mat4x4* a)
 	a->data[ 5] = 1;
 	a->data[10] = 1;
 	a->data[15] = 1;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Scale matrix 'a' by factor 'x'.
+///
+void scale_matrix(struct mat4x4* restrict a, const double x)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		a->data[i] *= x;
+	}
 }
 
 
@@ -76,19 +90,6 @@ void sub_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict
 	for (int i = 0; i < 16; i++)
 	{
 		c->data[i] = a->data[i] - b->data[i];
-	}
-}
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Scale matrix 'a' by factor 'x'.
-///
-void scale_matrix(struct mat4x4* restrict a, const numeric x)
-{
-	for (int i = 0; i < 16; i++)
-	{
-		a->data[i] *= x;
 	}
 }
 
@@ -324,7 +325,7 @@ int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv
 
 			numeric s = m.data[4*i + k] / m.data[4*k + k];
 
-			// subtract 's' times of k-th row from i-th row
+			// subtract 's' times k-th row from i-th row
 			for (int j = k + 1; j < 4; j++) {
 				m.data[4*i + j] -= s * m.data[4*k + j];
 			}
@@ -347,4 +348,39 @@ int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv
 	}
 
 	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Compute the unitary polar factor 'u' in the polar decomposition 'a = u p' of a matrix,
+/// assuming that 'a' is not singular.
+///
+/// Reference:
+///     Nicholas J. Higham
+///     Computing the polar decomposition - with applications
+///     SIAM J. Sci. Stat. Comput. 7, 1160 - 1174 (1986)
+///
+void polar_factor(const struct mat4x4* restrict a, struct mat4x4* restrict u)
+{
+	memcpy(u->data, a->data, sizeof(u->data));
+
+	for (int k = 0; k < 14; k++)
+	{
+		// w = u^{-\dagger}
+		struct mat4x4 v, w;
+		inverse_matrix(u, &v);
+		adjoint(&v, &w);
+
+		// u = (u + w)/2
+		add_matrix(u, &w);
+		scale_matrix(u, 0.5);
+
+		if (k >= 4) {
+			// early stopping
+			if (uniform_distance(16, u->data, w.data) < 1e-14) {
+				break;
+			}
+		}
+	}
 }
