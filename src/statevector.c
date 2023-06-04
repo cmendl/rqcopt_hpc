@@ -19,7 +19,7 @@ int allocate_statevector(int nqubits, struct statevector* psi)
 	psi->data = aligned_alloc(MEM_DATA_ALIGN, size);
 	if (psi->data == NULL)
 	{
-		fprintf(stderr, "allocating statevector memory (%zu bytes) failed", size);
+		fprintf(stderr, "allocating statevector memory (%zu bytes) failed\n", size);
 		return -1;
 	}
 

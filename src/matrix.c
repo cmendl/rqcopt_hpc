@@ -307,7 +307,7 @@ int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv
 			return -1;
 		}
 		if (p < 1e-12) {
-			fprintf(stderr, "warning: encountered an almost singular matrix in 'inverse_matrix', p = %g", p);
+			fprintf(stderr, "warning: encountered an almost singular matrix in 'inverse_matrix', p = %g\n", p);
 		}
 
 		// swap pivot row with current row

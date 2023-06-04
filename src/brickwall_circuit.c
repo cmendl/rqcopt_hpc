@@ -204,7 +204,7 @@ int brickwall_unitary_gradient_vector_matfree(const struct mat4x4 Vlist[], int n
 	struct mat4x4* Glist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (Glist == NULL)
 	{
-		fprintf(stderr, "allocating temporary memory for gradient matrices failed");
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
 	}
 
