@@ -5,7 +5,6 @@
 #include "statevector.h"
 #include "brickwall_circuit.h"
 #include "util.h"
-#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT

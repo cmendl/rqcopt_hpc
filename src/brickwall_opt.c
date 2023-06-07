@@ -159,7 +159,7 @@ static void hessfunc_matfree(const double* restrict x, void* hdata, double* rest
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
 /// the unitary matrix `U` using a trust-region method.
 ///
-void optimize_brickwall_circuit_matfree(int L, unitary_func Ufunc, void* udata, const struct mat4x4 Vlist_start[], int nlayers, const int* perms[], struct rtr_params* params, double* f_iter, double* g_iter, struct mat4x4 Vlist_opt[])
+void optimize_brickwall_circuit_matfree(const int L, unitary_func Ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
 {
 	// target function data
 	struct f_target_data fdata = {
@@ -171,13 +171,15 @@ void optimize_brickwall_circuit_matfree(int L, unitary_func Ufunc, void* udata, 
 	};
 
 	// TODO: quantify error by spectral norm
-	params->gfunc = NULL;
-	params->gdata = NULL;
+	params->g_func = NULL;
+	params->g_data = NULL;
+	params->g_iter = NULL;
 
 	// perform optimization
-	riemannian_trust_region_optimize(f_target_matfree, &fdata, retract_unitary_list, &nlayers,
+	int rdata = nlayers;
+	riemannian_trust_region_optimize(f_target_matfree, &fdata, retract_unitary_list, &rdata,
 		gradfunc_matfree, &fdata, hessfunc_matfree, &fdata, nlayers * 16,
-		(const double*)Vlist_start, nlayers * 16 * 2, params, f_iter, g_iter, (double*)Vlist_opt);
+		(const double*)Vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)Vlist_opt);
 }
 
 

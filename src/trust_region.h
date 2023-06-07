@@ -9,9 +9,10 @@
 ///
 struct truncated_cg_params
 {
-	int maxiter;
-	double abstol;
-	double reltol;
+	int maxiter;    //!< maximum number of iterations
+	double abstol;  //!< absolute tolerance (for early stopping)
+	double reltol;  //!< relative tolerance (for early stopping)
+
 };
 
 
@@ -44,13 +45,13 @@ typedef void  (*hessian_func)(const double* restrict x, void* hdata, double* res
 ///
 struct rtr_params
 {
-	struct truncated_cg_params tcg_params;
-	double rho_trust;
-	double radius_init;
-	double maxradius;
-	int niter;
-	target_func gfunc;
-	void* gdata;
+	struct truncated_cg_params tcg_params;  //!< parameters for the internally used truncated CG method
+	double rho_trust;                       //!< threshold for accepting next candidate point
+	double radius_init;                     //!< initial radius
+	double maxradius;                       //!< maximum radius
+	target_func g_func;                     //!< optional user-provided function, called at each iteration (unless set to NULL)
+	void*       g_data;                     //!< additional arguments of 'gfunc'
+	double*     g_iter;                     //!< array to store evaluations of 'gfunc', of length 'niter + 1'
 };
 
 
@@ -64,12 +65,12 @@ static inline void set_rtr_default_params(int n, struct rtr_params* params)
 	params->rho_trust   = 0.125;
 	params->radius_init = 0.01;
 	params->maxradius   = 0.1;
-	params->niter       = 20;
-	params->gfunc       = NULL;
-	params->gdata       = NULL;
+	params->g_func      = NULL;
+	params->g_data      = NULL;
+	params->g_iter      = NULL;
 }
 
 
-void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func retract, void* rdata,
+void riemannian_trust_region_optimize(target_func f, void* f_data, retract_func retract, void* rdata,
 	gradient_func gradfunc, void* graddata, hessian_func hessfunc, void* hessdata, const int n,
-	const double* x_init, const int m, const struct rtr_params* params, double* f_iter, double* g_iter, double* x_final);
+	const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final);

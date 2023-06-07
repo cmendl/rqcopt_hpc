@@ -4,7 +4,6 @@
 #include "statevector.h"
 #include "parallel_gates.h"
 #include "util.h"
-#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT

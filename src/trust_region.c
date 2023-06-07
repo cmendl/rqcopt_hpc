@@ -153,7 +153,7 @@ bool truncated_cg(const double* grad, const double* hess, int n, double radius, 
 ///
 void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func retract, void* rdata,
 	gradient_func gradfunc, void* graddata, hessian_func hessfunc, void* hessdata, const int n,
-	const double* x_init, const int m, const struct rtr_params* params, double* f_iter, double* g_iter, double* x_final)
+	const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
 
@@ -163,8 +163,8 @@ void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func r
 	double* x_next = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
 
 	double radius = params->radius_init;
-	if (params->gfunc != NULL) {
-		g_iter[0] = params->gfunc(x, params->gdata);
+	if (params->g_func != NULL) {
+		params->g_iter[0] = params->g_func(x, params->g_data);
 	}
 
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
@@ -172,7 +172,7 @@ void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func r
 	double* eta  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
 	double* Heta = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
 
-	for (int k = 0; k < params->niter; k++)
+	for (int k = 0; k < niter; k++)
 	{
 		gradfunc(x, graddata, grad);
 		hessfunc(x, hessdata, hess);
@@ -202,8 +202,8 @@ void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func r
 			x_next = y;
 		}
 
-		if (params->gfunc != NULL) {
-			g_iter[k + 1] = params->gfunc(x, params->gdata);
+		if (params->g_func != NULL) {
+			params->g_iter[k + 1] = params->g_func(x, params->g_data);
 		}
 	}
 

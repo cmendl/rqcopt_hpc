@@ -1,7 +1,6 @@
 #include "config.h"
 #include "statevector.h"
 #include "util.h"
-#include "io_util.h"
 
 
 #ifdef COMPLEX_CIRCUIT

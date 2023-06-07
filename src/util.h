@@ -1,6 +1,7 @@
 #pragma once
 
 #include <math.h>
+#include <hdf5.h>
 #include "config.h"
 
 
@@ -20,3 +21,6 @@ double relative_distance(size_t n, const numeric* x, const numeric* y, double ep
 
 
 void inverse_permutation(int n, const int* restrict perm, int* restrict inv_perm);
+
+
+herr_t read_hdf5_dataset(hid_t file, const char* name, hid_t mem_type, void* data);

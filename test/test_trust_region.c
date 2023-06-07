@@ -1,7 +1,7 @@
 #include <math.h>
 #include "config.h"
 #include "trust_region.h"
-#include "io_util.h"
+#include "util.h"
 
 
 char* test_truncated_cg()

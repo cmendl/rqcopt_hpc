@@ -6,7 +6,7 @@ The code uses a matrix-free and cache optimized application of single- and two-q
 
 Building
 --------
-The code requires the HDF5 development libraries. These can be installed via `sudo apt install libhdf5-dev` (on Ubuntu Linux) or similar.
+The code requires the BLAS and HDF5 development libraries. These can be installed via `sudo apt install libblas-dev` and `sudo apt install libhdf5-dev` (on Ubuntu Linux) or similar, respectively.
 
 From the project directory, use `cmake` to build the project:
 ```
