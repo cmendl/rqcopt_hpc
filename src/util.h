@@ -24,3 +24,7 @@ void inverse_permutation(int n, const int* restrict perm, int* restrict inv_perm
 
 
 herr_t read_hdf5_dataset(hid_t file, const char* name, hid_t mem_type, void* data);
+
+herr_t write_hdf5_dataset(hid_t file, const char* name, int degree, const hsize_t dims[], hid_t mem_type_store, hid_t mem_type_input, const void* data);
+
+herr_t write_hdf5_scalar_attribute(hid_t file, const char* name, hid_t mem_type_store, hid_t mem_type_input, const void* data);
