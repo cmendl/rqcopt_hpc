@@ -8,8 +8,6 @@
 typedef int (*unitary_func)(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out);
 
 
-void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi, struct statevector* restrict psi_out);
-
 int apply_parallel_gates(const struct mat4x4* V, const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_out);
 
 int apply_parallel_gates_directed_grad(const struct mat4x4* V, const struct mat4x4* Z,
