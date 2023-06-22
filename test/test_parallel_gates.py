@@ -131,7 +131,6 @@ def parallel_gates_hess_matfree_data():
 
 
 def main():
-    apply_gate_data()
     apply_parallel_gates_data()
     apply_parallel_gates_directed_grad_data()
     parallel_gates_grad_matfree_data()
