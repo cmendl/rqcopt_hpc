@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include "brickwall_circuit.h"
+#include "gate.h"
+#include "util.h"
 
 
 //________________________________________________________________________________________________________________________
@@ -81,6 +83,158 @@ int apply_adjoint_brickwall_unitary(const struct mat4x4 Vlist[], int nlayers, co
 	if (nlayers > 1) {
 		free_statevector(&chi);
 	}
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Allocate temporary cache required by backward pass of a brick wall quantum circuit.
+///
+int allocate_brickwall_unitary_cache(const int nlayers, const int nqubits, struct brickwall_unitary_cache* cache)
+{
+	assert(nlayers >= 1);
+	assert(nqubits % 2 == 0);
+
+	cache->nlayers = nlayers;
+	cache->nqubits = nqubits;
+
+	const int nstates = nlayers * (nqubits / 2);
+	cache->psi_list = aligned_alloc(MEM_DATA_ALIGN, nstates * sizeof(struct statevector));
+	if (cache->psi_list == NULL) {
+		fprintf(stderr, "allocating memory for statevector array failed\n");
+		return -1;
+	}
+
+	for (int i = 0; i < nstates; i++)
+	{
+		int ret = allocate_statevector(nqubits, &cache->psi_list[i]);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Free temporary cache required by backward pass of a brick wall quantum circuit.
+///
+void free_brickwall_unitary_cache(struct brickwall_unitary_cache* cache)
+{
+	const int nstates = cache->nlayers * (cache->nqubits / 2);
+
+	for (int i = 0; i < nstates; i++)
+	{
+		free_statevector(&cache->psi_list[i]);
+	}
+
+	aligned_free(cache->psi_list);
+	cache->psi_list = NULL;
+
+	cache->nqubits = 0;
+	cache->nlayers = 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Apply the unitary matrix representation of a brick wall
+/// quantum circuit with periodic boundary conditions to state psi.
+///
+int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const int* perms[],
+	const struct statevector* restrict psi, struct brickwall_unitary_cache* cache, struct statevector* restrict psi_out)
+{
+	assert(nlayers >= 1);
+	assert(psi->nqubits == psi_out->nqubits);
+	assert(cache->nlayers == nlayers);
+	assert(cache->nqubits == psi->nqubits);
+	assert(psi->nqubits % 2 == 0);
+
+	// store initial statevector in cache as well
+	memcpy(cache->psi_list[0].data, psi->data, ((size_t)1 << psi->nqubits) * sizeof(numeric));
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(int));
+	if (inv_perm == NULL) {
+		fprintf(stderr, "allocating permutation vector failed\n");
+		return -1;
+	}
+
+	const int nstates = nlayers * (psi->nqubits / 2);
+
+	int k = 0;
+	for (int i = 0; i < nlayers; i++)
+	{
+		inverse_permutation(psi->nqubits, perms[i], inv_perm);
+
+		for (int j = 0; j < psi->nqubits; j += 2)
+		{
+			apply_gate(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k],
+				(k + 1 < nstates ? &cache->psi_list[k + 1] : psi_out));
+			k++;
+		}
+	}
+
+	aligned_free(inv_perm);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Backward pass for applying the unitary matrix representation of a brick wall
+/// quantum circuit with periodic boundary conditions to state psi.
+///
+int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
+	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[])
+{
+	assert(nlayers >= 1);
+	assert(dpsi_out->nqubits == dpsi->nqubits);
+	assert(cache->nlayers == nlayers);
+	assert(cache->nqubits == dpsi->nqubits);
+	assert(cache->nqubits % 2 == 0);
+
+	// temporary statevector
+	struct statevector tmp = { 0 };
+	if (allocate_statevector(dpsi->nqubits, &tmp) < 0) {
+		return -1;
+	}
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
+	if (inv_perm == NULL) {
+		fprintf(stderr, "allocating permutation vector failed\n");
+		return -1;
+	}
+
+	const int nstates = nlayers * (dpsi->nqubits / 2);
+
+	int k = nstates - 1;
+	for (int i = nlayers - 1; i >= 0; i--)
+	{
+		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
+
+		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+
+		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
+		{
+			const struct statevector* dpsi1 = ((k == nstates - 1) ? dpsi_out : (k % 2 == 1 ? dpsi : &tmp));
+			struct statevector* dpsi0 = (k % 2 == 1 ? &tmp : dpsi);
+
+			struct mat4x4 dV;
+			apply_gate_backward(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k], dpsi1, dpsi0, &dV);
+			// accumulate gradient
+			add_matrix(&dVlist[i], &dV);
+
+			k--;
+		}
+	}
+
+	aligned_free(inv_perm);
+	free_statevector(&tmp);
 
 	return 0;
 }

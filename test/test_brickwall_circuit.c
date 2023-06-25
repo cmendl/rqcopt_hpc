@@ -4,6 +4,7 @@
 #include "matrix.h"
 #include "statevector.h"
 #include "brickwall_circuit.h"
+#include "numerical_gradient.h"
 #include "util.h"
 
 
@@ -23,10 +24,10 @@ char* test_apply_brickwall_unitary()
 		return "'H5Fopen' in test_apply_brickwall_unitary failed";
 	}
 
-	struct statevector psi, chi, chiref;
-	if (allocate_statevector(L, &psi)    < 0) { return "memory allocation failed"; }
-	if (allocate_statevector(L, &chi)    < 0) { return "memory allocation failed"; }
-	if (allocate_statevector(L, &chiref) < 0) { return "memory allocation failed"; }
+	struct statevector psi, chi, chi_ref;
+	if (allocate_statevector(L, &psi)     < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &chi)     < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &chi_ref) < 0) { return "memory allocation failed"; }
 
 	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
@@ -62,17 +63,17 @@ char* test_apply_brickwall_unitary()
 
 		char varname[32];
 		sprintf(varname, "chi%i", nlayers - 3);
-		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chiref.data) < 0) {
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, chi_ref.data) < 0) {
 			return "reading output statevector data from disk failed";
 		}
 
 		// compare with reference
-		if (uniform_distance((size_t)1 << L, chi.data, chiref.data) > 1e-12) {
+		if (uniform_distance((size_t)1 << L, chi.data, chi_ref.data) > 1e-12) {
 			return "quantum state after applying gate does not match reference";
 		}
 	}
 
-	free_statevector(&chiref);
+	free_statevector(&chi_ref);
 	free_statevector(&chi);
 	free_statevector(&psi);
 
@@ -142,6 +143,189 @@ char* test_apply_adjoint_brickwall_unitary()
 
 	free_statevector(&chiref);
 	free_statevector(&chi);
+	free_statevector(&psi);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
+struct brickwall_unitary_forward_psi_params
+{
+	int nqubits;
+	int nlayers;
+	const struct mat4x4* Vlist;
+	const int** perms;
+};
+
+// wrapper of brickwall_unitary_forward as a function of 'psi'
+static void brickwall_unitary_forward_psi(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct brickwall_unitary_forward_psi_params* params = p;
+
+	struct statevector psi;
+	allocate_statevector(params->nqubits, &psi);
+	memcpy(psi.data, x, ((size_t)1 << params->nqubits) * sizeof(numeric));
+
+	struct statevector psi_out;
+	allocate_statevector(params->nqubits, &psi_out);
+
+	struct brickwall_unitary_cache cache;
+	allocate_brickwall_unitary_cache(params->nlayers, params->nqubits, &cache);
+
+	brickwall_unitary_forward(params->Vlist, params->nlayers, params->perms, &psi, &cache, &psi_out);
+	memcpy(y, psi_out.data, ((size_t)1 << params->nqubits) * sizeof(numeric));
+
+	free_brickwall_unitary_cache(&cache);
+	free_statevector(&psi_out);
+	free_statevector(&psi);
+}
+
+struct brickwall_unitary_forward_gates_params
+{
+	int nqubits;
+	int nlayers;
+	const struct statevector* psi;
+	const int** perms;
+};
+
+// wrapper of brickwall_unitary_forward as a function of the gates
+static void brickwall_unitary_forward_gates(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct brickwall_unitary_forward_gates_params* params = p;
+
+	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	for (int i = 0; i < params->nlayers; i++) {
+		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
+	}
+
+	struct statevector psi_out;
+	allocate_statevector(params->nqubits, &psi_out);
+
+	struct brickwall_unitary_cache cache;
+	allocate_brickwall_unitary_cache(params->nlayers, params->nqubits, &cache);
+
+	brickwall_unitary_forward(Vlist, params->nlayers, params->perms, params->psi, &cache, &psi_out);
+	memcpy(y, psi_out.data, ((size_t)1 << params->nqubits) * sizeof(numeric));
+
+	free_brickwall_unitary_cache(&cache);
+	free_statevector(&psi_out);
+	aligned_free(Vlist);
+}
+
+char* test_brickwall_unitary_backward()
+{
+	int L = 6;
+
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_backward" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_backward failed";
+	}
+
+	struct statevector psi, psi_out, psi_out_ref, dpsi_out, dpsi;
+	if (allocate_statevector(L, &psi)         < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &psi_out)     < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &psi_out_ref) < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &dpsi_out)    < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(L, &dpsi)        < 0) { return "memory allocation failed"; }
+
+	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
+		return "reading input statevector data from disk failed";
+	}
+
+	if (read_hdf5_dataset(file, "dpsi_out", H5T_NATIVE_DOUBLE, dpsi_out.data) < 0) {
+		return "reading upstream gradient data from disk failed";
+	}
+
+	struct mat4x4 Vlist[4];
+	for (int i = 0; i < 4; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[4][8];
+	for (int i = 0; i < 4; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3] };
+
+	for (int nlayers = 3; nlayers <= 4; nlayers++)
+	{
+		struct brickwall_unitary_cache cache;
+		if (allocate_brickwall_unitary_cache(nlayers, L, &cache) < 0) {
+			return "'allocate_brickwall_unitary_cache' failed";
+		}
+
+		// brickwall unitary forward pass
+		if (brickwall_unitary_forward(Vlist, nlayers, pperms, &psi, &cache, &psi_out) < 0) {
+			return "'brickwall_unitary_forward' failed internally";
+		}
+
+		char varname[32];
+		sprintf(varname, "psi_out%i", nlayers - 3);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
+			return "reading output statevector data from disk failed";
+		}
+		// compare output state of forward pass with reference
+		if (uniform_distance((size_t)1 << L, psi_out.data, psi_out_ref.data) > 1e-12) {
+			return "quantum state after applying brick wall quantum circuit does not match reference";
+		}
+
+		// brickwall unitary backward pass
+		struct mat4x4 dVlist[4];
+		if (brickwall_unitary_backward(Vlist, nlayers, pperms, &cache, &dpsi_out, &dpsi, dVlist) < 0) {
+			return "'brickwall_unitary_backward' failed internally";
+		}
+
+		const double h = 1e-5;
+
+		// numerical gradient with respect to 'psi'
+		struct brickwall_unitary_forward_psi_params params_psi = {
+			.nqubits = L,
+			.nlayers = nlayers,
+			.Vlist = Vlist,
+			.perms = pperms,
+		};
+		struct statevector dpsi_num;
+		if (allocate_statevector(L, &dpsi_num) < 0) { return "memory allocation failed"; }
+		numerical_gradient(brickwall_unitary_forward_psi, &params_psi, (size_t)1 << L, psi.data, (size_t)1 << L, dpsi_out.data, h, dpsi_num.data);
+		// compare
+		if (uniform_distance((size_t)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
+			return "gradient with respect to 'psi' computed by 'brickwall_unitary_backward' does not match finite difference approximation";
+		}
+
+		// numerical gradient with respect to gates
+		struct brickwall_unitary_forward_gates_params params_gates = {
+			.nqubits = L,
+			.nlayers = nlayers,
+			.psi = &psi,
+			.perms = pperms,
+		};
+		struct mat4x4 dVlist_num[4];
+		numerical_gradient(brickwall_unitary_forward_gates, &params_gates, nlayers * 16, (numeric*)Vlist, (size_t)1 << L, dpsi_out.data, h, (numeric*)dVlist_num);
+		// compare
+		if (uniform_distance(nlayers * 16, (numeric*)dVlist, (numeric*)dVlist_num) > 1e-8) {
+			return "gradient with respect to gates computed by 'brickwall_unitary_backward' does not match finite difference approximation";
+		}
+
+		free_statevector(&dpsi_num);
+		free_brickwall_unitary_cache(&cache);
+	}
+
+	free_statevector(&dpsi);
+	free_statevector(&dpsi_out);
+	free_statevector(&psi_out_ref);
+	free_statevector(&psi_out);
 	free_statevector(&psi);
 
 	H5Fclose(file);

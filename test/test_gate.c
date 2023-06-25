@@ -140,7 +140,7 @@ char* test_apply_gate_backward()
 
 	struct statevector dpsi_out;
 	if (allocate_statevector(L, &dpsi_out) < 0) { return "memory allocation failed"; }
-	if (read_hdf5_dataset(file, "dpsi_out", H5T_NATIVE_DOUBLE, psi.data) < 0) {
+	if (read_hdf5_dataset(file, "dpsi_out", H5T_NATIVE_DOUBLE, dpsi_out.data) < 0) {
 		return "reading input statevector data from disk failed";
 	}
 
