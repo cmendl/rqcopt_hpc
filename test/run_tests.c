@@ -38,6 +38,7 @@ char* test_brickwall_unitary_hess_matfree();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_hessian_matrix_matfree();
 #endif
+char* test_target_and_gradient();
 char* test_truncated_cg();
 
 
@@ -71,6 +72,7 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_brickwall_unitary_hessian_matrix_matfree,  .name = "test_brickwall_unitary_hessian_matrix_matfree" },
 		#endif
+		{ .func = test_target_and_gradient,                       .name = "test_target_and_gradient" },
 		{ .func = test_truncated_cg,                              .name = "test_truncated_cg" },		
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
