@@ -37,14 +37,14 @@ void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevecto
 		{
 			for (intqs b = 0; b < n; b++)
 			{
-				numeric x = psi->data[a*(4*n) +        b ];
-				numeric y = psi->data[a*(4*n) + (  n + b)];
-				numeric z = psi->data[a*(4*n) + (2*n + b)];
-				numeric w = psi->data[a*(4*n) + (3*n + b)];
-				psi_out->data[a*(4*n) +        b ] = gate->data[ 0] * x + gate->data[ 1] * y + gate->data[ 2] * z + gate->data[ 3] * w;
-				psi_out->data[a*(4*n) + (  n + b)] = gate->data[ 4] * x + gate->data[ 5] * y + gate->data[ 6] * z + gate->data[ 7] * w;
-				psi_out->data[a*(4*n) + (2*n + b)] = gate->data[ 8] * x + gate->data[ 9] * y + gate->data[10] * z + gate->data[11] * w;
-				psi_out->data[a*(4*n) + (3*n + b)] = gate->data[12] * x + gate->data[13] * y + gate->data[14] * z + gate->data[15] * w;
+				numeric x = psi->data[(a*4    )*n + b];
+				numeric y = psi->data[(a*4 + 1)*n + b];
+				numeric z = psi->data[(a*4 + 2)*n + b];
+				numeric w = psi->data[(a*4 + 3)*n + b];
+				psi_out->data[(a*4    )*n + b] = gate->data[ 0] * x + gate->data[ 1] * y + gate->data[ 2] * z + gate->data[ 3] * w;
+				psi_out->data[(a*4 + 1)*n + b] = gate->data[ 4] * x + gate->data[ 5] * y + gate->data[ 6] * z + gate->data[ 7] * w;
+				psi_out->data[(a*4 + 2)*n + b] = gate->data[ 8] * x + gate->data[ 9] * y + gate->data[10] * z + gate->data[11] * w;
+				psi_out->data[(a*4 + 3)*n + b] = gate->data[12] * x + gate->data[13] * y + gate->data[14] * z + gate->data[15] * w;
 			}
 		}
 	}
@@ -59,14 +59,14 @@ void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevecto
 			{
 				for (intqs c = 0; c < o; c++)
 				{
-					numeric x = psi->data[a*(4*n*o) +      b *(2*o) +      c ];
-					numeric y = psi->data[a*(4*n*o) +      b *(2*o) + (o + c)];
-					numeric z = psi->data[a*(4*n*o) + (n + b)*(2*o) +      c ];
-					numeric w = psi->data[a*(4*n*o) + (n + b)*(2*o) + (o + c)];
-					psi_out->data[a*(4*n*o) +      b *(2*o) +      c ] = gate->data[ 0] * x + gate->data[ 1] * y + gate->data[ 2] * z + gate->data[ 3] * w;
-					psi_out->data[a*(4*n*o) +      b *(2*o) + (o + c)] = gate->data[ 4] * x + gate->data[ 5] * y + gate->data[ 6] * z + gate->data[ 7] * w;
-					psi_out->data[a*(4*n*o) + (n + b)*(2*o) +      c ] = gate->data[ 8] * x + gate->data[ 9] * y + gate->data[10] * z + gate->data[11] * w;
-					psi_out->data[a*(4*n*o) + (n + b)*(2*o) + (o + c)] = gate->data[12] * x + gate->data[13] * y + gate->data[14] * z + gate->data[15] * w;
+					numeric x = psi->data[(((a*2    )*n + b)*2    )*o + c];
+					numeric y = psi->data[(((a*2    )*n + b)*2 + 1)*o + c];
+					numeric z = psi->data[(((a*2 + 1)*n + b)*2    )*o + c];
+					numeric w = psi->data[(((a*2 + 1)*n + b)*2 + 1)*o + c];
+					psi_out->data[(((a*2    )*n + b)*2    )*o + c] = gate->data[ 0] * x + gate->data[ 1] * y + gate->data[ 2] * z + gate->data[ 3] * w;
+					psi_out->data[(((a*2    )*n + b)*2 + 1)*o + c] = gate->data[ 4] * x + gate->data[ 5] * y + gate->data[ 6] * z + gate->data[ 7] * w;
+					psi_out->data[(((a*2 + 1)*n + b)*2    )*o + c] = gate->data[ 8] * x + gate->data[ 9] * y + gate->data[10] * z + gate->data[11] * w;
+					psi_out->data[(((a*2 + 1)*n + b)*2 + 1)*o + c] = gate->data[12] * x + gate->data[13] * y + gate->data[14] * z + gate->data[15] * w;
 				}
 			}
 		}
@@ -121,15 +121,15 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 		{
 			for (intqs b = 0; b < n; b++)
 			{
-				numeric x = psi->data[a*(4*n) +        b ];
-				numeric y = psi->data[a*(4*n) + (  n + b)];
-				numeric z = psi->data[a*(4*n) + (2*n + b)];
-				numeric w = psi->data[a*(4*n) + (3*n + b)];
+				numeric x = psi->data[(a*4    )*n + b];
+				numeric y = psi->data[(a*4 + 1)*n + b];
+				numeric z = psi->data[(a*4 + 2)*n + b];
+				numeric w = psi->data[(a*4 + 3)*n + b];
 
-				numeric dx = dpsi_out->data[a*(4*n) +        b ];
-				numeric dy = dpsi_out->data[a*(4*n) + (  n + b)];
-				numeric dz = dpsi_out->data[a*(4*n) + (2*n + b)];
-				numeric dw = dpsi_out->data[a*(4*n) + (3*n + b)];
+				numeric dx = dpsi_out->data[(a*4    )*n + b];
+				numeric dy = dpsi_out->data[(a*4 + 1)*n + b];
+				numeric dz = dpsi_out->data[(a*4 + 2)*n + b];
+				numeric dw = dpsi_out->data[(a*4 + 3)*n + b];
 
 				// gradient with respect to gate entries (outer product between 'dpsi_out' and 'psi' entries)
 				dgate->data[ 0] += dx * x;  dgate->data[ 1] += dx * y;  dgate->data[ 2] += dx * z;  dgate->data[ 3] += dx * w;
@@ -138,10 +138,10 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 				dgate->data[12] += dw * x;  dgate->data[13] += dw * y;  dgate->data[14] += dw * z;  dgate->data[15] += dw * w;
 
 				// gradient with respect to input vector 'psi'
-				dpsi->data[a*(4*n) +        b ] = gate->data[ 0] * dx + gate->data[ 4] * dy + gate->data[ 8] * dz + gate->data[12] * dw;
-				dpsi->data[a*(4*n) + (  n + b)] = gate->data[ 1] * dx + gate->data[ 5] * dy + gate->data[ 9] * dz + gate->data[13] * dw;
-				dpsi->data[a*(4*n) + (2*n + b)] = gate->data[ 2] * dx + gate->data[ 6] * dy + gate->data[10] * dz + gate->data[14] * dw;
-				dpsi->data[a*(4*n) + (3*n + b)] = gate->data[ 3] * dx + gate->data[ 7] * dy + gate->data[11] * dz + gate->data[15] * dw;
+				dpsi->data[(a*4    )*n + b] = gate->data[ 0] * dx + gate->data[ 4] * dy + gate->data[ 8] * dz + gate->data[12] * dw;
+				dpsi->data[(a*4 + 1)*n + b] = gate->data[ 1] * dx + gate->data[ 5] * dy + gate->data[ 9] * dz + gate->data[13] * dw;
+				dpsi->data[(a*4 + 2)*n + b] = gate->data[ 2] * dx + gate->data[ 6] * dy + gate->data[10] * dz + gate->data[14] * dw;
+				dpsi->data[(a*4 + 3)*n + b] = gate->data[ 3] * dx + gate->data[ 7] * dy + gate->data[11] * dz + gate->data[15] * dw;
 			}
 		}
 	}
@@ -158,15 +158,15 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 			{
 				for (intqs c = 0; c < o; c++)
 				{
-					numeric x = psi->data[a*(4*n*o) +      b *(2*o) +      c ];
-					numeric y = psi->data[a*(4*n*o) +      b *(2*o) + (o + c)];
-					numeric z = psi->data[a*(4*n*o) + (n + b)*(2*o) +      c ];
-					numeric w = psi->data[a*(4*n*o) + (n + b)*(2*o) + (o + c)];
+					numeric x = psi->data[(((a*2    )*n + b)*2    )*o + c];
+					numeric y = psi->data[(((a*2    )*n + b)*2 + 1)*o + c];
+					numeric z = psi->data[(((a*2 + 1)*n + b)*2    )*o + c];
+					numeric w = psi->data[(((a*2 + 1)*n + b)*2 + 1)*o + c];
 
-					numeric dx = dpsi_out->data[a*(4*n*o) +      b *(2*o) +      c ];
-					numeric dy = dpsi_out->data[a*(4*n*o) +      b *(2*o) + (o + c)];
-					numeric dz = dpsi_out->data[a*(4*n*o) + (n + b)*(2*o) +      c ];
-					numeric dw = dpsi_out->data[a*(4*n*o) + (n + b)*(2*o) + (o + c)];
+					numeric dx = dpsi_out->data[(((a*2    )*n + b)*2    )*o + c];
+					numeric dy = dpsi_out->data[(((a*2    )*n + b)*2 + 1)*o + c];
+					numeric dz = dpsi_out->data[(((a*2 + 1)*n + b)*2    )*o + c];
+					numeric dw = dpsi_out->data[(((a*2 + 1)*n + b)*2 + 1)*o + c];
 
 					// gradient of target function with respect to gate entries (outer product between 'dpsi_out' and 'psi' entries)
 					dgate->data[ 0] += dx * x;  dgate->data[ 1] += dx * y;  dgate->data[ 2] += dx * z;  dgate->data[ 3] += dx * w;
@@ -175,10 +175,57 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 					dgate->data[12] += dw * x;  dgate->data[13] += dw * y;  dgate->data[14] += dw * z;  dgate->data[15] += dw * w;
 
 					// gradient with respect to input vector 'psi'
-					dpsi->data[a*(4*n*o) +      b *(2*o) +      c ] = gate->data[ 0] * dx + gate->data[ 4] * dy + gate->data[ 8] * dz + gate->data[12] * dw;
-					dpsi->data[a*(4*n*o) +      b *(2*o) + (o + c)] = gate->data[ 1] * dx + gate->data[ 5] * dy + gate->data[ 9] * dz + gate->data[13] * dw;
-					dpsi->data[a*(4*n*o) + (n + b)*(2*o) +      c ] = gate->data[ 2] * dx + gate->data[ 6] * dy + gate->data[10] * dz + gate->data[14] * dw;
-					dpsi->data[a*(4*n*o) + (n + b)*(2*o) + (o + c)] = gate->data[ 3] * dx + gate->data[ 7] * dy + gate->data[11] * dz + gate->data[15] * dw;
+					dpsi->data[(((a*2    )*n + b)*2    )*o + c] = gate->data[ 0] * dx + gate->data[ 4] * dy + gate->data[ 8] * dz + gate->data[12] * dw;
+					dpsi->data[(((a*2    )*n + b)*2 + 1)*o + c] = gate->data[ 1] * dx + gate->data[ 5] * dy + gate->data[ 9] * dz + gate->data[13] * dw;
+					dpsi->data[(((a*2 + 1)*n + b)*2    )*o + c] = gate->data[ 2] * dx + gate->data[ 6] * dy + gate->data[10] * dz + gate->data[14] * dw;
+					dpsi->data[(((a*2 + 1)*n + b)*2 + 1)*o + c] = gate->data[ 3] * dx + gate->data[ 7] * dy + gate->data[11] * dz + gate->data[15] * dw;
+				}
+			}
+		}
+	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Apply a two-qubit gate "placeholder" acting on qubits 'i' and 'j' of a statevector.
+/// 
+/// Outputs a statevector array containing 16 vectors, corresponding to the placeholder gate entries.
+///
+void apply_gate_placeholder(const int i, const int j, const struct statevector* psi, struct statevector_array* psi_out)
+{
+	assert(psi->nqubits == psi_out->nqubits);
+	assert(0 <= i && i < psi->nqubits);
+	assert(0 <= j && j < psi->nqubits);
+	assert(i < j);
+	assert(psi_out->nstates == 16);
+
+	memset(psi_out->data, 0, ((size_t)1 << psi_out->nqubits) * psi_out->nstates * sizeof(numeric));
+
+	const intqs m = (intqs)1 << i;
+	const intqs n = (intqs)1 << (j - i - 1);
+	const intqs o = (intqs)1 << (psi->nqubits - 1 - j);
+	for (intqs a = 0; a < m; a++)
+	{
+		for (intqs b = 0; b < n; b++)
+		{
+			for (intqs c = 0; c < o; c++)
+			{
+				numeric x = psi->data[(((a*2    )*n + b)*2    )*o + c];
+				numeric y = psi->data[(((a*2    )*n + b)*2 + 1)*o + c];
+				numeric z = psi->data[(((a*2 + 1)*n + b)*2    )*o + c];
+				numeric w = psi->data[(((a*2 + 1)*n + b)*2 + 1)*o + c];
+
+				// equivalent to outer product with 4x4 identity matrix and transpositions
+				for (int k = 0; k < 2; k++)
+				{
+					for (int l = 0; l < 2; l++)
+					{
+						psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 0] = x;
+						psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 1] = y;
+						psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 2] = z;
+						psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 3] = w;
+					}
 				}
 			}
 		}

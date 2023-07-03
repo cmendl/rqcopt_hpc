@@ -66,9 +66,38 @@ def apply_gate_backward_data():
         file.close()
 
 
+def apply_gate_placeholder_data():
+
+    # random number generator
+    rng = np.random.default_rng(44)
+
+    # system size
+    L = 7
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_apply_gate_placeholder_{ctype}.hdf5", "w")
+
+        # random input statevector
+        psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
+        psi /= np.linalg.norm(psi)
+        file["psi"] = interleave_complex(psi, ctype)
+
+        # output statevector array
+        i = 2
+        j = 5
+        psi_out = np.kron(psi, np.identity(4).reshape(-1))
+        psi_out = psi_out.reshape((2**i, 2, 2**(j - i - 1), 2, 2**(L - 1 - j), 2, 2, 2, 2))
+        psi_out = psi_out.transpose((0, 5, 2, 6, 4, 7, 8, 1, 3))
+        psi_out = psi_out.reshape(-1)
+        file["psi_out"] = interleave_complex(psi_out, ctype)
+
+        file.close()
+
+
 def main():
     apply_gate_data()
     apply_gate_backward_data()
+    apply_gate_placeholder_data()
 
 
 if __name__ == "__main__":

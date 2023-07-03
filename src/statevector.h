@@ -20,3 +20,20 @@ void free_statevector(struct statevector* psi);
 
 
 void transpose_statevector(const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_trans);
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Array of quantum statevectors, using interleaved entries.
+///
+struct statevector_array
+{
+	numeric* data;  //!< data entries, matrix of size 2^nqubits x nstates
+	int nqubits;    //!< number of qubits
+	int nstates;    //!< number of statevectors
+};
+
+
+int allocate_statevector_array(int nqubits, int nstates, struct statevector_array* psi_list);
+
+void free_statevector_array(struct statevector_array* psi_list);

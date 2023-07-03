@@ -198,3 +198,42 @@ char* test_apply_gate_backward()
 
 	return 0;
 }
+
+
+char* test_apply_gate_placeholder()
+{
+	int L = 7;
+
+	hid_t file = H5Fopen("../test/data/test_apply_gate_placeholder" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_apply_gate_placeholder failed";
+	}
+
+	struct statevector psi;
+	if (allocate_statevector(L, &psi) < 0) { return "memory allocation failed"; }
+	struct statevector_array psi_out, psi_out_ref;
+	if (allocate_statevector_array(L, 16, &psi_out)     < 0) { return "memory allocation failed"; }
+	if (allocate_statevector_array(L, 16, &psi_out_ref) < 0) { return "memory allocation failed"; }
+
+	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
+		return "reading input statevector data from disk failed";
+	}
+	if (read_hdf5_dataset(file, "psi_out", H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
+		return "reading output statevector array data from disk failed";
+	}
+
+	apply_gate_placeholder(2, 5, &psi, &psi_out);
+
+	// compare with reference
+	if (uniform_distance(((size_t)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
+		return "quantum state array after applying gate placeholder does not match reference";
+	}
+
+	free_statevector_array(&psi_out_ref);
+	free_statevector_array(&psi_out);
+	free_statevector(&psi);
+
+	H5Fclose(file);
+
+	return 0;
+}

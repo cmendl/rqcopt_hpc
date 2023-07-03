@@ -69,3 +69,43 @@ void transpose_statevector(const struct statevector* restrict psi, const int* pe
 
 	aligned_free(strides);
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Allocate a statevector array.
+///
+int allocate_statevector_array(int nqubits, int nstates, struct statevector_array* psi_array)
+{
+	size_t size = ((size_t)1 << nqubits) * nstates * sizeof(numeric);
+	if (size < MEM_DATA_ALIGN) {
+		size = MEM_DATA_ALIGN;
+	}
+
+	psi_array->nqubits = nqubits;
+	psi_array->nstates = nstates;
+	psi_array->data = aligned_alloc(MEM_DATA_ALIGN, size);
+	if (psi_array->data == NULL)
+	{
+		fprintf(stderr, "allocating statevector array memory (%zu bytes) failed\n", size);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Free (release memory of) a statevector array.
+///
+void free_statevector_array(struct statevector_array* psi_array)
+{
+	if (psi_array->data != NULL)
+	{
+		aligned_free(psi_array->data);
+		psi_array->data = NULL;
+	}
+	psi_array->nqubits = 0;
+	psi_array->nstates = 0;
+}
