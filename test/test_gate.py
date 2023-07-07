@@ -66,6 +66,52 @@ def apply_gate_backward_data():
         file.close()
 
 
+def apply_gate_to_array_data():
+
+    # random number generator
+    rng = np.random.default_rng(42)
+
+    # system size
+    L = 6
+    # number of states
+    nstates = 5
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_apply_gate_to_array_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrix (does not need to be unitary for this test)
+        V = 1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng)
+        file["V"] = interleave_complex(V, ctype)
+
+        # random input statevectors
+        psi_list = []
+        chi1_list = []
+        chi2_list = []
+        chi3_list = []
+        for _ in range(nstates):
+            psi = rng.standard_normal(2**L) if ctype == "real" else oc.crandn(2**L, rng)
+            psi /= np.linalg.norm(psi)
+            psi_list.append(psi)
+
+            # general i < j
+            chi1 = oc.apply_gate(V, L, 2, 5, psi)
+            # j < i
+            chi2 = oc.apply_gate(V, L, 4, 1, psi)
+            # j == i + 1
+            chi3 = oc.apply_gate(V, L, 3, 4, psi)
+
+            chi1_list.append(chi1)
+            chi2_list.append(chi2)
+            chi3_list.append(chi3)
+
+        file["psi"]  = interleave_complex(np.asarray(psi_list).T, ctype)
+        file["chi1"] = interleave_complex(np.asarray(chi1_list).T, ctype)
+        file["chi2"] = interleave_complex(np.asarray(chi2_list).T, ctype)
+        file["chi3"] = interleave_complex(np.asarray(chi3_list).T, ctype)
+
+        file.close()
+
+
 def apply_gate_placeholder_data():
 
     # random number generator
@@ -97,6 +143,7 @@ def apply_gate_placeholder_data():
 def main():
     apply_gate_data()
     apply_gate_backward_data()
+    apply_gate_to_array_data()
     apply_gate_placeholder_data()
 
 

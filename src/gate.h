@@ -10,4 +10,7 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4* dgate);
 
 
+void apply_gate_to_array(const struct mat4x4* gate, int i, int j, const struct statevector_array* restrict psi, struct statevector_array* restrict psi_out);
+
+
 void apply_gate_placeholder(const int i, const int j, const struct statevector* psi, struct statevector_array* psi_out);
