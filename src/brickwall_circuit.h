@@ -19,12 +19,12 @@ int apply_adjoint_brickwall_unitary(const struct mat4x4 Vlist[], int nlayers,
 ///
 struct brickwall_unitary_cache
 {
-	int nlayers;
 	int nqubits;
+	int nstates;
 	struct statevector* psi_list;
 };
 
-int allocate_brickwall_unitary_cache(const int nlayers, const int nqubits, struct brickwall_unitary_cache* cache);
+int allocate_brickwall_unitary_cache(const int nqubits, const int nstates, struct brickwall_unitary_cache* cache);
 
 void free_brickwall_unitary_cache(struct brickwall_unitary_cache* cache);
 
@@ -33,6 +33,9 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 
 int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[]);
+
+int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
+	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[], numeric* hess);
 
 
 int brickwall_unitary_grad_matfree(const struct mat4x4 Vlist[], int nlayers, int L,

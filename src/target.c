@@ -30,7 +30,7 @@ int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vli
 	}
 
 	struct brickwall_unitary_cache cache = { 0 };
-	if (allocate_brickwall_unitary_cache(nlayers, L, &cache) < 0) {
+	if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
 		fprintf(stderr, "'allocate_brickwall_unitary_cache' failed");
 		return -1;
 	}

@@ -128,14 +128,25 @@ def apply_gate_placeholder_data():
         psi /= np.linalg.norm(psi)
         file["psi"] = interleave_complex(psi, ctype)
 
-        # output statevector array
+        # i < j
         i = 2
         j = 5
-        psi_out = np.kron(psi, np.identity(4).reshape(-1))
-        psi_out = psi_out.reshape((2**i, 2, 2**(j - i - 1), 2, 2**(L - 1 - j), 2, 2, 2, 2))
-        psi_out = psi_out.transpose((0, 5, 2, 6, 4, 7, 8, 1, 3))
-        psi_out = psi_out.reshape(-1)
-        file["psi_out"] = interleave_complex(psi_out, ctype)
+        # output statevector array
+        psi_out1 = np.kron(psi, np.identity(4).reshape(-1))
+        psi_out1 = psi_out1.reshape((2**i, 2, 2**(j - i - 1), 2, 2**(L - 1 - j), 2, 2, 2, 2))
+        psi_out1 = psi_out1.transpose((0, 5, 2, 6, 4, 7, 8, 1, 3))
+        psi_out1 = psi_out1.reshape(-1)
+        file["psi_out1"] = interleave_complex(psi_out1, ctype)
+
+        # i > j
+        i = 5
+        j = 1
+        # output statevector array
+        psi_out2 = np.kron(psi, np.identity(4).reshape(-1))
+        psi_out2 = psi_out2.reshape((2**j, 2, 2**(i - j - 1), 2, 2**(L - 1 - i), 2, 2, 2, 2))
+        psi_out2 = psi_out2.transpose((0, 5, 2, 6, 4, 8, 7, 3, 1))
+        psi_out2 = psi_out2.reshape(-1)
+        file["psi_out2"] = interleave_complex(psi_out2, ctype)
 
         file.close()
 

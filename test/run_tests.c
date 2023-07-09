@@ -32,6 +32,7 @@ char* test_parallel_gates_hess_matfree();
 char* test_apply_brickwall_unitary();
 char* test_apply_adjoint_brickwall_unitary();
 char* test_brickwall_unitary_backward();
+char* test_brickwall_unitary_backward_hessian();
 char* test_brickwall_unitary_grad_matfree();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_gradient_vector_matfree();
@@ -68,6 +69,7 @@ int main()
 		{ .func = test_apply_brickwall_unitary,                   .name = "test_apply_brickwall_unitary" },
 		{ .func = test_apply_adjoint_brickwall_unitary,           .name = "test_apply_adjoint_brickwall_unitary" },
 		{ .func = test_brickwall_unitary_backward,                .name = "test_brickwall_unitary_backward" },
+		{ .func = test_brickwall_unitary_backward_hessian,        .name = "test_brickwall_unitary_backward_hessian" },
 		{ .func = test_brickwall_unitary_grad_matfree,            .name = "test_brickwall_unitary_grad_matfree" },
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_brickwall_unitary_gradient_vector_matfree, .name = "test_brickwall_unitary_gradient_vector_matfree" },

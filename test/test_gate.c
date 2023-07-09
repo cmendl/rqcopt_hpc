@@ -279,12 +279,24 @@ char* test_apply_gate_placeholder()
 	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
 	}
-	if (read_hdf5_dataset(file, "psi_out", H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
+
+	// case i < j
+	if (read_hdf5_dataset(file, "psi_out1", H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
 		return "reading output statevector array data from disk failed";
 	}
-
+	// apply gate placeholder
 	apply_gate_placeholder(2, 5, &psi, &psi_out);
+	// compare with reference
+	if (uniform_distance(((size_t)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
+		return "quantum state array after applying gate placeholder does not match reference";
+	}
 
+	// case i > j
+	if (read_hdf5_dataset(file, "psi_out2", H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
+		return "reading output statevector array data from disk failed";
+	}
+	// apply gate placeholder
+	apply_gate_placeholder(5, 1, &psi, &psi_out);
 	// compare with reference
 	if (uniform_distance(((size_t)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
 		return "quantum state array after applying gate placeholder does not match reference";

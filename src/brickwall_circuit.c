@@ -92,15 +92,13 @@ int apply_adjoint_brickwall_unitary(const struct mat4x4 Vlist[], int nlayers, co
 ///
 /// \brief Allocate temporary cache required by backward pass of a brick wall quantum circuit.
 ///
-int allocate_brickwall_unitary_cache(const int nlayers, const int nqubits, struct brickwall_unitary_cache* cache)
+int allocate_brickwall_unitary_cache(const int nqubits, const int nstates, struct brickwall_unitary_cache* cache)
 {
-	assert(nlayers >= 1);
-	assert(nqubits % 2 == 0);
+	assert(nstates >= 1);
 
-	cache->nlayers = nlayers;
 	cache->nqubits = nqubits;
+	cache->nstates = nstates;
 
-	const int nstates = nlayers * (nqubits / 2);
 	cache->psi_list = aligned_alloc(MEM_DATA_ALIGN, nstates * sizeof(struct statevector));
 	if (cache->psi_list == NULL) {
 		fprintf(stderr, "allocating memory for statevector array failed\n");
@@ -125,9 +123,7 @@ int allocate_brickwall_unitary_cache(const int nlayers, const int nqubits, struc
 ///
 void free_brickwall_unitary_cache(struct brickwall_unitary_cache* cache)
 {
-	const int nstates = cache->nlayers * (cache->nqubits / 2);
-
-	for (int i = 0; i < nstates; i++)
+	for (int i = 0; i < cache->nstates; i++)
 	{
 		free_statevector(&cache->psi_list[i]);
 	}
@@ -136,7 +132,7 @@ void free_brickwall_unitary_cache(struct brickwall_unitary_cache* cache)
 	cache->psi_list = NULL;
 
 	cache->nqubits = 0;
-	cache->nlayers = 0;
+	cache->nstates = 0;
 }
 
 
@@ -148,9 +144,11 @@ void free_brickwall_unitary_cache(struct brickwall_unitary_cache* cache)
 int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const int* perms[],
 	const struct statevector* restrict psi, struct brickwall_unitary_cache* cache, struct statevector* restrict psi_out)
 {
+	const int nstates = nlayers * (psi->nqubits / 2);
+
 	assert(nlayers >= 1);
 	assert(psi->nqubits == psi_out->nqubits);
-	assert(cache->nlayers == nlayers);
+	assert(cache->nstates == nstates);
 	assert(cache->nqubits == psi->nqubits);
 	assert(psi->nqubits % 2 == 0);
 
@@ -162,8 +160,6 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 		fprintf(stderr, "allocating permutation vector failed\n");
 		return -1;
 	}
-
-	const int nstates = nlayers * (psi->nqubits / 2);
 
 	int k = 0;
 	for (int i = 0; i < nlayers; i++)
@@ -192,11 +188,13 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[])
 {
+	const int nstates = nlayers * (dpsi->nqubits / 2);
+
 	assert(nlayers >= 1);
 	assert(dpsi_out->nqubits == dpsi->nqubits);
-	assert(cache->nlayers == nlayers);
+	assert(dpsi_out->nqubits % 2 == 0);
 	assert(cache->nqubits == dpsi->nqubits);
-	assert(cache->nqubits % 2 == 0);
+	assert(cache->nstates == nstates);
 
 	// temporary statevector
 	struct statevector tmp = { 0 };
@@ -209,8 +207,6 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 		fprintf(stderr, "allocating permutation vector failed\n");
 		return -1;
 	}
-
-	const int nstates = nlayers * (dpsi->nqubits / 2);
 
 	int k = nstates - 1;
 	for (int i = nlayers - 1; i >= 0; i--)
@@ -235,6 +231,156 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 
 	aligned_free(inv_perm);
 	free_statevector(&tmp);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Backward pass and Hessian computation for applying the unitary matrix representation of a brick wall
+/// quantum circuit with periodic boundary conditions to state psi.
+///
+/// On input, 'hess' must point to a memory block of size (nlayers * 16)^2.
+///
+int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
+	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[], numeric* hess)
+{
+	const int nstates = nlayers * (dpsi->nqubits / 2);
+
+	assert(nlayers >= 1);
+	assert(dpsi_out->nqubits == dpsi->nqubits);
+	assert(dpsi_out->nqubits % 2 == 0);
+	assert(cache->nqubits == dpsi->nqubits);
+	assert(cache->nstates == nstates);
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
+	if (inv_perm == NULL) {
+		fprintf(stderr, "allocating permutation vector failed\n");
+		return -1;
+	}
+
+	// store gradient vectors in another cache
+	struct brickwall_unitary_cache grad_cache;
+	if (allocate_brickwall_unitary_cache(dpsi->nqubits, nstates, &grad_cache) < 0) {
+		fprintf(stderr, "allocating a brick wall unitary cache failed\n");
+		return -1;
+	}
+
+	// store initial gradient statevector in cache
+	memcpy(grad_cache.psi_list[nstates - 1].data, dpsi_out->data, ((size_t)1 << dpsi_out->nqubits) * sizeof(numeric));
+
+	// gradient
+	int k = nstates - 1;
+	for (int i = nlayers - 1; i >= 0; i--)
+	{
+		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
+
+		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+
+		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
+		{
+			struct statevector* dpsi0 = (k > 0 ? &grad_cache.psi_list[k - 1] : dpsi);
+
+			struct mat4x4 dV;
+			apply_gate_backward(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k], &grad_cache.psi_list[k], dpsi0, &dV);
+			// accumulate gradient
+			add_matrix(&dVlist[i], &dV);
+
+			k--;
+		}
+	}
+
+	// Hessian
+	memset(hess, 0, nlayers * 16 * nlayers * 16 * sizeof(numeric));
+	// temporary statevector array
+	struct statevector_array tmp[2];
+	for (int i = 0; i < 2; i++) {
+		if (allocate_statevector_array(dpsi->nqubits, 16, &tmp[i]) < 0) {
+			fprintf(stderr, "memory allocation of a statevector array for %i qubits and 16 states failed", dpsi->nqubits);
+			return -1;
+		}
+	}
+	// temporary derivative with respect to two gates
+	struct mat4x4* h = aligned_alloc(MEM_DATA_ALIGN, 16 * sizeof(struct mat4x4));
+	if (h == NULL) {
+		fprintf(stderr, "allocating temporary gates failed\n");
+		return -1;
+	}
+	int* inv_perm_cont = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
+	if (inv_perm_cont == NULL) {
+		fprintf(stderr, "allocating permutation vector failed\n");
+		return -1;
+	}
+	k = 0;
+	for (int i = 0; i < nlayers; i++)
+	{
+		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
+
+		for (int r = 0; r < dpsi->nqubits; r += 2)
+		{
+			apply_gate_placeholder(inv_perm[r], inv_perm[r + 1], &cache->psi_list[k], &tmp[0]);
+			k++;
+
+			// proceed through the circuit with gate placeholder at layer i and qubit pair indexed by r
+			int p = 0;
+			int l = k;
+			for (int j = i; j < nlayers; j++)
+			{
+				inverse_permutation(dpsi->nqubits, perms[j], inv_perm_cont);
+
+				for (int s = 0; s < dpsi->nqubits; s += 2)
+				{
+					if (i == j && s <= r) {
+						continue;
+					}
+
+					apply_gate_backward_array(&Vlist[j], inv_perm_cont[s], inv_perm_cont[s + 1], &tmp[p], &grad_cache.psi_list[l], h);
+					// accumulate Hessian entries
+					for (int x = 0; x < 16; x++) {
+						for (int y = 0; y < 16; y++) {
+							hess[((i*16 + x)*nlayers + j)*16 + y] += h[x].data[y];
+						}
+					}
+
+					if (j < nlayers - 1 || s < dpsi->nqubits - 2) {  // skip (expensive) gate application at final iteration
+						apply_gate_to_array(&Vlist[j], inv_perm_cont[s], inv_perm_cont[s + 1], &tmp[p], &tmp[1 - p]);
+						p = 1 - p;
+					}
+
+					l++;
+				}
+			}
+		}
+	}
+
+	// symmetrize diagonal blocks
+	for (int i = 0; i < nlayers; i++) {
+		for (int x = 0; x < 16; x++) {
+			for (int y = 0; y <= x; y++) {
+				numeric s = hess[((i*16 + x)*nlayers + i)*16 + y] + hess[((i*16 + y)*nlayers + i)*16 + x];
+				hess[((i*16 + x)*nlayers + i)*16 + y] = s;
+				hess[((i*16 + y)*nlayers + i)*16 + x] = s;
+			}
+		}
+	}
+	// copy off-diagonal blocks according to symmetry
+	for (int i = 0; i < nlayers; i++) {
+		for (int j = 0; j < i; j++) {
+			for (int x = 0; x < 16; x++) {
+				for (int y = 0; y < 16; y++) {
+					hess[((i*16 + x)*nlayers + j)*16 + y] = hess[((j*16 + y)*nlayers + i)*16 + x];
+				}
+			}
+		}
+	}
+	
+	aligned_free(h);
+	free_statevector_array(&tmp[1]);
+	free_statevector_array(&tmp[0]);
+	free_brickwall_unitary_cache(&grad_cache);
+	aligned_free(inv_perm_cont);
+	aligned_free(inv_perm);
 
 	return 0;
 }
