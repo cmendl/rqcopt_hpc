@@ -10,3 +10,7 @@ typedef int (*unitary_func)(const struct statevector* restrict psi, void* fdata,
 int target_and_gradient(unitary_func ufunc, void* udata,
 	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
 	double* fval, struct mat4x4 dVlist[]);
+
+int target_gradient_hessian(unitary_func ufunc, void* udata,
+	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval, struct mat4x4 dVlist[], numeric* hess);
