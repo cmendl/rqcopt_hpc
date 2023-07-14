@@ -21,6 +21,9 @@ void identity_matrix(struct mat4x4* a);
 void scale_matrix(struct mat4x4* restrict a, const double x);
 
 
+void conjugate_matrix(struct mat4x4* a);
+
+
 void add_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
 void sub_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b);
 
@@ -37,8 +40,10 @@ void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z);
 #ifdef COMPLEX_CIRCUIT
 
 void real_to_antisymm(const double* r, struct mat4x4* w);
-
 void antisymm_to_real(const struct mat4x4* w, double* r);
+
+void real_to_unitary_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
+void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
 
 #endif
 

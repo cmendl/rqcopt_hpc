@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import unitary_group
 import h5py
 from io_util import interleave_complex
 import rqcopt_matfree as oc
@@ -53,6 +54,43 @@ def target_and_gradient_data():
             file[f"dVlist{i}"] = interleave_complex(dVlist.conj(), ctype)   # complex conjugation due to different convention
 
         file.close()
+
+
+def target_and_gradient_vector_data():
+
+    # random number generator
+    rng = np.random.default_rng(43)
+
+    # system size
+    L = 6
+
+    # number of layers
+    nlayers = 3
+
+    ctype = "cplx"
+
+    file = h5py.File(f"data/test_target_and_gradient_vector_{ctype}.hdf5", "w")
+
+    # general random 4x4 matrices (do not need to be unitary for this test)
+    Vlist = np.stack([0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
+    for i in range(nlayers):
+        file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+    # random permutations
+    perms = [rng.permutation(L) for _ in range(nlayers)]
+    for i in range(nlayers):
+        file[f"perm{i}"] = perms[i]
+
+    ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+    # target function value
+    f = oc.brickwall_opt_matfree._f_target_matfree(Vlist, L, ufunc, perms)
+    file["f"] = f
+    # gate gradients as real vector
+    grad = oc.brickwall_unitary_gradient_vector_matfree(Vlist, L, ufunc, perms)
+    file["grad"] = grad
+
+    file.close()
 
 
 def _brickwall_unitary_plain_hessian_matrix_matfree(Vlist, L, Ufunc, perms):
@@ -115,9 +153,53 @@ def target_gradient_hessian_data():
         file.close()
 
 
+def target_gradient_vector_hessian_matrix_data():
+
+    # random number generator
+    rng = np.random.default_rng(47)
+
+    # system size
+    L = 6
+
+    # number of layers
+    nlayers = 5
+
+    ctype = "cplx"
+
+    file = h5py.File(f"data/target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
+
+    # random unitaries (unitary property required for Hessian matrix to be symmetric)
+    Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
+    for i in range(nlayers):
+        file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+    # random permutations
+    perms = [rng.permutation(L) for _ in range(nlayers)]
+    for i in range(nlayers):
+        file[f"perm{i}"] = perms[i]
+
+    ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+    # target function value
+    f = oc.brickwall_opt_matfree._f_target_matfree(Vlist, L, ufunc, perms)
+    file["f"] = f
+
+    # gate gradients as real vector
+    grad = oc.brickwall_unitary_gradient_vector_matfree(Vlist, L, ufunc, perms)
+    file["grad"] = grad
+
+    # Hessian matrix
+    H = oc.brickwall_unitary_hessian_matrix_matfree(Vlist, L, ufunc, perms)
+    file["H"] = H
+
+    file.close()
+
+
 def main():
     target_and_gradient_data()
+    target_and_gradient_vector_data()
     target_gradient_hessian_data()
+    target_gradient_vector_hessian_matrix_data()
 
 
 if __name__ == "__main__":

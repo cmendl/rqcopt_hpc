@@ -99,6 +99,82 @@ char* test_target_and_gradient()
 }
 
 
+#ifdef COMPLEX_CIRCUIT
+
+char* test_target_and_gradient_vector()
+{
+	int L = 6;
+	int nlayers = 3;
+
+	hid_t file = H5Fopen("../test/data/test_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_target_and_gradient_vector failed";
+	}
+
+	struct mat4x4 Vlist[3];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[3][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2] };
+
+	const int m = nlayers * 16;
+
+	double f;
+	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	if (target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
+		return "'target_and_gradient_vector' failed internally";
+	}
+
+	double f_ref;
+	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+		return "reading reference target function value from disk failed";
+	}
+
+	// compare with reference
+	if (fabs(f - f_ref) > 1e-12) {
+		return "computed target function value not match reference";
+	}
+
+	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
+		return "reading reference gradient vector from disk failed";
+	}
+
+	// compare with reference
+	double d = 0;
+	for (int i = 0; i < nlayers * 16; i++)
+	{
+		d = fmax(d, fabs(grad[i] - grad_ref[i]));
+	}
+	if (d > 1e-14) {
+		return "computed gate gradient vector does not match reference";
+	}
+
+	aligned_free(grad_ref);
+	aligned_free(grad);
+	H5Fclose(file);
+
+	return 0;
+}
+
+#endif
+
+
 char* test_target_gradient_hessian()
 {
 	int L = 6;
@@ -195,3 +271,113 @@ char* test_target_gradient_hessian()
 
 	return 0;
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+char* test_target_gradient_vector_hessian_matrix()
+{
+	int L = 6;
+	int nlayers = 5;
+
+	hid_t file = H5Fopen("../test/data/target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in target_gradient_vector_hessian_matrix failed";
+	}
+
+	struct mat4x4 Vlist[5];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[5][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	const int m = nlayers * 16;
+
+	double f;
+	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+
+	if (target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
+		return "'target_gradient_vector_hessian_matrix' failed internally";
+	}
+
+	double f_ref;
+	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+		return "reading reference target function value from disk failed";
+	}
+
+	// compare with reference
+	if (fabs(f - f_ref) > 1e-12) {
+		return "computed target function value not match reference";
+	}
+
+	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
+		return "reading reference gradient vector from disk failed";
+	}
+
+	// compare with reference
+	double d = 0;
+	for (int i = 0; i < m; i++)
+	{
+		d = fmax(d, fabs(grad[i] - grad_ref[i]));
+	}
+	if (d > 1e-14) {
+		return "computed gate gradient vector does not match reference";
+	}
+
+	// check symmetry
+	double es = 0;
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < m; j++) {
+			es = fmax(es, fabs(H[i * m + j] - H[j * m + i]));
+		}
+	}
+	if (es > 1e-14) {
+		return "computed gate Hessian matrix is not symmetric";
+	}
+
+	double* H_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	if (H_ref == NULL) {
+		return "memory allocation for reference Hessian matrix failed";
+	}
+	if (read_hdf5_dataset(file, "H", H5T_NATIVE_DOUBLE, H_ref) < 0) {
+		return "reading reference Hessian matrix from disk failed";
+	}
+
+	// compare with reference
+	d = 0;
+	for (int i = 0; i < m * m; i++)
+	{
+		d = fmax(d, fabs(H[i] - H_ref[i]));
+	}
+	if (d > 1e-13) {
+		return "computed brickwall circuit Hessian matrix does not match reference";
+	}
+
+	aligned_free(H_ref);
+	aligned_free(grad_ref);
+	aligned_free(H);
+	aligned_free(grad);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+#endif

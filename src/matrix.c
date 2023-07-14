@@ -44,6 +44,19 @@ void scale_matrix(struct mat4x4* restrict a, const double x)
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Complex-conjugate the entries of a matrix.
+///
+void conjugate_matrix(struct mat4x4* a)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		a->data[i] = conj(a->data[i]);
+	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Add matrix 'b' to matrix 'a'.
 ///
 void add_matrix(struct mat4x4* restrict a, const struct mat4x4* restrict b)
@@ -179,6 +192,7 @@ void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 
 #ifdef COMPLEX_CIRCUIT
 
+
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Map a real-valued square matrix to an anti-symmetric matrix of the same dimension.
@@ -220,6 +234,33 @@ void antisymm_to_real(const struct mat4x4* w, double* r)
 		r[i] = creal(w->data[i]) + cimag(w->data[i]);
 	}
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map a real-valued square matrix to a tangent vector of the unitary matrix manifold at point 'v'.
+///
+void real_to_unitary_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z)
+{
+	struct mat4x4 a;
+	real_to_antisymm(r, &a);
+	multiply_matrices(v, &a, z);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map a tangent vector of the unitary matrix manifold at point 'v' to a real-valued square matrix.
+///
+void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r)
+{
+	struct mat4x4 w, t;
+	adjoint(v, &w);
+	multiply_matrices(&w, z, &t);
+	antisymm(&t, &w);
+	antisymm_to_real(&w, r);
+}
+
 
 #endif
 

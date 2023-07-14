@@ -15,6 +15,7 @@ char* test_symm();
 char* test_antisymm();
 #ifdef COMPLEX_CIRCUIT
 char* test_real_to_antisymm();
+char* test_real_to_unitary_tangent();
 #endif
 char* test_multiply();
 char* test_project_unitary_tangent();
@@ -42,7 +43,13 @@ char* test_brickwall_unitary_hess_matfree();
 char* test_brickwall_unitary_hessian_matrix_matfree();
 #endif
 char* test_target_and_gradient();
+#ifdef COMPLEX_CIRCUIT
+char* test_target_and_gradient_vector();
+#endif
 char* test_target_gradient_hessian();
+#ifdef COMPLEX_CIRCUIT
+char* test_target_gradient_vector_hessian_matrix();
+#endif
 char* test_truncated_cg();
 
 
@@ -53,6 +60,7 @@ int main()
 		{ .func = test_antisymm,                                  .name = "test_antisymm" },
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_real_to_antisymm,                          .name = "test_real_to_antisymm" },
+		{ .func = test_real_to_unitary_tangent,                   .name = "test_real_to_unitary_tangent" },
 		#endif
 		{ .func = test_multiply,                                  .name = "test_multiply" },
 		{ .func = test_project_unitary_tangent,                   .name = "test_project_unitary_tangent" },
@@ -80,7 +88,13 @@ int main()
 		{ .func = test_brickwall_unitary_hessian_matrix_matfree,  .name = "test_brickwall_unitary_hessian_matrix_matfree" },
 		#endif
 		{ .func = test_target_and_gradient,                       .name = "test_target_and_gradient" },
+		#ifdef COMPLEX_CIRCUIT
+		{ .func = test_target_and_gradient_vector,                .name = "test_target_and_gradient_vector" },
+		#endif
 		{ .func = test_target_gradient_hessian,                   .name = "test_target_gradient_hessian" },
+		#ifdef COMPLEX_CIRCUIT
+		{ .func = test_target_gradient_vector_hessian_matrix,     .name = "test_target_gradient_vector_hessian_matrix" },
+		#endif
 		{ .func = test_truncated_cg,                              .name = "test_truncated_cg" },		
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);

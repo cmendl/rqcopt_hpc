@@ -110,6 +110,46 @@ char* test_real_to_antisymm()
 #endif
 
 
+#ifdef COMPLEX_CIRCUIT
+
+char* test_real_to_unitary_tangent()
+{
+	hid_t file = H5Fopen("../test/data/test_real_to_unitary_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_real_to_unitary_tangent failed";
+	}
+
+	double r[16];
+	if (read_hdf5_dataset(file, "r", H5T_NATIVE_DOUBLE, r) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 v;
+	if (read_hdf5_dataset(file, "v", H5T_NATIVE_DOUBLE, v.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 z;
+	real_to_unitary_tangent(r, &v, &z);
+
+	double s[16];
+	unitary_tangent_to_real(&v, &z, s);
+	// 's' must match 'r'
+	double d = 0;
+	for (int i = 0; i < 16; i++)
+	{
+		d = fmax(d, fabs(s[i] - r[i]));
+	}
+	if (d > 1e-14) {
+		return "converting from real to unitary tangent matrix and back does not result in original matrix";
+	}
+
+	return 0;
+}
+
+#endif
+
+
 char* test_multiply()
 {
 	hid_t file = H5Fopen("../test/data/test_multiply" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
