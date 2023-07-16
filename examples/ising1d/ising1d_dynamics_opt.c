@@ -2,19 +2,20 @@
 #include <cblas.h>
 #include "brickwall_opt.h"
 #include "util.h"
+#include "timing.h"
 
 
 #ifdef COMPLEX_CIRCUIT
 
 
-static int Ufunc(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out)
+static int ufunc(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out)
 {
 	const intqs n = (intqs)1 << psi->nqubits;
 	const numeric* U = (numeric*)fdata;
 
 	// apply U
 	numeric alpha = 1;
-	numeric beta = 0;
+	numeric beta  = 0;
 	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, U, n, psi->data, 1, &beta, psi_out->data, 1);
 
 	return 0;
@@ -77,8 +78,15 @@ int main()
 
 	struct mat4x4* Vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 
+	uint64_t start_tick = get_ticks();
+
 	// perform optimization
-	optimize_brickwall_circuit_matfree(L, Ufunc, expiH, Vlist_start, nlayers, pperms, &params, niter, f_iter, Vlist_opt);
+	optimize_brickwall_circuit(ufunc, expiH, Vlist_start, nlayers, L, pperms, &params, niter, f_iter, Vlist_opt);
+
+	uint64_t total_ticks = get_ticks() - start_tick;
+	// get the tick resolution
+	const double ticks_per_sec = (double)get_tick_resolution();
+	printf("wall time: %g\n", total_ticks / ticks_per_sec);
 
 	for (int i = 0; i < niter; i++)
 	{

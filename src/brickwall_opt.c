@@ -90,7 +90,7 @@ static void retract_unitary_list(const double* restrict x, const double* restric
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
 /// the unitary matrix `U` using a trust-region method.
 ///
-void optimize_brickwall_circuit_matfree(const int L, unitary_func ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
+void optimize_brickwall_circuit(unitary_func ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int L, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
 {
 	// target function data
 	struct f_target_data fdata = {
