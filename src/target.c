@@ -50,7 +50,7 @@ int target(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const i
 			Upsi.data[a] = -conj(Upsi.data[a]);
 		}
 
-		ret = apply_brickwall_unitary(Vlist, nlayers, &psi, perms, &Wpsi);
+		ret = apply_brickwall_unitary(Vlist, nlayers, perms, &psi, &Wpsi);
 		if (ret < 0) {
 			fprintf(stderr, "call of 'apply_brickwall_unitary' failed, return value: %i\n", ret);
 			return -1;

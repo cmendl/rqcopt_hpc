@@ -337,9 +337,9 @@ char* test_target_gradient_vector_hessian_matrix()
 	int L = 6;
 	int nlayers = 5;
 
-	hid_t file = H5Fopen("../test/data/target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in target_gradient_vector_hessian_matrix failed";
+		return "'H5Fopen' in test_target_gradient_vector_hessian_matrix failed";
 	}
 
 	struct mat4x4 Vlist[5];

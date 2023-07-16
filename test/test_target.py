@@ -199,7 +199,7 @@ def target_gradient_vector_hessian_matrix_data():
 
     ctype = "cplx"
 
-    file = h5py.File(f"data/target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
+    file = h5py.File(f"data/test_target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
 
     # random unitaries (unitary property required for Hessian matrix to be symmetric)
     Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]

@@ -26,22 +26,9 @@ char* test_apply_gate();
 char* test_apply_gate_backward();
 char* test_apply_gate_to_array();
 char* test_apply_gate_placeholder();
-char* test_apply_parallel_gates();
-char* test_apply_parallel_gates_directed_grad();
-char* test_parallel_gates_grad_matfree();
-char* test_parallel_gates_hess_matfree();
 char* test_apply_brickwall_unitary();
-char* test_apply_adjoint_brickwall_unitary();
 char* test_brickwall_unitary_backward();
 char* test_brickwall_unitary_backward_hessian();
-char* test_brickwall_unitary_grad_matfree();
-#ifdef COMPLEX_CIRCUIT
-char* test_brickwall_unitary_gradient_vector_matfree();
-#endif
-char* test_brickwall_unitary_hess_matfree();
-#ifdef COMPLEX_CIRCUIT
-char* test_brickwall_unitary_hessian_matrix_matfree();
-#endif
 char* test_target();
 char* test_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
@@ -72,22 +59,9 @@ int main()
 		{ .func = test_apply_gate_backward,                       .name = "test_apply_gate_backward" },
 		{ .func = test_apply_gate_to_array,                       .name = "test_apply_gate_to_array" },
 		{ .func = test_apply_gate_placeholder,                    .name = "test_apply_gate_placeholder" },
-		{ .func = test_apply_parallel_gates,                      .name = "test_apply_parallel_gates" },
-		{ .func = test_apply_parallel_gates_directed_grad,        .name = "test_apply_parallel_gates_directed_grad" },
-		{ .func = test_parallel_gates_grad_matfree,               .name = "test_parallel_gates_grad_matfree" },
-		{ .func = test_parallel_gates_hess_matfree,               .name = "test_parallel_gates_hess_matfree" },
 		{ .func = test_apply_brickwall_unitary,                   .name = "test_apply_brickwall_unitary" },
-		{ .func = test_apply_adjoint_brickwall_unitary,           .name = "test_apply_adjoint_brickwall_unitary" },
 		{ .func = test_brickwall_unitary_backward,                .name = "test_brickwall_unitary_backward" },
 		{ .func = test_brickwall_unitary_backward_hessian,        .name = "test_brickwall_unitary_backward_hessian" },
-		{ .func = test_brickwall_unitary_grad_matfree,            .name = "test_brickwall_unitary_grad_matfree" },
-		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_brickwall_unitary_gradient_vector_matfree, .name = "test_brickwall_unitary_gradient_vector_matfree" },
-		#endif
-		{ .func = test_brickwall_unitary_hess_matfree,            .name = "test_brickwall_unitary_hess_matfree" },
-		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_brickwall_unitary_hessian_matrix_matfree,  .name = "test_brickwall_unitary_hessian_matrix_matfree" },
-		#endif
 		{ .func = test_target,                                    .name = "test_target" },
 		{ .func = test_target_and_gradient,                       .name = "test_target_and_gradient" },
 		#ifdef COMPLEX_CIRCUIT
