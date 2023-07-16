@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "config.h"
+#include "target.h"
 #include "brickwall_opt.h"
 
 
@@ -10,72 +11,45 @@
 
 struct f_target_data
 {
-	int L;
-	unitary_func Ufunc;
+	unitary_func ufunc;
 	void* udata;
 	int nlayers;
+	int nqubits;
 	const int** perms;
 };
 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function,
-/// using the provided matrix-free application of U to a state.
+/// \brief Wrapper of target function evaluation.
 ///
-static double f_target_matfree(const double* restrict x, void* fdata)
+static double f(const double* x, void* fdata)
 {
 	struct f_target_data* data = fdata;
 
-	// temporary statevectors
-	struct statevector psi = { 0 };
-	if (allocate_statevector(data->L, &psi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits in 'f_target_matfree' failed\n", data->L);
-		return -1;
-	}
-	struct statevector Upsi = { 0 };
-	if (allocate_statevector(data->L, &Upsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits in 'f_target_matfree' failed\n", data->L);
-		return -1;
-	}
-	struct statevector Vpsi = { 0 };
-	if (allocate_statevector(data->L, &Vpsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits in 'f_target_matfree' failed\n", data->L);
+	double f;
+	if (target(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f) < 0) {
+		fprintf(stderr, "target function evaluation failed internally\n");
 		return -1;
 	}
 
-	double f = 0;
-	// implement trace via summation over unit vectors
-	const intqs n = (intqs)1 << data->L;
-	for (intqs b = 0; b < n; b++)
-	{
-		int ret;
+	return f;
+}
 
-		memset(psi.data, 0, n * sizeof(numeric));
-		psi.data[b] = 1;
 
-		ret = data->Ufunc(&psi, data->udata, &Upsi);
-		if (ret < 0) {
-			fprintf(stderr, "call of 'Ufunc' in 'f_target_matfree' failed, return value: %i\n", ret);
-			return -1;
-		}
+//________________________________________________________________________________________________________________________
+///
+/// \brief Wrapper of target function, gradient and Hessian evaluation.
+///
+static double f_deriv(const double* restrict x, void* fdata, double* restrict grad, double* restrict hess)
+{
+	struct f_target_data* data = fdata;
 
-		ret = apply_brickwall_unitary((const struct mat4x4*)x, data->nlayers, &psi, data->perms, &Vpsi);
-		if (ret < 0) {
-			fprintf(stderr, "call of 'apply_brickwall_unitary' in 'f_target_matfree' failed, return value: %i\n", ret);
-			return -1;
-		}
-
-		// f -= Re <Vpsi | Upsi>
-		for (intqs a = 0; a < n; a++)
-		{
-			f -= creal(conj(Vpsi.data[a]) * Upsi.data[a]);
-		}
+	double f;
+	if (target_gradient_vector_hessian_matrix(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f, grad, hess) < 0) {
+		fprintf(stderr, "target function and derivative evaluation failed internally\n");
+		return -1;
 	}
-
-	free_statevector(&Vpsi);
-	free_statevector(&Upsi);
-	free_statevector(&psi);
 
 	return f;
 }
@@ -113,60 +87,17 @@ static void retract_unitary_list(const double* restrict x, const double* restric
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Compute the gradient corresponding to the target function.
-///
-static void gradfunc_matfree(const double* restrict x, void* gdata, double* restrict grad)
-{
-	struct f_target_data* data = gdata;
-
-	int ret = brickwall_unitary_gradient_vector_matfree((const struct mat4x4*)x, data->nlayers, data->L, data->Ufunc, data->udata, data->perms, grad);
-	if (ret < 0) {
-		fprintf(stderr, "call of 'brickwall_unitary_gradient_vector_matfree' in 'gradfunc_matfree' failed, return value: %i\n", ret);
-	}
-
-	// flip the sign of the gradient vector
-	for (int i = 0; i < data->nlayers * 16; i++)
-	{
-		grad[i] = -grad[i];
-	}
-}
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Compute the Hessian corresponding to the target function.
-///
-static void hessfunc_matfree(const double* restrict x, void* hdata, double* restrict hess)
-{
-	struct f_target_data* data = hdata;
-
-	int ret = brickwall_unitary_hessian_matrix_matfree((const struct mat4x4*)x, data->nlayers, data->L, data->Ufunc, data->udata, data->perms, hess);
-	if (ret < 0) {
-		fprintf(stderr, "call of 'brickwall_unitary_hessian_matrix_matfree' in 'hessfunc_matfree' failed, return value: %i\n", ret);
-	}
-
-	// flip the sign of the Hessian matrix
-	const int m = data->nlayers * 16;
-	for (int i = 0; i < m * m; i++)
-	{
-		hess[i] = -hess[i];
-	}
-}
-
-
-//________________________________________________________________________________________________________________________
-///
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
 /// the unitary matrix `U` using a trust-region method.
 ///
-void optimize_brickwall_circuit_matfree(const int L, unitary_func Ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
+void optimize_brickwall_circuit_matfree(const int L, unitary_func ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
 {
 	// target function data
 	struct f_target_data fdata = {
-		.L = L,
-		.Ufunc = Ufunc,
+		.ufunc = ufunc,
 		.udata = udata,
 		.nlayers = nlayers,
+		.nqubits = L,
 		.perms = perms,
 	};
 
@@ -177,9 +108,8 @@ void optimize_brickwall_circuit_matfree(const int L, unitary_func Ufunc, void* u
 
 	// perform optimization
 	int rdata = nlayers;
-	riemannian_trust_region_optimize(f_target_matfree, &fdata, retract_unitary_list, &rdata,
-		gradfunc_matfree, &fdata, hessfunc_matfree, &fdata, nlayers * 16,
-		(const double*)Vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)Vlist_opt);
+	riemannian_trust_region_optimize(f, f_deriv, &fdata, retract_unitary_list, &rdata,
+		nlayers * 16, (const double*)Vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)Vlist_opt);
 }
 
 

@@ -151,9 +151,8 @@ bool truncated_cg(const double* grad, const double* hess, int n, double radius, 
 ///     Optimization Algorithms on Matrix Manifolds
 ///     Princeton University Press (2008)
 ///
-void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func retract, void* rdata,
-	gradient_func gradfunc, void* graddata, hessian_func hessfunc, void* hessdata, const int n,
-	const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
+void riemannian_trust_region_optimize(target_func f, target_gradient_hessian_func f_deriv, void* fdata, retract_func retract, void* rdata,
+	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
 
@@ -174,12 +173,10 @@ void riemannian_trust_region_optimize(target_func f, void* fdata, retract_func r
 
 	for (int k = 0; k < niter; k++)
 	{
-		gradfunc(x, graddata, grad);
-		hessfunc(x, hessdata, hess);
+		double fx = f_deriv(x, fdata, grad, hess);
 		bool on_boundary = truncated_cg(grad, hess, n, radius, &params->tcg_params, eta);
 		retract(x, eta, rdata, x_next);
 
-		double fx = f(x, fdata);
 		f_iter[k] = fx;
 
 		// Eq. (7.7)

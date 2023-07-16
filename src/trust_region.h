@@ -31,12 +31,11 @@ static inline void set_truncated_cg_default_params(int n, struct truncated_cg_pa
 bool truncated_cg(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z);
 
 
-typedef double (*target_func)(const double* restrict x, void* fdata);
+typedef double (*target_func)(const double* x, void* fdata);
+
+typedef double (*target_gradient_hessian_func)(const double* restrict x, void* fdata, double* restrict grad, double* restrict hess);
 
 typedef void (*retract_func)(const double* restrict x, const double* restrict eta, void* rdata, double* restrict xs);
-
-typedef void (*gradient_func)(const double* restrict x, void* gdata, double* restrict grad);
-typedef void  (*hessian_func)(const double* restrict x, void* hdata, double* restrict hess);
 
 
 //________________________________________________________________________________________________________________________
@@ -71,6 +70,5 @@ static inline void set_rtr_default_params(int n, struct rtr_params* params)
 }
 
 
-void riemannian_trust_region_optimize(target_func f, void* f_data, retract_func retract, void* rdata,
-	gradient_func gradfunc, void* graddata, hessian_func hessfunc, void* hessdata, const int n,
-	const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final);
+void riemannian_trust_region_optimize(target_func f, target_gradient_hessian_func f_deriv, void* fdata, retract_func retract, void* rdata,
+	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final);
