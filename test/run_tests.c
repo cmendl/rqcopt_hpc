@@ -42,6 +42,7 @@ char* test_brickwall_unitary_hess_matfree();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_hessian_matrix_matfree();
 #endif
+char* test_target();
 char* test_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
 char* test_target_and_gradient_vector();
@@ -87,6 +88,7 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_brickwall_unitary_hessian_matrix_matfree,  .name = "test_brickwall_unitary_hessian_matrix_matfree" },
 		#endif
+		{ .func = test_target,                                    .name = "test_target" },
 		{ .func = test_target_and_gradient,                       .name = "test_target_and_gradient" },
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_target_and_gradient_vector,                .name = "test_target_and_gradient_vector" },

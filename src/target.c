@@ -2,12 +2,80 @@
 #include <stdio.h>
 #include "target.h"
 #include "brickwall_circuit.h"
-#include "util.h"
 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function Re tr[U^{\dagger} W] and its gate gradients,
+/// \brief Evaluate target function -Re tr[U^{\dagger} W],
+/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int target(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+{
+	// temporary statevectors
+	struct statevector psi = { 0 };
+	if (allocate_statevector(L, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
+		return -1;
+	}
+	struct statevector Upsi = { 0 };
+	if (allocate_statevector(L, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
+		return -1;
+	}
+	struct statevector Wpsi = { 0 };
+	if (allocate_statevector(L, &Wpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
+		return -1;
+	}
+
+	double f = 0;
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << L;
+	for (intqs b = 0; b < n; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, n * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		ret = apply_brickwall_unitary(Vlist, nlayers, &psi, perms, &Wpsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'apply_brickwall_unitary' failed, return value: %i\n", ret);
+			return -1;
+		}
+
+		// f += Re <Upsi | Wpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += creal(Upsi.data[a] * Wpsi.data[a]);
+		}
+	}
+
+	free_statevector(&Wpsi);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -Re tr[U^{\dagger} W] and its gate gradients,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
@@ -59,13 +127,13 @@ int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vli
 
 		ret = ufunc(&psi, udata, &Upsi);
 		if (ret < 0) {
-			fprintf(stderr, "call of 'Ufunc' failed, return value: %i\n", ret);
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
 			return -2;
 		}
-		// complex-conjugate entries
+		// negate and complex-conjugate entries
 		for (intqs a = 0; a < n; a++)
 		{
-			Upsi.data[a] = conj(Upsi.data[a]);
+			Upsi.data[a] = -conj(Upsi.data[a]);
 		}
 
 		// brickwall unitary forward pass
@@ -74,10 +142,10 @@ int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vli
 			return -3;
 		}
 
-		// f -= Re <Upsi | Wpsi>
+		// f += Re <Upsi | Wpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f -= creal(Upsi.data[a] * Wpsi.data[a]);
+			f += creal(Upsi.data[a] * Wpsi.data[a]);
 		}
 
 		// brickwall unitary backward pass
@@ -109,7 +177,7 @@ int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vli
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Represent target function Re tr[U^{\dagger} W] and its gradient as real vector,
+/// \brief Represent target function -Re tr[U^{\dagger} W] and its gradient as real vector,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
@@ -144,7 +212,7 @@ int target_and_gradient_vector(unitary_func ufunc, void* udata, const struct mat
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function Re tr[U^{\dagger} W], its gate gradients and Hessian,
+/// \brief Evaluate target function -Re tr[U^{\dagger} W], its gate gradients and Hessian,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
@@ -205,13 +273,13 @@ int target_gradient_hessian(unitary_func ufunc, void* udata, const struct mat4x4
 
 		ret = ufunc(&psi, udata, &Upsi);
 		if (ret < 0) {
-			fprintf(stderr, "call of 'Ufunc' failed, return value: %i\n", ret);
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
 			return -2;
 		}
-		// complex-conjugate entries
+		// negate and complex-conjugate entries
 		for (intqs a = 0; a < n; a++)
 		{
-			Upsi.data[a] = conj(Upsi.data[a]);
+			Upsi.data[a] = -conj(Upsi.data[a]);
 		}
 
 		// brickwall unitary forward pass
@@ -220,10 +288,10 @@ int target_gradient_hessian(unitary_func ufunc, void* udata, const struct mat4x4
 			return -3;
 		}
 
-		// f -= Re <Upsi | Wpsi>
+		// f += Re <Upsi | Wpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f -= creal(Upsi.data[a] * Wpsi.data[a]);
+			f += creal(Upsi.data[a] * Wpsi.data[a]);
 		}
 
 		// brickwall unitary backward pass and Hessian computation
@@ -281,7 +349,7 @@ static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, con
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function Re tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
+/// \brief Evaluate target function -Re tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
