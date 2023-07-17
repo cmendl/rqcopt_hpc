@@ -262,6 +262,86 @@ void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x
 }
 
 
+#else // COMPLEX_CIRCUIT not defined
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Isometrically map a real vector with 6 entries to a real skew-symmetric matrix.
+///
+void real_to_skew(const double* r, struct mat4x4* w)
+{
+	// diagonal entries
+	w->data[ 0] = 0;
+	w->data[ 5] = 0;
+	w->data[10] = 0;
+	w->data[15] = 0;
+
+	// 1/sqrt(2) factor to preserve inner products
+	const double inv_sqrt2 = 0.70710678118654752;
+
+	// upper triangular part
+	w->data[ 1] = inv_sqrt2 * r[0];
+	w->data[ 2] = inv_sqrt2 * r[1];
+	w->data[ 3] = inv_sqrt2 * r[2];
+	w->data[ 6] = inv_sqrt2 * r[3];
+	w->data[ 7] = inv_sqrt2 * r[4];
+	w->data[11] = inv_sqrt2 * r[5];
+
+	// lower triangular part
+	w->data[ 4] = -w->data[ 1];
+	w->data[ 8] = -w->data[ 2];
+	w->data[ 9] = -w->data[ 6];
+	w->data[12] = -w->data[ 3];
+	w->data[13] = -w->data[ 7];
+	w->data[14] = -w->data[11];
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Isometrically map a real skew-symmetric matrix to a real vector with 6 entries.
+///
+void skew_to_real(const struct mat4x4* w, double* r)
+{
+	// sqrt(2) factor to preserve inner products
+	const double sqrt2 = 1.41421356237309505;
+
+	r[0] = sqrt2 * w->data[ 1];
+	r[1] = sqrt2 * w->data[ 2];
+	r[2] = sqrt2 * w->data[ 3];
+	r[3] = sqrt2 * w->data[ 6];
+	r[4] = sqrt2 * w->data[ 7];
+	r[5] = sqrt2 * w->data[11];
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map a real vector with 6 entries to a tangent vector of the orthogonal matrix manifold at point 'v'.
+///
+void real_to_ortho_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z)
+{
+	struct mat4x4 a;
+	real_to_skew(r, &a);
+	multiply_matrices(v, &a, z);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Map a tangent vector of the orthogonal matrix manifold at point 'v' to a real vector with 6 entries.
+///
+void ortho_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r)
+{
+	struct mat4x4 w, t;
+	adjoint(v, &w);
+	multiply_matrices(&w, z, &t);
+	antisymm(&t, &w);
+	skew_to_real(&w, r);
+}
+
+
 #endif
 
 

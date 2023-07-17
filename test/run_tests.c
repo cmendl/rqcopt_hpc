@@ -16,6 +16,9 @@ char* test_antisymm();
 #ifdef COMPLEX_CIRCUIT
 char* test_real_to_antisymm();
 char* test_real_to_unitary_tangent();
+#else
+char* test_real_to_skew();
+char* test_real_to_ortho_tangent();
 #endif
 char* test_multiply();
 char* test_project_unitary_tangent();
@@ -49,6 +52,9 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_real_to_antisymm,                          .name = "test_real_to_antisymm" },
 		{ .func = test_real_to_unitary_tangent,                   .name = "test_real_to_unitary_tangent" },
+		#else
+		{ .func = test_real_to_skew,                              .name = "test_real_to_skew" },
+		{ .func = test_real_to_ortho_tangent,                     .name = "test_real_to_ortho_tangent" },
 		#endif
 		{ .func = test_multiply,                                  .name = "test_multiply" },
 		{ .func = test_project_unitary_tangent,                   .name = "test_project_unitary_tangent" },

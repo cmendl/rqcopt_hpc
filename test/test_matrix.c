@@ -74,6 +74,7 @@ char* test_antisymm()
 
 #ifdef COMPLEX_CIRCUIT
 
+
 char* test_real_to_antisymm()
 {
 	double r[16];
@@ -107,10 +108,6 @@ char* test_real_to_antisymm()
 	return 0;
 }
 
-#endif
-
-
-#ifdef COMPLEX_CIRCUIT
 
 char* test_real_to_unitary_tangent()
 {
@@ -144,8 +141,86 @@ char* test_real_to_unitary_tangent()
 		return "converting from real to unitary tangent matrix and back does not result in original matrix";
 	}
 
+	H5Fclose(file);
+
 	return 0;
 }
+
+
+#else
+
+
+char* test_real_to_skew()
+{
+	double r[6];
+	for (int i = 0; i < 6; i++)
+	{
+		r[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
+	}
+
+	struct mat4x4 w;
+	real_to_skew(r, &w);
+
+	// 'w' must indeed be skew-symmetric
+	struct mat4x4 z;
+	antisymm(&w, &z);
+	if (uniform_distance(16, w.data, z.data) > 1e-14) {
+		return "matrix returned by 'real_to_skew' is not skew-symmetric";
+	}
+
+	double s[6];
+	skew_to_real(&w, s);
+	// 's' must match 'r'
+	double d = 0;
+	for (int i = 0; i < 6; i++)
+	{
+		d = fmax(d, fabs(s[i] - r[i]));
+	}
+	if (d > 1e-14) {
+		return "converting from real vector to a skew-symmetric matrix and back does not result in original vector";
+	}
+
+	return 0;
+}
+
+
+char* test_real_to_ortho_tangent()
+{
+	hid_t file = H5Fopen("../test/data/test_real_to_ortho_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_real_to_ortho_tangent failed";
+	}
+
+	double r[6];
+	if (read_hdf5_dataset(file, "r", H5T_NATIVE_DOUBLE, r) < 0) {
+		return "reading vector entries from disk failed";
+	}
+
+	struct mat4x4 v;
+	if (read_hdf5_dataset(file, "v", H5T_NATIVE_DOUBLE, v.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 z;
+	real_to_ortho_tangent(r, &v, &z);
+
+	double s[6];
+	ortho_tangent_to_real(&v, &z, s);
+	// 's' must match 'r'
+	double d = 0;
+	for (int i = 0; i < 6; i++)
+	{
+		d = fmax(d, fabs(s[i] - r[i]));
+	}
+	if (d > 1e-14) {
+		return "converting from real vector to orthogonal tangent matrix and back does not result in original vector";
+	}
+
+	H5Fclose(file);
+
+	return 0;
+}
+
 
 #endif
 

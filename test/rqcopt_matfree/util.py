@@ -38,6 +38,27 @@ def antisymm_to_real(w):
     return w.real + w.imag
 
 
+def real_to_skew(r, n: int):
+    """
+    Map a real vector to a skew-symmetric matrix containing the vector entries in its upper-triangular part.
+    """
+    if len(r) != n * (n - 1) // 2:
+        raise ValueError("length of input vector does not match matrix dimension")
+    w = np.zeros((n, n))
+    # sqrt(2) factor to preserve inner products
+    w[np.triu_indices(n, k=1)] = r / np.sqrt(2)
+    w -= w.T
+    return w
+
+
+def skew_to_real(w):
+    """
+    Map a real skew-symmetric matrix to a real vector containing the upper-triangular entries.
+    """
+    # sqrt(2) factor to preserve inner products
+    return np.sqrt(2) * w[np.triu_indices(len(w), k=1)]
+
+
 def project_unitary_tangent(u, z):
     """
     Project `z` onto the tangent plane at the unitary matrix `u`.

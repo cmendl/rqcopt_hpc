@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import unitary_group
+from scipy.stats import unitary_group, ortho_group
 import h5py
 import rqcopt_matfree as oc
 from io_util import interleave_complex
@@ -16,6 +16,21 @@ def real_to_unitary_tangent_data():
     v = unitary_group.rvs(4, random_state=rng)
 
     with h5py.File(f"data/test_real_to_unitary_tangent_{ctype}.hdf5", "w") as file:
+        file["r"] = r
+        file["v"] = interleave_complex(v, ctype)
+
+
+def real_to_ortho_tangent_data():
+
+    # random number generator
+    rng = np.random.default_rng(41)
+
+    ctype = "real"
+
+    r = 0.5 * rng.standard_normal(6)
+    v = ortho_group.rvs(4, random_state=rng)
+
+    with h5py.File(f"data/test_real_to_ortho_tangent_{ctype}.hdf5", "w") as file:
         file["r"] = r
         file["v"] = interleave_complex(v, ctype)
 
@@ -70,6 +85,7 @@ def polar_factor_data():
 
 def main():
     real_to_unitary_tangent_data()
+    real_to_ortho_tangent_data()
     multiply_data()
     project_unitary_tangent_data()
     polar_factor_data()

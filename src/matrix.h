@@ -45,6 +45,14 @@ void antisymm_to_real(const struct mat4x4* w, double* r);
 void real_to_unitary_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
 void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
 
+#else
+
+void real_to_skew(const double* r, struct mat4x4* w);
+void skew_to_real(const struct mat4x4* w, double* r);
+
+void real_to_ortho_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
+void ortho_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
+
 #endif
 
 
