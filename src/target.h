@@ -4,7 +4,7 @@
 #include "statevector.h"
 
 
-typedef int (*unitary_func)(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out);
+typedef int (*unitary_func)(const struct statevector* restrict psi, void* udata, struct statevector* restrict psi_out);
 
 
 int target(unitary_func ufunc, void* udata,

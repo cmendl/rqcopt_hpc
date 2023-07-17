@@ -10,7 +10,7 @@
 #endif
 
 
-static int ufunc(const struct statevector* restrict psi, void*, struct statevector* restrict psi_out)
+static int ufunc(const struct statevector* restrict psi, void* udata, struct statevector* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
 
