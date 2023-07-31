@@ -10,7 +10,7 @@
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int target(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+int unitary_target(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -79,7 +79,7 @@ int target(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const i
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
+int unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -181,7 +181,7 @@ int target_and_gradient(unitary_func ufunc, void* udata, const struct mat4x4 Vli
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int target_and_gradient_vector(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
+int unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL) {
@@ -189,7 +189,7 @@ int target_and_gradient_vector(unitary_func ufunc, void* udata, const struct mat
 		return -1;
 	}
 
-	int ret = target_and_gradient(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist);
+	int ret = unitary_target_and_gradient(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist);
 	if (ret < 0) {
 		return ret;
 	}
@@ -216,7 +216,7 @@ int target_and_gradient_vector(unitary_func ufunc, void* udata, const struct mat
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int target_gradient_hessian(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[], numeric* hess)
+int unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[], numeric* hess)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -353,7 +353,7 @@ static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, con
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int target_gradient_vector_hessian_matrix(unitary_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
+int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL)
@@ -365,7 +365,7 @@ int target_gradient_vector_hessian_matrix(unitary_func ufunc, void* udata, const
 	const int m = nlayers * 16;
 	numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 
-	int ret = target_gradient_hessian(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist, hess);
+	int ret = unitary_target_gradient_hessian(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist, hess);
 	if (ret < 0) {
 		return ret;
 	}

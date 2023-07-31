@@ -28,13 +28,13 @@ static int ufunc(const struct statevector* restrict psi, void* udata, struct sta
 }
 
 
-char* test_target()
+char* test_unitary_target()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_unitary_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_target failed";
+		return "'H5Fopen' in test_unitary_target failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -62,8 +62,8 @@ char* test_target()
 	for (int i = 0; i < 2; i++)
 	{
 		double f;
-		if (target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
-			return "'target' failed internally";
+		if (unitary_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
+			return "'unitary_target' failed internally";
 		}
 
 		char varname[32];
@@ -85,13 +85,13 @@ char* test_target()
 }
 
 
-char* test_target_and_gradient()
+char* test_unitary_target_and_gradient()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_unitary_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_target_and_gradient failed";
+		return "'H5Fopen' in test_unitary_target_and_gradient failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -120,8 +120,8 @@ char* test_target_and_gradient()
 	{
 		double f;
 		struct mat4x4 dVlist[5];
-		if (target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
-			return "'target_and_gradient' failed internally";
+		if (unitary_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
+			return "'unitary_target_and_gradient' failed internally";
 		}
 
 		char varname[32];
@@ -158,14 +158,14 @@ char* test_target_and_gradient()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_target_and_gradient_vector()
+char* test_unitary_target_and_gradient_vector()
 {
 	int L = 6;
 	int nlayers = 3;
 
-	hid_t file = H5Fopen("../test/data/test_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_unitary_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_target_and_gradient_vector failed";
+		return "'H5Fopen' in test_unitary_target_and_gradient_vector failed";
 	}
 
 	struct mat4x4 Vlist[3];
@@ -193,8 +193,8 @@ char* test_target_and_gradient_vector()
 
 	double f;
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	if (target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
-		return "'target_and_gradient_vector' failed internally";
+	if (unitary_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
+		return "'unitary_target_and_gradient_vector' failed internally";
 	}
 
 	double f_ref;
@@ -232,13 +232,13 @@ char* test_target_and_gradient_vector()
 #endif
 
 
-char* test_target_gradient_hessian()
+char* test_unitary_target_gradient_hessian()
 {
 	int L = 6;
 
-	hid_t file = H5Fopen("../test/data/test_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_unitary_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_target_gradient_hessian failed";
+		return "'H5Fopen' in test_unitary_target_gradient_hessian failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -270,8 +270,8 @@ char* test_target_gradient_hessian()
 		double f;
 		struct mat4x4 dVlist[5];
 		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-		if (target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
-			return "'target_gradient_hessian' failed internally";
+		if (unitary_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
+			return "'unitary_target_gradient_hessian' failed internally";
 		}
 
 		// check symmetry of Hessian matrix
@@ -332,14 +332,14 @@ char* test_target_gradient_hessian()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_target_gradient_vector_hessian_matrix()
+char* test_unitary_target_gradient_vector_hessian_matrix()
 {
 	int L = 6;
 	int nlayers = 5;
 
-	hid_t file = H5Fopen("../test/data/test_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_unitary_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_target_gradient_vector_hessian_matrix failed";
+		return "'H5Fopen' in test_unitary_target_gradient_vector_hessian_matrix failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -369,8 +369,8 @@ char* test_target_gradient_vector_hessian_matrix()
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
 	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
 
-	if (target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
-		return "'target_gradient_vector_hessian_matrix' failed internally";
+	if (unitary_target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
+		return "'unitary_target_gradient_vector_hessian_matrix' failed internally";
 	}
 
 	double f_ref;

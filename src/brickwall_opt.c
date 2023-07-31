@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include "config.h"
-#include "target.h"
 #include "brickwall_opt.h"
 
 
@@ -11,7 +10,7 @@
 
 struct f_target_data
 {
-	unitary_func ufunc;
+	linear_func ufunc;
 	void* udata;
 	int nlayers;
 	int nqubits;
@@ -28,7 +27,7 @@ static double f(const double* x, void* fdata)
 	struct f_target_data* data = fdata;
 
 	double f;
-	if (target(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f) < 0) {
+	if (unitary_target(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f) < 0) {
 		fprintf(stderr, "target function evaluation failed internally\n");
 		return -1;
 	}
@@ -46,7 +45,7 @@ static double f_deriv(const double* restrict x, void* fdata, double* restrict gr
 	struct f_target_data* data = fdata;
 
 	double f;
-	if (target_gradient_vector_hessian_matrix(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f, grad, hess) < 0) {
+	if (unitary_target_gradient_vector_hessian_matrix(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f, grad, hess) < 0) {
 		fprintf(stderr, "target function and derivative evaluation failed internally\n");
 		return -1;
 	}
@@ -90,7 +89,7 @@ static void retract_unitary_list(const double* restrict x, const double* restric
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
 /// the unitary matrix `U` using a trust-region method.
 ///
-void optimize_brickwall_circuit(unitary_func ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int L, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
+void optimize_brickwall_circuit(linear_func ufunc, void* udata, const struct mat4x4 Vlist_start[], const int nlayers, const int L, const int* perms[], struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 Vlist_opt[])
 {
 	// target function data
 	struct f_target_data fdata = {

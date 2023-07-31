@@ -5,7 +5,7 @@ from .trust_region import riemannian_trust_region_optimize
 from .util import polar_decomp, real_to_antisymm
 
 
-def _f_target_matfree(Vlist, L, Ufunc, perms):
+def _f_unitary_target_matfree(Vlist, L, Ufunc, perms):
     """
     Evaluate target function,
     using the provided matrix-free application of U to a state.
@@ -28,7 +28,7 @@ def brickwall_quadratic_model_matfree(Vlist, L: int, Ufunc, perms, hlist, rng: n
     """
     n = len(Vlist)
     # target function
-    f = lambda vlist: _f_target_matfree(vlist, L, Ufunc, perms)
+    f = lambda vlist: _f_unitary_target_matfree(vlist, L, Ufunc, perms)
     f0 = f(Vlist)
     # gradient
     grad = -brickwall_unitary_gradient_vector_matfree(Vlist, L, Ufunc, perms)
@@ -54,7 +54,7 @@ def optimize_brickwall_circuit_matfree(L: int, Ufunc, Uadjfunc, Vlist_start, per
     the unitary matrix `U` using a trust-region method.
     """
     # target function
-    f = lambda vlist: _f_target_matfree(vlist, L, Ufunc, perms)
+    f = lambda vlist: _f_unitary_target_matfree(vlist, L, Ufunc, perms)
     gradfunc = lambda vlist: -brickwall_unitary_gradient_vector_matfree(vlist, L, Ufunc, perms)
     hessfunc = lambda vlist: -brickwall_unitary_hessian_matrix_matfree(vlist, L, Ufunc, perms)
     # quantify error by spectral norm
