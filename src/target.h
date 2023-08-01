@@ -32,3 +32,9 @@ int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata
 	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
 	double* fval, double* grad_vec, double* H);
 #endif
+
+
+
+int blockenc_target(linear_func hfunc, void* hdata,
+	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval);

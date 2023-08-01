@@ -67,6 +67,27 @@ def project_unitary_tangent(u, z):
     return z - u @ symm(u.conj().T @ z)
 
 
+def blockenc_isometry(L: int):
+    """
+    Construct the default block-encoding isometry:
+
+      --------
+      --|0>
+      --------
+      --|0>
+        .
+        .
+    """
+    b = np.array([[ 1., 0.],
+                  [ 0., 0.],
+                  [ 0., 1.],
+                  [ 0., 0.]])
+    p = np.identity(1)
+    for i in range(L // 2):
+        p = np.kron(p, b)
+    return p
+
+
 def crandn(size, rng: np.random.Generator=None):
     """
     Draw random samples from the standard complex normal (Gaussian) distribution.

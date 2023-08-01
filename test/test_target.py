@@ -228,12 +228,48 @@ def unitary_target_gradient_vector_hessian_matrix_data():
     file.close()
 
 
+def blockenc_target_data():
+
+    # random number generator
+    rng = np.random.default_rng(48)
+
+    # system size
+    L = 8
+
+    max_nlayers = 5
+
+    P = oc.blockenc_isometry(L)
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_blockenc_target_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
+        for i in range(max_nlayers):
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            file[f"perm{i}"] = perms[i]
+
+        hfunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        for i, nlayers in enumerate([4, 5]):
+            # target function value
+            f = oc.brickwall_opt_matfree._f_blockenc_target_matfree(Vlist[:nlayers], L, hfunc, perms[:nlayers], P)
+            file[f"f{i}"] = f
+
+        file.close()
+
+
 def main():
     unitary_target_data()
     unitary_target_and_gradient_data()
     unitary_target_and_gradient_vector_data()
     unitary_target_gradient_hessian_data()
     unitary_target_gradient_vector_hessian_matrix_data()
+    blockenc_target_data()
 
 
 if __name__ == "__main__":

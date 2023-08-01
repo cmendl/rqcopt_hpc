@@ -41,6 +41,7 @@ char* test_unitary_target_gradient_hessian();
 #ifdef COMPLEX_CIRCUIT
 char* test_unitary_target_gradient_vector_hessian_matrix();
 #endif
+char* test_blockenc_target();
 char* test_truncated_cg();
 
 
@@ -77,7 +78,8 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		{ .func = test_unitary_target_gradient_vector_hessian_matrix,   .name = "test_unitary_target_gradient_vector_hessian_matrix" },
 		#endif
-		{.func = test_truncated_cg,                                     .name = "test_truncated_cg" },
+		{ .func = test_blockenc_target,                                 .name = "test_blockenc_target" },
+		{ .func = test_truncated_cg,                                    .name = "test_truncated_cg" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

@@ -5,9 +5,9 @@ from .trust_region import riemannian_trust_region_optimize
 from .util import polar_decomp, real_to_antisymm
 
 
-def _f_unitary_target_matfree(Vlist, L, Ufunc, perms):
+def _f_unitary_target_matfree(Vlist, L: int, Ufunc, perms):
     """
-    Evaluate target function,
+    Evaluate target function -Re tr[U^{\dagger} W],
     using the provided matrix-free application of U to a state.
     """
     f = 0
@@ -67,6 +67,22 @@ def optimize_brickwall_circuit_matfree(L: int, Ufunc, Uadjfunc, Vlist_start, per
     Vlist, f_iter, err_iter = riemannian_trust_region_optimize(
         f, retract_unitary_list, gradfunc, hessfunc, np.stack(Vlist_start), **kwargs)
     return Vlist, f_iter, err_iter
+
+
+def _f_blockenc_target_matfree(Vlist, L: int, Hfunc, perms, P):
+    """
+    Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2,
+    using the provided matrix-free application of H to a state.
+    """
+    f = 0
+    # implement Frobenius norm via summation over unit vectors
+    for b in range(P.shape[1]):
+        psi = np.zeros(P.shape[1])
+        psi[b] = 1
+        Hpsi = Hfunc(psi)
+        Vpsi = P.conj().T @ apply_brickwall_unitary(Vlist, L, P @ psi, perms)
+        f += 0.5 * np.linalg.norm(Vpsi - Hpsi)**2
+    return f
 
 
 def retract_unitary_list(vlist, eta):

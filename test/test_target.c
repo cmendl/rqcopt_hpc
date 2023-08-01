@@ -438,3 +438,60 @@ char* test_unitary_target_gradient_vector_hessian_matrix()
 }
 
 #endif
+
+
+char* test_blockenc_target()
+{
+	int L = 8;
+
+	hid_t file = H5Fopen("../test/data/test_blockenc_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_blockenc_target failed";
+	}
+
+	struct mat4x4 Vlist[5];
+	for (int i = 0; i < 5; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[5][8];
+	for (int i = 0; i < 5; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	int nlayers[] = { 4, 5 };
+	for (int i = 0; i < 2; i++)
+	{
+		double f;
+		if (blockenc_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
+			return "'blockenc_target' failed internally";
+		}
+
+		char varname[32];
+		sprintf(varname, "f%i", i);
+		double f_ref;
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+			return "reading reference target function value from disk failed";
+		}
+
+		// compare with reference
+		if (fabs(f - f_ref) > 1e-12) {
+			return "computed target function value not match reference";
+		}
+	}
+
+	H5Fclose(file);
+
+	return 0;
+}

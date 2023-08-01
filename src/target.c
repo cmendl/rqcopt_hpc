@@ -1,5 +1,6 @@
 #include <memory.h>
 #include <stdio.h>
+#include <assert.h>
 #include "target.h"
 #include "brickwall_circuit.h"
 
@@ -439,3 +440,101 @@ int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata
 }
 
 #endif
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2
+/// to approximate the matrix H based on block-encoding with projector P,
+/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// using the provided matrix-free application of H to a state.
+///
+int blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+{
+	assert(L % 2 == 0);
+
+	// temporary statevectors
+	// half number of qubits
+	struct statevector psi = { 0 };
+	if (allocate_statevector(L / 2, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L / 2);
+		return -1;
+	}
+	// half number of qubits
+	struct statevector Hpsi = { 0 };
+	if (allocate_statevector(L / 2, &Hpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L / 2);
+		return -1;
+	}
+	struct statevector chi = { 0 };
+	if (allocate_statevector(L, &chi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
+		return -1;
+	}
+	struct statevector Wchi = { 0 };
+	if (allocate_statevector(L, &Wchi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
+		return -1;
+	}
+
+	double f = 0;
+	// implement Frobenius norm via summation over unit vectors
+	const intqs m = (intqs)1 << (L / 2);
+	const intqs n = (intqs)1 << L;
+	for (intqs b = 0; b < m; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, m * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = hfunc(&psi, hdata, &Hpsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'hfunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+
+		// interleave |0> states (corresponds to application of projector P)
+		memset(chi.data, 0, n * sizeof(numeric));
+		{
+			intqs c = 0;
+			for (int i = 0; i < L / 2; i++)
+			{
+				intqs t = b & ((intqs)1 << i);
+				c += 2 * t * t;
+			}
+			chi.data[c] = 1;
+		}
+
+		ret = apply_brickwall_unitary(Vlist, nlayers, perms, &chi, &Wchi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'apply_brickwall_unitary' failed, return value: %i\n", ret);
+			return -1;
+		}
+
+		for (intqs a = 0; a < m; a++)
+		{
+			// index corresponding to applying P^{\dagger}
+			intqs c = 0;
+			for (int i = 0; i < L / 2; i++)
+			{
+				intqs t = a & ((intqs)1 << i);
+				c += 2 * t * t;
+			}
+
+			// entry at index 'a' of P^{\dagger} W P |psi> - H |psi>
+			numeric d = Wchi.data[c] - Hpsi.data[a];
+
+			f += 0.5 * (creal(d)*creal(d) + cimag(d)*cimag(d));
+		}
+	}
+
+	free_statevector(&Wchi);
+	free_statevector(&chi);
+	free_statevector(&Hpsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
