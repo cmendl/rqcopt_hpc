@@ -42,6 +42,7 @@ char* test_unitary_target_gradient_hessian();
 char* test_unitary_target_gradient_vector_hessian_matrix();
 #endif
 char* test_blockenc_target();
+char* test_blockenc_target_and_gradient();
 char* test_truncated_cg();
 
 
@@ -79,6 +80,7 @@ int main()
 		{ .func = test_unitary_target_gradient_vector_hessian_matrix,   .name = "test_unitary_target_gradient_vector_hessian_matrix" },
 		#endif
 		{ .func = test_blockenc_target,                                 .name = "test_blockenc_target" },
+		{ .func = test_blockenc_target_and_gradient,                    .name = "test_blockenc_target_and_gradient" },
 		{ .func = test_truncated_cg,                                    .name = "test_truncated_cg" },
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);

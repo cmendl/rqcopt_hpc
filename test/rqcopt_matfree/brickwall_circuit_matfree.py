@@ -244,3 +244,12 @@ def brickwall_unitary_hessian_matrix_matfree(Vlist, L, Ufunc, perms):
             for i in range(n):
                 H[i, :, j, k] = antisymm_to_real(antisymm(Vlist[i].conj().T @ dVZj[i])).reshape(-1)
     return H.reshape((n * 16, n * 16))
+
+
+def squared_brickwall_unitary_grad_matfree(Vlist, L, Afunc, Bfunc, perms):
+    """
+    Compute the gradient of tr[A W† B W] with respect to Vlist,
+    where W is the brickwall circuit constructed from the gates in Vlist
+    and A and B are Hermitian.
+    """
+    return 2 * brickwall_unitary_grad_matfree(Vlist, L, lambda psi: Bfunc(apply_brickwall_unitary(Vlist, L, Afunc(psi), perms)), perms)

@@ -579,3 +579,128 @@ char* test_blockenc_target()
 
 	return 0;
 }
+
+
+struct blockenc_target_params
+{
+	linear_func hfunc;
+	int nqubits;
+	int nlayers;
+	const int** perms;
+};
+
+// wrapper of block encoding target function
+static void blockenc_target_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct blockenc_target_params* params = p;
+
+	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	for (int i = 0; i < params->nlayers; i++) {
+		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
+	}
+
+	double f;
+	blockenc_target(params->hfunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
+	*y = f;
+
+	aligned_free(Vlist);
+}
+
+
+char* test_blockenc_target_and_gradient()
+{
+	int L = 8;
+
+	hid_t file = H5Fopen("../test/data/test_blockenc_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_blockenc_target_and_gradient failed";
+	}
+
+	struct mat4x4 Vlist[5];
+	for (int i = 0; i < 5; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[5][8];
+	for (int i = 0; i < 5; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	int nlayers[] = { 4, 5 };
+	for (int i = 0; i < 2; i++)
+	{
+		double f;
+		struct mat4x4 dVlist[5];
+		if (blockenc_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
+			return "'blockenc_target_and_gradient' failed internally";
+		}
+
+		char varname[32];
+		sprintf(varname, "f%i", i);
+		double f_ref;
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+			return "reading reference target function value from disk failed";
+		}
+
+		// compare with reference
+		if (fabs(f - f_ref) > 1e-12) {
+			return "computed target function value not match reference";
+		}
+
+		// numerical gradient
+		const double h = 1e-5;
+		struct blockenc_target_params params = {
+			.hfunc = ufunc,
+			.nqubits = L,
+			.nlayers = nlayers[i],
+			.perms = pperms,
+		};
+		struct mat4x4 dVlist_num[5];
+		numeric dy = 1;
+		#ifdef COMPLEX_CIRCUIT
+		numerical_gradient_wirtinger(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		// convert from Wirtinger convention
+		for (int j = 0; j < nlayers[i]; j++) {
+			for (int k = 0; k < 16; k++) {
+				dVlist_num[j].data[k] = 2 * dVlist_num[j].data[k];
+			}
+		}
+		#else
+		numerical_gradient(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		#endif
+		// compare
+		for (int j = 0; j < nlayers[i]; j++) {
+			if (uniform_distance(16, dVlist[j].data, dVlist_num[j].data) > 1e-8) {
+				return "target function gradient with respect to gates does not match finite difference approximation";
+			}
+		}
+
+		sprintf(varname, "dVlist%i", i);
+		struct mat4x4 dVlist_ref[5];
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVlist_ref) < 0) {
+			return "reading reference gradient data from disk failed";
+		}
+
+		// compare with reference
+		for (int j = 0; j < nlayers[i]; j++) {
+			if (uniform_distance(16, dVlist[j].data, dVlist_ref[j].data) > 1e-12) {
+				return "computed target function gradient does not match reference";
+			}
+		}
+	}
+
+	H5Fclose(file);
+
+	return 0;
+}
