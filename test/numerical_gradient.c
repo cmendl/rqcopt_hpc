@@ -6,7 +6,7 @@
 ///
 /// \brief Numerically approximate the gradient via difference quotient (f(x + h e_i) - f(x - h e_i)) / (2 h)
 ///
-void numerical_gradient(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const double h, numeric* restrict grad)
+void numerical_gradient(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad)
 {
 	numeric *xmod = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
 	memcpy(xmod, x, n * sizeof(numeric));
@@ -45,3 +45,26 @@ void numerical_gradient(generic_func f, void* params, const int n, const numeric
 	aligned_free(y);
 	aligned_free(xmod);
 }
+
+
+#ifdef COMPLEX_CIRCUIT
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Numerically approximate the gradient (Wirtinger convention) via difference quotients.
+///
+void numerical_gradient_wirtinger(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad)
+{
+	numerical_gradient(f, params, n, x, m, dy, h, grad);
+
+	// h -> i*h
+	numeric *grad_c = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
+	numerical_gradient(f, params, n, x, m, dy, h * I, grad_c);
+	for (int i = 0; i < n; i++)
+	{
+		grad[i] = 0.5 * (grad[i] + grad_c[i]);
+	}
+	aligned_free(grad_c);
+}
+
+#endif

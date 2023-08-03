@@ -525,7 +525,11 @@ int blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[],
 			// entry at index 'a' of P^{\dagger} W P |psi> - H |psi>
 			numeric d = Wchi.data[c] - Hpsi.data[a];
 
+			#ifdef COMPLEX_CIRCUIT
 			f += 0.5 * (creal(d)*creal(d) + cimag(d)*cimag(d));
+			#else
+			f += 0.5 * d*d;
+			#endif
 		}
 	}
 

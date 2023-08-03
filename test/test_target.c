@@ -1,5 +1,7 @@
+#include <memory.h>
 #include <assert.h>
 #include "target.h"
+#include "numerical_gradient.h"
 #include "util.h"
 
 
@@ -85,6 +87,32 @@ char* test_unitary_target()
 }
 
 
+struct unitary_target_params
+{
+	linear_func ufunc;
+	int nqubits;
+	int nlayers;
+	const int** perms;
+};
+
+// wrapper of unitary target function
+static void unitary_target_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct unitary_target_params* params = p;
+
+	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	for (int i = 0; i < params->nlayers; i++) {
+		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
+	}
+
+	double f;
+	unitary_target(params->ufunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
+	*y = f;
+
+	aligned_free(Vlist);
+}
+
+
 char* test_unitary_target_and_gradient()
 {
 	int L = 8;
@@ -136,6 +164,34 @@ char* test_unitary_target_and_gradient()
 			return "computed target function value not match reference";
 		}
 
+		// numerical gradient
+		const double h = 1e-5;
+		struct unitary_target_params params = {
+			.ufunc = ufunc,
+			.nqubits = L,
+			.nlayers = nlayers[i],
+			.perms = pperms,
+		};
+		struct mat4x4 dVlist_num[5];
+		numeric dy = 1;
+		#ifdef COMPLEX_CIRCUIT
+		numerical_gradient_wirtinger(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		// convert from Wirtinger convention
+		for (int j = 0; j < nlayers[i]; j++) {
+			for (int k = 0; k < 16; k++) {
+				dVlist_num[j].data[k] = 2 * dVlist_num[j].data[k];
+			}
+		}
+		#else
+		numerical_gradient(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		#endif
+		// compare
+		for (int j = 0; j < nlayers[i]; j++) {
+			if (uniform_distance(16, dVlist[j].data, dVlist_num[j].data) > 1e-8) {
+				return "target function gradient with respect to gates does not match finite difference approximation";
+			}
+		}
+
 		sprintf(varname, "dVlist%i", i);
 		struct mat4x4 dVlist_ref[5];
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, dVlist_ref) < 0) {
@@ -145,7 +201,7 @@ char* test_unitary_target_and_gradient()
 		// compare with reference
 		for (int j = 0; j < nlayers[i]; j++) {
 			if (uniform_distance(16, dVlist[j].data, dVlist_ref[j].data) > 1e-12) {
-				return "computed brickwall circuit gradient does not match reference";
+				return "computed target function gradient does not match reference";
 			}
 		}
 	}
@@ -294,6 +350,34 @@ char* test_unitary_target_gradient_hessian()
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
 			return "computed target function value not match reference";
+		}
+
+		// numerical gradient
+		const double h = 1e-5;
+		struct unitary_target_params params = {
+			.ufunc = ufunc,
+			.nqubits = L,
+			.nlayers = nlayers[i],
+			.perms = pperms,
+		};
+		struct mat4x4 dVlist_num[5];
+		numeric dy = 1;
+		#ifdef COMPLEX_CIRCUIT
+		numerical_gradient_wirtinger(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		// convert from Wirtinger convention
+		for (int j = 0; j < nlayers[i]; j++) {
+			for (int k = 0; k < 16; k++) {
+				dVlist_num[j].data[k] = 2 * dVlist_num[j].data[k];
+			}
+		}
+		#else
+		numerical_gradient(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		#endif
+		// compare
+		for (int j = 0; j < nlayers[i]; j++) {
+			if (uniform_distance(16, dVlist[j].data, dVlist_num[j].data) > 1e-8) {
+				return "target function gradient with respect to gates does not match finite difference approximation";
+			}
 		}
 
 		sprintf(varname, "dVlist%i", i);
