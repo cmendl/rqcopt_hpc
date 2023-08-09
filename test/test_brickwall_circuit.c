@@ -128,23 +128,17 @@ static void brickwall_unitary_forward_gates(const numeric* restrict x, void* p, 
 {
 	const struct brickwall_unitary_forward_gates_params* params = p;
 
-	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
-	for (int i = 0; i < params->nlayers; i++) {
-		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
-	}
-
 	struct statevector psi_out;
 	allocate_statevector(params->nqubits, &psi_out);
 
 	struct brickwall_unitary_cache cache;
 	allocate_brickwall_unitary_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
 
-	brickwall_unitary_forward(Vlist, params->nlayers, params->perms, params->psi, &cache, &psi_out);
+	brickwall_unitary_forward((struct mat4x4*)x, params->nlayers, params->perms, params->psi, &cache, &psi_out);
 	memcpy(y, psi_out.data, ((size_t)1 << params->nqubits) * sizeof(numeric));
 
 	free_brickwall_unitary_cache(&cache);
 	free_statevector(&psi_out);
-	aligned_free(Vlist);
 }
 
 char* test_brickwall_unitary_backward()
@@ -280,11 +274,6 @@ static void brickwall_unitary_derivative_gates(const numeric* restrict x, void* 
 {
 	const struct brickwall_unitary_derivative_gates_params* params = p;
 
-	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
-	for (int i = 0; i < params->nlayers; i++) {
-		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
-	}
-
 	struct brickwall_unitary_cache cache;
 	allocate_brickwall_unitary_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
 
@@ -292,25 +281,17 @@ static void brickwall_unitary_derivative_gates(const numeric* restrict x, void* 
 	allocate_statevector(params->nqubits, &psi_out);
 
 	// brickwall unitary forward pass
-	brickwall_unitary_forward(Vlist, params->nlayers, params->perms, params->psi, &cache, &psi_out);
+	brickwall_unitary_forward((struct mat4x4*)x, params->nlayers, params->perms, params->psi, &cache, &psi_out);
 
 	struct statevector dpsi;
 	allocate_statevector(params->nqubits, &dpsi);
 
-	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
-
 	// brickwall unitary backward pass
-	brickwall_unitary_backward(Vlist, params->nlayers, params->perms, &cache, params->dpsi_out, &dpsi, dVlist);
+	brickwall_unitary_backward((struct mat4x4*)x, params->nlayers, params->perms, &cache, params->dpsi_out, &dpsi, (struct mat4x4*)y);
 
-	for (int i = 0; i < params->nlayers; i++) {
-		memcpy(&y[i * 16], dVlist[i].data, sizeof(dVlist[i].data));
-	}
-
-	aligned_free(dVlist);
 	free_statevector(&dpsi);
 	free_statevector(&psi_out);
 	free_brickwall_unitary_cache(&cache);
-	aligned_free(Vlist);
 }
 
 char* test_brickwall_unitary_backward_hessian()

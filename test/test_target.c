@@ -1,4 +1,5 @@
 #include <memory.h>
+#include <cblas.h>
 #include <assert.h>
 #include "target.h"
 #include "numerical_gradient.h"
@@ -288,6 +289,15 @@ char* test_unitary_target_and_gradient_vector()
 #endif
 
 
+// wrapper of unitary target gradient function
+static void unitary_target_gradient_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct unitary_target_params* params = p;
+
+	double f;
+	unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
+}
+
 char* test_unitary_target_gradient_hessian()
 {
 	int L = 6;
@@ -317,6 +327,17 @@ char* test_unitary_target_gradient_hessian()
 		}
 	}
 	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	// gradient direction of quantum gates
+	struct mat4x4 Zlist[5];
+	for (int i = 0; i < 5; i++)
+	{
+		char varname[32];
+		sprintf(varname, "Z%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, Zlist[i].data) < 0) {
+			return "reading gradient direction of two-qubit quantum gates from disk failed";
+		}
+	}
 
 	int nlayers[] = { 4, 5 };
 	for (int i = 0; i < 2; i++)
@@ -352,7 +373,6 @@ char* test_unitary_target_gradient_hessian()
 			return "computed target function value not match reference";
 		}
 
-		// numerical gradient
 		const double h = 1e-5;
 		struct unitary_target_params params = {
 			.ufunc = ufunc,
@@ -360,6 +380,8 @@ char* test_unitary_target_gradient_hessian()
 			.nlayers = nlayers[i],
 			.perms = pperms,
 		};
+
+		// numerical gradient
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
@@ -391,6 +413,27 @@ char* test_unitary_target_gradient_hessian()
 			if (uniform_distance(16, dVlist[j].data, dVlist_ref[j].data) > 1e-12) {
 				return "computed brickwall circuit gradient does not match reference";
 			}
+		}
+
+		// numerical gradient
+		struct mat4x4 dVZlist_num[5];
+		#ifdef COMPLEX_CIRCUIT
+		numerical_gradient_wirtinger(unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		#else
+		numerical_gradient(unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		#endif
+		// Hessian matrix times gradient direction
+		struct mat4x4 dVZlist[5];
+		#ifdef COMPLEX_CIRCUIT
+		numeric alpha = 1;
+		numeric beta  = 0;
+		cblas_zgemv(CblasRowMajor, CblasNoTrans, m, m, &alpha, hess, m, (numeric*)Zlist, 1, &beta, (numeric*)dVZlist, 1);
+		#else
+		cblas_dgemv(CblasRowMajor, CblasNoTrans, m, m, 1.0, hess, m, (numeric*)Zlist, 1, 0, (numeric*)dVZlist, 1);
+		#endif
+		// compare
+		if (uniform_distance(m, (numeric*)dVZlist, (numeric*)dVZlist_num) > 1e-7) {
+			return "second derivative with respect to gates computed by 'unitary_target_gradient_hessian' does not match finite difference approximation";
 		}
 
 		sprintf(varname, "hess%i", i);

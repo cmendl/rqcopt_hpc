@@ -170,6 +170,11 @@ def unitary_target_gradient_hessian_data():
         for i in range(max_nlayers):
             file[f"perm{i}"] = perms[i]
 
+        # gradient direction of quantum gates
+        Zlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
+        for i in range(max_nlayers):
+            file[f"Z{i}"] = interleave_complex(Zlist[i], ctype)
+
         ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
         for i, nlayers in enumerate([4, 5]):
