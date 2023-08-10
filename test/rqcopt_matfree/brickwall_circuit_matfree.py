@@ -175,6 +175,16 @@ def brickwall_unitary_gradient_vector_matfree(Vlist, L, Ufunc, perms):
         for j in range(len(grad))]).reshape(-1)
 
 
+def apply_brickwall_unitary_directed_grad(Vlist, L, Z, k, psi, perms):
+    """
+    Apply the gradient of W in direction Z with respect to Vlist[k] to psi,
+    where W is the brickwall circuit constructed from the gates in Vlist.
+    """
+    return apply_brickwall_unitary(Vlist[k+1:], L,
+           apply_parallel_gates_directed_grad(Vlist[k], L, Z,
+           apply_brickwall_unitary(Vlist[:k], L, psi, perms[:k]), perms[k]), perms[k+1:])
+
+
 def brickwall_unitary_hess_matfree(Vlist, L, Z, k, Ufunc, perms, unitary_proj=False):
     """
     Compute the Hessian of Re tr[U† W] in direction Z with respect to Vlist[k],
@@ -253,3 +263,46 @@ def squared_brickwall_unitary_grad_matfree(Vlist, L, Afunc, Bfunc, perms):
     and A and B are Hermitian.
     """
     return 2 * brickwall_unitary_grad_matfree(Vlist, L, lambda psi: Bfunc(apply_brickwall_unitary(Vlist, L, Afunc(psi), perms)), perms)
+
+
+def squared_brickwall_unitary_gradient_vector_matfree(Vlist, L, Afunc, Bfunc, perms):
+    """
+    Represent the gradient of tr[A W† B W] as real vector,
+    where W is the brickwall circuit constructed from the gates in Vlist
+    and A and B are Hermitian.
+    """
+    return 2 * brickwall_unitary_gradient_vector_matfree(Vlist, L, lambda psi: Bfunc(apply_brickwall_unitary(Vlist, L, Afunc(psi), perms)), perms)
+
+
+def squared_brickwall_unitary_hess_matfree(Vlist, L, Z, k, Afunc, Bfunc, perms, unitary_proj=False):
+    """
+    Compute the Hessian of tr[A W† B W] in direction Z with respect to Vlist[k],
+    where W is the brickwall circuit constructed from the gates in Vlist
+    and A and B are Hermitian.
+    """
+    H1 = brickwall_unitary_hess_matfree(Vlist, L, Z, k, lambda psi: Bfunc(apply_brickwall_unitary(Vlist, L, Afunc(psi), perms)), perms, unitary_proj)
+    H2 = brickwall_unitary_grad_matfree(Vlist, L, lambda psi: Bfunc(apply_brickwall_unitary_directed_grad(Vlist, L, Z, k, Afunc(psi), perms)), perms)
+    if unitary_proj:
+        H2 = np.stack([project_unitary_tangent(Vlist[j], dVj) for j, dVj in enumerate(H2)])
+    return 2 * (H1 + H2)
+
+
+def squared_brickwall_unitary_hessian_matrix_matfree(Vlist, L, Afunc, Bfunc, perms):
+    """
+    Construct the Hessian matrix of tr[A W† B W] with respect to Vlist
+    defining the layers of W,
+    where W is the brickwall circuit constructed from the gates in Vlist,
+    and A and B are Hermitian..
+    """
+    n = len(Vlist)
+    H = np.zeros((n, 16, n, 16))
+    for j in range(n):
+        for k in range(16):
+            # unit vector
+            Z = np.zeros(16)
+            Z[k] = 1
+            Z = real_to_antisymm(np.reshape(Z, (4, 4)))
+            dVZj = squared_brickwall_unitary_hess_matfree(Vlist, L, Vlist[j] @ Z, j, Afunc, Bfunc, perms, unitary_proj=True)
+            for i in range(n):
+                H[i, :, j, k] = antisymm_to_real(antisymm(Vlist[i].conj().T @ dVZj[i])).reshape(-1)
+    return H.reshape((n * 16, n * 16))

@@ -348,3 +348,73 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 
 	return 0;
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Apply the unitary matrix representation of a brickwall-type
+/// quantum circuit with periodic boundary conditions to state psi,
+/// with a gate hole in layer 'l'.
+///
+int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nlayers, const int* perms[], int l, const struct brickwall_unitary_cache* cache, struct statevector_array* restrict psi_out)
+{
+	assert(nlayers >= 1);
+	assert(cache->nqubits == psi_out->nqubits);
+	assert(cache->nstates == nlayers * (cache->nqubits / 2));
+	assert(psi_out->nstates == 16);
+	assert(0 <= l && l < nlayers);
+
+	// temporary statevector arrays
+	struct statevector_array tmp[2] = { 0 };
+	for (int i = 0; i < 2; i++) {
+		if (allocate_statevector_array(cache->nqubits, 16, &tmp[i]) < 0) {
+			fprintf(stderr, "memory allocation of a statevector array for %i qubits and 16 states failed\n", cache->nqubits);
+			return -1;
+		}
+	}
+
+	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, cache->nqubits * sizeof(int));
+	if (inv_perm == NULL) {
+		fprintf(stderr, "allocating permutation vector failed\n");
+		return -1;
+	}
+
+	const intqs nentries = ((size_t)1 << psi_out->nqubits) * psi_out->nstates;
+	memset(psi_out->data, 0, nentries * sizeof(numeric));
+
+	// iterate over hole locations in layer 'l'
+	for (int s = 0; s < cache->nqubits; s += 2)
+	{
+		int k = l * (cache->nqubits / 2) + s / 2;
+		inverse_permutation(cache->nqubits, perms[l], inv_perm);
+		apply_gate_placeholder(inv_perm[s], inv_perm[s + 1], &cache->psi_list[k], &tmp[0]);
+
+		k = 0;
+		for (int i = l; i < nlayers; i++)
+		{
+			inverse_permutation(cache->nqubits, perms[i], inv_perm);
+
+			for (int j = 0; j < cache->nqubits; j += 2)
+			{
+				if (i == l && j <= s) {
+					continue;
+				}
+				apply_gate_to_array(&Vlist[i], inv_perm[j], inv_perm[j + 1], &tmp[k], &tmp[1 - k]);
+				k = 1 - k;
+			}
+		}
+
+		// accumulate statevectors
+		for (int i = 0; i < nentries; i++)
+		{
+			psi_out->data[i] += tmp[k].data[i];
+		}
+	}
+
+	aligned_free(inv_perm);
+	for (int i = 0; i < 2; i++) {
+		free_statevector_array(&tmp[i]);
+	}
+
+	return 0;
+}

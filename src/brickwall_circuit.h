@@ -32,3 +32,7 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 
 int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct brickwall_unitary_cache* cache,
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[], numeric* hess);
+
+
+int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nlayers, const int* perms[], int l,
+	const struct brickwall_unitary_cache* cache, struct statevector_array* restrict psi_out);

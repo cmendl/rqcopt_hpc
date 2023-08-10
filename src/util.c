@@ -3,6 +3,22 @@
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Uniform distance (infinity norm) between real vectors 'x' and 'y'.
+///
+double uniform_distance_real(size_t n, const double* x, const double* y)
+{
+	double d = 0;
+	for (size_t i = 0; i < n; i++)
+	{
+		d = fmax(d, fabs(x[i] - y[i]));
+	}
+
+	return d;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Uniform distance (infinity norm) between vectors 'x' and 'y'.
 ///
 double uniform_distance(size_t n, const numeric* x, const numeric* y)

@@ -43,3 +43,26 @@ int blockenc_target(linear_func hfunc, void* hdata,
 int blockenc_target_and_gradient(linear_func hfunc, void* hdata,
 	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
 	double* fval, struct mat4x4 dVlist[]);
+
+#ifdef COMPLEX_CIRCUIT
+int blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata,
+	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval, double* grad_vec);
+#endif
+
+
+int blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
+	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval, struct mat4x4 dVlist[],
+	#ifdef COMPLEX_CIRCUIT
+	numeric* hess1, numeric* hess2
+	#else
+	numeric* hess
+	#endif
+	);
+
+#ifdef COMPLEX_CIRCUIT
+int blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata,
+	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval, double* grad_vec, double* H);
+#endif

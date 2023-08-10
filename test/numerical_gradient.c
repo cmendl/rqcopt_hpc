@@ -67,4 +67,22 @@ void numerical_gradient_wirtinger(generic_func f, void* params, const int n, con
 	aligned_free(grad_c);
 }
 
+//________________________________________________________________________________________________________________________
+///
+/// \brief Numerically approximate the gradient (conjugated Wirtinger convention) via difference quotients.
+///
+void numerical_gradient_conjugated_wirtinger(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad)
+{
+	numerical_gradient(f, params, n, x, m, dy, h, grad);
+
+	// h -> i*h
+	numeric *grad_c = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
+	numerical_gradient(f, params, n, x, m, dy, h * I, grad_c);
+	for (int i = 0; i < n; i++)
+	{
+		grad[i] = 0.5 * (grad[i] - grad_c[i]);
+	}
+	aligned_free(grad_c);
+}
+
 #endif

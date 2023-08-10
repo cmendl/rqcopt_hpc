@@ -13,4 +13,6 @@ void numerical_gradient(generic_func f, void* params, const int n, const numeric
 
 void numerical_gradient_wirtinger(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad);
 
+void numerical_gradient_conjugated_wirtinger(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad);
+
 #endif

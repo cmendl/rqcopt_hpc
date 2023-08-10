@@ -15,6 +15,8 @@ static inline double reldist(numeric x, numeric y, double eps)
 }
 
 
+double uniform_distance_real(size_t n, const double* x, const double* y);
+
 double uniform_distance(size_t n, const numeric* x, const numeric* y);
 
 double relative_distance(size_t n, const numeric* x, const numeric* y, double eps);
