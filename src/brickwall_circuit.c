@@ -25,27 +25,18 @@ int apply_brickwall_unitary(const struct mat4x4 Vlist[], int nlayers, const int*
 		return -1;
 	}
 
-	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(int));
-	if (inv_perm == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
-
 	int k = 0;
 	for (int i = 0; i < nlayers; i++)
 	{
-		inverse_permutation(psi->nqubits, perms[i], inv_perm);
-
 		for (int j = 0; j < psi->nqubits; j += 2)
 		{
 			const struct statevector* psi0 = (k == 0 ? psi : ((nstates - k) % 2 == 0 ? psi_out : &tmp));
 			struct statevector* psi1 = ((nstates - k) % 2 == 0 ? &tmp : psi_out);
-			apply_gate(&Vlist[i], inv_perm[j], inv_perm[j + 1], psi0, psi1);
+			apply_gate(&Vlist[i], perms[i][j], perms[i][j + 1], psi0, psi1);
 			k++;
 		}
 	}
 
-	aligned_free(inv_perm);
 	free_statevector(&tmp);
 
 	return 0;
@@ -119,26 +110,16 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 	// store initial statevector in cache as well
 	memcpy(cache->psi_list[0].data, psi->data, ((size_t)1 << psi->nqubits) * sizeof(numeric));
 
-	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(int));
-	if (inv_perm == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
-
 	int k = 0;
 	for (int i = 0; i < nlayers; i++)
 	{
-		inverse_permutation(psi->nqubits, perms[i], inv_perm);
-
 		for (int j = 0; j < psi->nqubits; j += 2)
 		{
-			apply_gate(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k],
+			apply_gate(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k],
 				(k + 1 < nstates ? &cache->psi_list[k + 1] : psi_out));
 			k++;
 		}
 	}
-
-	aligned_free(inv_perm);
 
 	return 0;
 }
@@ -166,17 +147,9 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 		return -1;
 	}
 
-	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
-	if (inv_perm == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
-
 	int k = nstates - 1;
 	for (int i = nlayers - 1; i >= 0; i--)
 	{
-		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
-
 		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
 
 		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
@@ -185,7 +158,7 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 			struct statevector* dpsi0 = (k % 2 == 1 ? &tmp : dpsi);
 
 			struct mat4x4 dV;
-			apply_gate_backward(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k], dpsi1, dpsi0, &dV);
+			apply_gate_backward(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], dpsi1, dpsi0, &dV);
 			// accumulate gradient
 			add_matrix(&dVlist[i], &dV);
 
@@ -193,7 +166,6 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 		}
 	}
 
-	aligned_free(inv_perm);
 	free_statevector(&tmp);
 
 	return 0;
@@ -218,12 +190,6 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 	assert(cache->nqubits == dpsi->nqubits);
 	assert(cache->nstates == nstates);
 
-	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
-	if (inv_perm == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
-
 	// store gradient vectors in another cache
 	struct brickwall_unitary_cache grad_cache;
 	if (allocate_brickwall_unitary_cache(dpsi->nqubits, nstates, &grad_cache) < 0) {
@@ -238,8 +204,6 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 	int k = nstates - 1;
 	for (int i = nlayers - 1; i >= 0; i--)
 	{
-		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
-
 		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
 
 		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
@@ -247,7 +211,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 			struct statevector* dpsi0 = (k > 0 ? &grad_cache.psi_list[k - 1] : dpsi);
 
 			struct mat4x4 dV;
-			apply_gate_backward(&Vlist[i], inv_perm[j], inv_perm[j + 1], &cache->psi_list[k], &grad_cache.psi_list[k], dpsi0, &dV);
+			apply_gate_backward(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], &grad_cache.psi_list[k], dpsi0, &dV);
 			// accumulate gradient
 			add_matrix(&dVlist[i], &dV);
 
@@ -271,19 +235,12 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 		fprintf(stderr, "allocating temporary gates failed\n");
 		return -1;
 	}
-	int* inv_perm_cont = aligned_alloc(MEM_DATA_ALIGN, dpsi->nqubits * sizeof(int));
-	if (inv_perm_cont == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
 	k = 0;
 	for (int i = 0; i < nlayers; i++)
 	{
-		inverse_permutation(dpsi->nqubits, perms[i], inv_perm);
-
 		for (int r = 0; r < dpsi->nqubits; r += 2)
 		{
-			apply_gate_placeholder(inv_perm[r], inv_perm[r + 1], &cache->psi_list[k], &tmp[0]);
+			apply_gate_placeholder(perms[i][r], perms[i][r + 1], &cache->psi_list[k], &tmp[0]);
 			k++;
 
 			// proceed through the circuit with gate placeholder at layer i and qubit pair indexed by r
@@ -291,15 +248,13 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 			int l = k;
 			for (int j = i; j < nlayers; j++)
 			{
-				inverse_permutation(dpsi->nqubits, perms[j], inv_perm_cont);
-
 				for (int s = 0; s < dpsi->nqubits; s += 2)
 				{
 					if (i == j && s <= r) {
 						continue;
 					}
 
-					apply_gate_backward_array(&Vlist[j], inv_perm_cont[s], inv_perm_cont[s + 1], &tmp[p], &grad_cache.psi_list[l], h);
+					apply_gate_backward_array(&Vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &grad_cache.psi_list[l], h);
 					// accumulate Hessian entries
 					for (int x = 0; x < 16; x++) {
 						for (int y = 0; y < 16; y++) {
@@ -308,7 +263,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 					}
 
 					if (j < nlayers - 1 || s < dpsi->nqubits - 2) {  // skip (expensive) gate application at final iteration
-						apply_gate_to_array(&Vlist[j], inv_perm_cont[s], inv_perm_cont[s + 1], &tmp[p], &tmp[1 - p]);
+						apply_gate_to_array(&Vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &tmp[1 - p]);
 						p = 1 - p;
 					}
 
@@ -343,8 +298,6 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 	free_statevector_array(&tmp[1]);
 	free_statevector_array(&tmp[0]);
 	free_brickwall_unitary_cache(&grad_cache);
-	aligned_free(inv_perm_cont);
-	aligned_free(inv_perm);
 
 	return 0;
 }
@@ -373,12 +326,6 @@ int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nl
 		}
 	}
 
-	int* inv_perm = aligned_alloc(MEM_DATA_ALIGN, cache->nqubits * sizeof(int));
-	if (inv_perm == NULL) {
-		fprintf(stderr, "allocating permutation vector failed\n");
-		return -1;
-	}
-
 	const intqs nentries = ((size_t)1 << psi_out->nqubits) * psi_out->nstates;
 	memset(psi_out->data, 0, nentries * sizeof(numeric));
 
@@ -386,20 +333,17 @@ int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nl
 	for (int s = 0; s < cache->nqubits; s += 2)
 	{
 		int k = l * (cache->nqubits / 2) + s / 2;
-		inverse_permutation(cache->nqubits, perms[l], inv_perm);
-		apply_gate_placeholder(inv_perm[s], inv_perm[s + 1], &cache->psi_list[k], &tmp[0]);
+		apply_gate_placeholder(perms[l][s], perms[l][s + 1], &cache->psi_list[k], &tmp[0]);
 
 		k = 0;
 		for (int i = l; i < nlayers; i++)
 		{
-			inverse_permutation(cache->nqubits, perms[i], inv_perm);
-
 			for (int j = 0; j < cache->nqubits; j += 2)
 			{
 				if (i == l && j <= s) {
 					continue;
 				}
-				apply_gate_to_array(&Vlist[i], inv_perm[j], inv_perm[j + 1], &tmp[k], &tmp[1 - k]);
+				apply_gate_to_array(&Vlist[i], perms[i][j], perms[i][j + 1], &tmp[k], &tmp[1 - k]);
 				k = 1 - k;
 			}
 		}
@@ -411,7 +355,6 @@ int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nl
 		}
 	}
 
-	aligned_free(inv_perm);
 	for (int i = 0; i < 2; i++) {
 		free_statevector_array(&tmp[i]);
 	}

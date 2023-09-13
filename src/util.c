@@ -51,19 +51,6 @@ double relative_distance(size_t n, const numeric* x, const numeric* y, double ep
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Compute the inverse of 'perm', a permutation of the numbers 0, 1, ..., n-1.
-///
-void inverse_permutation(int n, const int* restrict perm, int* restrict inv_perm)
-{
-	for (int i = 0; i < n; i++)
-	{
-		inv_perm[perm[i]] = i;
-	}
-}
-
-
-//________________________________________________________________________________________________________________________
-///
 /// \brief Read an HDF5 dataset from a file.
 ///
 herr_t read_hdf5_dataset(hid_t file, const char* name, hid_t mem_type, void* data)

@@ -74,7 +74,7 @@ def ising1d_dynamics_opt(nlayers: int, bootstrap: bool, coeffs_start=None, **kwa
         file["expiH"] = interleave_complex(expiH, "cplx")
         file["Vlist_start"] = interleave_complex(np.stack(Vlist_start), "cplx")
         for i in range(nlayers):
-            file[f"perm{i}"] = np.arange(L) if perms[i] is None else perms[i]
+            file[f"perm{i}"] = np.arange(L) if perms[i] is None else np.argsort(perms[i])
         # store parameters
         file.attrs["L"] = L
         file.attrs["J"] = float(J)

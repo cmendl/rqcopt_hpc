@@ -41,7 +41,7 @@ def unitary_target_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
@@ -74,7 +74,7 @@ def unitary_target_and_gradient_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
@@ -112,7 +112,7 @@ def unitary_target_and_gradient_vector_data():
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        file[f"perm{i}"] = perms[i]
+        file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
     ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
@@ -168,7 +168,7 @@ def unitary_target_gradient_hessian_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         # gradient direction of quantum gates
         Zlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
@@ -214,7 +214,7 @@ def unitary_target_gradient_vector_hessian_matrix_data():
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        file[f"perm{i}"] = perms[i]
+        file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
     ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
@@ -256,7 +256,7 @@ def blockenc_target_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         hfunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
@@ -292,7 +292,7 @@ def blockenc_target_and_gradient_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         hfunc = _ufunc_real if ctype == "real" else _ufunc_cplx
         PHPfunc = lambda psi: P @ (hfunc(P.conj().T @ psi))
@@ -335,7 +335,7 @@ def blockenc_target_and_gradient_vector_data():
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        file[f"perm{i}"] = perms[i]
+        file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
     hfunc = _ufunc_real if ctype == "real" else _ufunc_cplx
     PHPfunc = lambda psi: P @ (hfunc(P.conj().T @ psi))
@@ -412,7 +412,7 @@ def blockenc_target_gradient_hessian_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = perms[i]
+            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
         # gradient direction of quantum gates
         Zlist = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)]
@@ -474,7 +474,7 @@ def blockenc_target_gradient_vector_hessian_matrix_data():
     # random permutations
     perms = [rng.permutation(L) for _ in range(nlayers)]
     for i in range(nlayers):
-        file[f"perm{i}"] = perms[i]
+        file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
 
     # gradient direction of gradient vector (for testing Hessian matrix computation)
     zvec = 0.5 * rng.standard_normal(nlayers * 16)
