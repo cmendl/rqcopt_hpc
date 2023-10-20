@@ -31,7 +31,7 @@ def apply_brickwall_unitary_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([3, 4]):
             chi = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
@@ -66,7 +66,7 @@ def brickwall_unitary_backward_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([3, 4]):
             psi_out = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])
@@ -105,7 +105,7 @@ def brickwall_unitary_backward_hessian_data():
         # random permutations
         perms = [rng.permutation(L) for _ in range(max_nlayers)]
         for i in range(max_nlayers):
-            file[f"perm{i}"] = np.argsort(perms[i])  # inverse permutation due to different convention
+            file[f"perm{i}"] = perms[i]
 
         for i, nlayers in enumerate([3, 4]):
             psi_out = oc.apply_brickwall_unitary(Vlist[:nlayers], L, psi, perms[:nlayers])

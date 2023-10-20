@@ -25,11 +25,9 @@ def apply_parallel_gates(V, L: int, psi, perm=None):
     """
     assert L % 2 == 0
     if perm is None:
-        inv_perm = range(L)
-    else:
-        inv_perm = np.argsort(perm)
+        perm = range(L)
     for i in range(0, L, 2):
-        psi = apply_gate(V, L, inv_perm[i], inv_perm[i + 1], psi)
+        psi = apply_gate(V, L, perm[i], perm[i + 1], psi)
     return psi
 
 
@@ -48,10 +46,10 @@ def parallel_gates_grad_matfree(V, L, Ufunc, perm=None):
         psi = np.zeros(2**L)
         psi[b] = 1
         if perm is not None:
-            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), perm), -1)
+            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), inv_perm), -1)
         psi = Ufunc(psi)
         if perm is not None:
-            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), inv_perm), -1)
+            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), perm), -1)
         for i in range(0, L, 2):
             chi = psi.copy()
             for j in range(0, i, 2):
@@ -69,14 +67,12 @@ def apply_parallel_gates_directed_grad(V, L, Z, psi, perm=None):
     """
     assert L % 2 == 0
     if perm is None:
-        inv_perm = range(L)
-    else:
-        inv_perm = np.argsort(perm)
+        perm = range(L)
     Gpsi = 0
     for i in range(0, L, 2):
         chi = psi.copy()
         for j in range(0, L, 2):
-            chi = apply_gate(Z if i == j else V, L, inv_perm[j], inv_perm[j + 1], chi)
+            chi = apply_gate(Z if i == j else V, L, perm[j], perm[j + 1], chi)
         Gpsi += chi
     return Gpsi
 
@@ -97,10 +93,10 @@ def parallel_gates_hess_matfree(V, L, Z, Ufunc, perm=None, unitary_proj=False):
         psi = np.zeros(2**L)
         psi[b] = 1
         if perm is not None:
-            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), perm), -1)
+            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), inv_perm), -1)
         psi = Ufunc(psi)
         if perm is not None:
-            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), inv_perm), -1)
+            psi = np.reshape(np.transpose(np.reshape(psi, L * (2,)), perm), -1)
         for i in range(0, L, 2):
             for j in range(0, L, 2):
                 if j == i:

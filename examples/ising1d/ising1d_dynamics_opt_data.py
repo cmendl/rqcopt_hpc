@@ -61,20 +61,20 @@ def ising1d_dynamics_opt(nlayers: int, bootstrap: bool, coeffs_start=None, **kwa
         id4 = np.identity(4).reshape((1, 4, 4))
         Vlist_start = np.concatenate((id4, Vlist_start, id4), axis=0)
         assert Vlist_start.shape[0] == nlayers
-        perms = [None if i % 2 == 1 else np.roll(range(L), -1) for i in range(len(Vlist_start))]
+        perms = [None if i % 2 == 1 else np.roll(range(L), 1) for i in range(len(Vlist_start))]
     else:
         # local Hamiltonian term
         hloc = construct_ising_local_term(J, g)
         assert len(coeffs_start) == nlayers
         Vlist_start = [scipy.linalg.expm(-1j*c*t*hloc) for c in coeffs_start]
-        perms = [None if i % 2 == 0 else np.roll(range(L), -1) for i in range(len(Vlist_start))]
+        perms = [None if i % 2 == 0 else np.roll(range(L), 1) for i in range(len(Vlist_start))]
 
     # save initial data to disk
     with h5py.File(f"ising1d_dynamics_opt_n{nlayers}_init.hdf5", "w") as file:
         file["expiH"] = interleave_complex(expiH, "cplx")
         file["Vlist_start"] = interleave_complex(np.stack(Vlist_start), "cplx")
         for i in range(nlayers):
-            file[f"perm{i}"] = np.arange(L) if perms[i] is None else np.argsort(perms[i])
+            file[f"perm{i}"] = np.arange(L) if perms[i] is None else perms[i]
         # store parameters
         file.attrs["L"] = L
         file.attrs["J"] = float(J)
