@@ -309,7 +309,8 @@ static struct PyModuleDef module = {
 	"rqcopt_hpc",   // name of module
 	NULL,           // module documentation, may be NULL
 	-1,             // size of per-interpreter state of the module, or -1 if the module keeps state in global variables
-	methods         // module methods
+	methods,        // module methods
+	NULL            // slot definitions for multi-phase initialization
 };
 
 
