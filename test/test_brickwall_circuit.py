@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import unitary_group
 import h5py
 import rqcopt_matfree as oc
 from io_util import interleave_complex

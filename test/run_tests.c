@@ -32,6 +32,7 @@ char* test_apply_gate_placeholder();
 char* test_apply_brickwall_unitary();
 char* test_brickwall_unitary_backward();
 char* test_brickwall_unitary_backward_hessian();
+char* test_apply_quantum_circuit();
 char* test_unitary_target();
 char* test_unitary_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
@@ -53,49 +54,53 @@ char* test_blockenc_target_gradient_vector_hessian_matrix();
 char* test_truncated_cg();
 
 
+#define TEST_FUNCTION_ENTRY(fname) { .func = fname, .name = #fname }
+
+
 int main()
 {
 	struct test tests[] = {
-		{ .func = test_symm,                                            .name = "test_symm" },
-		{ .func = test_antisymm,                                        .name = "test_antisymm" },
+		TEST_FUNCTION_ENTRY(test_symm),
+		TEST_FUNCTION_ENTRY(test_antisymm),
 		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_real_to_antisymm,                                .name = "test_real_to_antisymm" },
-		{ .func = test_real_to_unitary_tangent,                         .name = "test_real_to_unitary_tangent" },
+		TEST_FUNCTION_ENTRY(test_real_to_antisymm),
+		TEST_FUNCTION_ENTRY(test_real_to_unitary_tangent),
 		#else
-		{ .func = test_real_to_skew,                                    .name = "test_real_to_skew" },
-		{ .func = test_real_to_ortho_tangent,                           .name = "test_real_to_ortho_tangent" },
+		TEST_FUNCTION_ENTRY(test_real_to_skew),
+		TEST_FUNCTION_ENTRY(test_real_to_ortho_tangent),
 		#endif
-		{ .func = test_multiply,                                        .name = "test_multiply" },
-		{ .func = test_project_unitary_tangent,                         .name = "test_project_unitary_tangent" },
-		{ .func = test_inverse_matrix,                                  .name = "test_inverse_matrix" },
-		{ .func = test_polar_factor,                                    .name = "test_polar_factor" },
-		{ .func = test_transpose_statevector,                           .name = "test_transpose_statevector" },
-		{ .func = test_apply_gate,                                      .name = "test_apply_gate" },
-		{ .func = test_apply_gate_backward,                             .name = "test_apply_gate_backward" },
-		{ .func = test_apply_gate_to_array,                             .name = "test_apply_gate_to_array" },
-		{ .func = test_apply_gate_placeholder,                          .name = "test_apply_gate_placeholder" },
-		{ .func = test_apply_brickwall_unitary,                         .name = "test_apply_brickwall_unitary" },
-		{ .func = test_brickwall_unitary_backward,                      .name = "test_brickwall_unitary_backward" },
-		{ .func = test_brickwall_unitary_backward_hessian,              .name = "test_brickwall_unitary_backward_hessian" },
-		{ .func = test_unitary_target,                                  .name = "test_unitary_target" },
-		{ .func = test_unitary_target_and_gradient,                     .name = "test_unitary_target_and_gradient" },
+		TEST_FUNCTION_ENTRY(test_multiply),
+		TEST_FUNCTION_ENTRY(test_project_unitary_tangent),
+		TEST_FUNCTION_ENTRY(test_inverse_matrix),
+		TEST_FUNCTION_ENTRY(test_polar_factor),
+		TEST_FUNCTION_ENTRY(test_transpose_statevector),
+		TEST_FUNCTION_ENTRY(test_apply_gate),
+		TEST_FUNCTION_ENTRY(test_apply_gate_backward),
+		TEST_FUNCTION_ENTRY(test_apply_gate_to_array),
+		TEST_FUNCTION_ENTRY(test_apply_gate_placeholder),
+		TEST_FUNCTION_ENTRY(test_apply_brickwall_unitary),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_backward),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_backward_hessian),
+		TEST_FUNCTION_ENTRY(test_apply_quantum_circuit),
+		TEST_FUNCTION_ENTRY(test_unitary_target),
+		TEST_FUNCTION_ENTRY(test_unitary_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_unitary_target_and_gradient_vector,              .name = "test_unitary_target_and_gradient_vector" },
+		TEST_FUNCTION_ENTRY(test_unitary_target_and_gradient_vector),
 		#endif
-		{ .func = test_unitary_target_gradient_hessian,                 .name = "test_unitary_target_gradient_hessian" },
+		TEST_FUNCTION_ENTRY(test_unitary_target_gradient_hessian),
 		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_unitary_target_gradient_vector_hessian_matrix,   .name = "test_unitary_target_gradient_vector_hessian_matrix" },
+		TEST_FUNCTION_ENTRY(test_unitary_target_gradient_vector_hessian_matrix),
 		#endif
-		{ .func = test_blockenc_target,                                 .name = "test_blockenc_target" },
-		{ .func = test_blockenc_target_and_gradient,                    .name = "test_blockenc_target_and_gradient" },
+		TEST_FUNCTION_ENTRY(test_blockenc_target),
+		TEST_FUNCTION_ENTRY(test_blockenc_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_blockenc_target_and_gradient_vector,             .name = "test_blockenc_target_and_gradient_vector" },
+		TEST_FUNCTION_ENTRY(test_blockenc_target_and_gradient_vector),
 		#endif
-		{ .func = test_blockenc_target_gradient_hessian,                .name = "test_blockenc_target_gradient_hessian" },
+		TEST_FUNCTION_ENTRY(test_blockenc_target_gradient_hessian),
 		#ifdef COMPLEX_CIRCUIT
-		{ .func = test_blockenc_target_gradient_vector_hessian_matrix,  .name = "test_blockenc_target_gradient_vector_hessian_matrix" },
+		TEST_FUNCTION_ENTRY(test_blockenc_target_gradient_vector_hessian_matrix),
 		#endif
-		{ .func = test_truncated_cg,                                    .name = "test_truncated_cg" },
+		TEST_FUNCTION_ENTRY(test_truncated_cg),
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

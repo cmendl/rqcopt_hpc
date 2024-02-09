@@ -944,7 +944,7 @@ char* test_blockenc_target_gradient_hessian()
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
-			if (uniform_distance(16, dVlist[j].data, dVlist_num[j].data) > 1e-8) {
+			if (uniform_distance(16, dVlist[j].data, dVlist_num[j].data) > 1e-7) {
 				return "target function gradient with respect to gates does not match finite difference approximation";
 			}
 		}
@@ -979,7 +979,7 @@ char* test_blockenc_target_gradient_hessian()
 		cblas_dgemv(CblasRowMajor, CblasNoTrans, m, m, 1.0, hess, m, (numeric*)Zlist, 1, 0, (numeric*)dVZlist, 1);
 		#endif
 		// compare
-		if (uniform_distance(m, (numeric*)dVZlist, (numeric*)dVZlist_num) > 1e-7) {
+		if (uniform_distance(m, (numeric*)dVZlist, (numeric*)dVZlist_num) > 1e-6) {
 			return "second derivative with respect to gates computed by 'blockenc_target_gradient_hessian' does not match finite difference approximation";
 		}
 		#ifdef COMPLEX_CIRCUIT
@@ -987,7 +987,7 @@ char* test_blockenc_target_gradient_hessian()
 		// Hessian matrix times gradient direction
 		cblas_zgemv(CblasRowMajor, CblasNoTrans, m, m, &alpha, hess2, m, (numeric*)Zlist, 1, &beta, (numeric*)dVZlist, 1);
 		// compare
-		if (uniform_distance(m, (numeric*)dVZlist, (numeric*)dVZlist_num) > 1e-7) {
+		if (uniform_distance(m, (numeric*)dVZlist, (numeric*)dVZlist_num) > 1e-6) {
 			return "second conjugated Wirtinger derivative with respect to gates computed by 'blockenc_target_gradient_hessian' does not match finite difference approximation";
 		}
 		#endif

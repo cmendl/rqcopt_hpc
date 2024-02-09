@@ -5,10 +5,10 @@
 ///
 /// \brief Uniform distance (infinity norm) between real vectors 'x' and 'y'.
 ///
-double uniform_distance_real(size_t n, const double* x, const double* y)
+double uniform_distance_real(long n, const double* x, const double* y)
 {
 	double d = 0;
-	for (size_t i = 0; i < n; i++)
+	for (long i = 0; i < n; i++)
 	{
 		d = fmax(d, fabs(x[i] - y[i]));
 	}
@@ -21,10 +21,10 @@ double uniform_distance_real(size_t n, const double* x, const double* y)
 ///
 /// \brief Uniform distance (infinity norm) between vectors 'x' and 'y'.
 ///
-double uniform_distance(size_t n, const numeric* x, const numeric* y)
+double uniform_distance(long n, const numeric* x, const numeric* y)
 {
 	double d = 0;
-	for (size_t i = 0; i < n; i++)
+	for (long i = 0; i < n; i++)
 	{
 		d = fmax(d, _abs(x[i] - y[i]));
 	}
@@ -37,10 +37,10 @@ double uniform_distance(size_t n, const numeric* x, const numeric* y)
 ///
 /// \brief Maximum element-wise relative distance of two vectors.
 ///
-double relative_distance(size_t n, const numeric* x, const numeric* y, double eps)
+double relative_distance(long n, const numeric* x, const numeric* y, double eps)
 {
 	double d = 0;
-	for (size_t i = 0; i < n; i++)
+	for (long i = 0; i < n; i++)
 	{
 		d = fmax(d, reldist(x[i], y[i], eps));
 	}
