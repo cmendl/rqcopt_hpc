@@ -109,6 +109,22 @@ void sub_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Transpose a matrix.
+///
+void transpose(const struct mat4x4* restrict a, struct mat4x4* restrict at)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			at->data[4*i + j] = a->data[4*j + i];
+		}
+	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Compute the adjoint (conjugate transpose) matrix.
 ///
 void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah)

@@ -4,15 +4,15 @@
 #include "statevector.h"
 
 
-void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi, struct statevector* restrict psi_out);
+void apply_gate(const struct mat4x4* gate, const int i, const int j, const struct statevector* restrict psi, struct statevector* restrict psi_out);
 
-void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi,
+void apply_gate_backward(const struct mat4x4* gate, const int i, const int j, const struct statevector* restrict psi,
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4* dgate);
 
 
-void apply_gate_to_array(const struct mat4x4* gate, int i, int j, const struct statevector_array* restrict psi, struct statevector_array* restrict psi_out);
+void apply_gate_to_array(const struct mat4x4* gate, const int i, const int j, const struct statevector_array* restrict psi, struct statevector_array* restrict psi_out);
 
-void apply_gate_backward_array(const struct mat4x4* gate, int i, int j, const struct statevector_array* restrict psi,
+void apply_gate_backward_array(const struct mat4x4* gate, const int i, const int j, const struct statevector_array* restrict psi,
 	const struct statevector* restrict dpsi_out, struct mat4x4* dgates);
 
 

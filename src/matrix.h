@@ -31,6 +31,7 @@ void add_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict
 void sub_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
 
 
+void transpose(const struct mat4x4* restrict a, struct mat4x4* restrict at);
 void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah);
 
 void symm(const struct mat4x4* restrict w, struct mat4x4* restrict z);

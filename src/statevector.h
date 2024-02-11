@@ -22,6 +22,9 @@ void free_statevector(struct statevector* psi);
 void transpose_statevector(const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_trans);
 
 
+void add_statevectors(const struct statevector* restrict psi1, const struct statevector* restrict psi2, struct statevector* restrict psi_sum);
+
+
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Array of quantum statevectors, using interleaved entries.

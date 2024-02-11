@@ -33,6 +33,8 @@ char* test_apply_brickwall_unitary();
 char* test_brickwall_unitary_backward();
 char* test_brickwall_unitary_backward_hessian();
 char* test_apply_quantum_circuit();
+char* test_quantum_circuit_backward();
+char* test_quantum_circuit_gates_hessian_vector_product();
 char* test_unitary_target();
 char* test_unitary_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
@@ -82,6 +84,8 @@ int main()
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_backward),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_backward_hessian),
 		TEST_FUNCTION_ENTRY(test_apply_quantum_circuit),
+		TEST_FUNCTION_ENTRY(test_quantum_circuit_backward),
+		TEST_FUNCTION_ENTRY(test_quantum_circuit_gates_hessian_vector_product),
 		TEST_FUNCTION_ENTRY(test_unitary_target),
 		TEST_FUNCTION_ENTRY(test_unitary_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT

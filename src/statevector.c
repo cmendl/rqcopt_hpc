@@ -73,6 +73,23 @@ void transpose_statevector(const struct statevector* restrict psi, const int* pe
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Add two statevectors.
+///
+void add_statevectors(const struct statevector* restrict psi1, const struct statevector* restrict psi2, struct statevector* restrict psi_sum)
+{
+	assert(psi1->nqubits == psi2->nqubits);
+	assert(psi1->nqubits == psi_sum->nqubits);
+
+	const int n = (intqs)1 << psi1->nqubits;
+	for (intqs j = 0; j < n; j++)
+	{
+		psi_sum->data[j] = psi1->data[j] + psi2->data[j];
+	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Allocate a statevector array.
 ///
 int allocate_statevector_array(int nqubits, int nstates, struct statevector_array* psi_array)

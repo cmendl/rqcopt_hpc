@@ -7,7 +7,7 @@
 ///
 /// \brief Apply a two-qubit gate to qubits 'i' and 'j' of a statevector.
 ///
-void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi, struct statevector* restrict psi_out)
+void apply_gate(const struct mat4x4* gate, const int i, const int j, const struct statevector* restrict psi, struct statevector* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
 	assert(0 <= i && i < psi->nqubits);
@@ -80,7 +80,7 @@ void apply_gate(const struct mat4x4* gate, int i, int j, const struct statevecto
 ///
 /// \brief Backward pass for applying a two-qubit gate to qubits 'i' and 'j' of a statevector.
 ///
-void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct statevector* restrict psi,
+void apply_gate_backward(const struct mat4x4* gate, const int i, const int j, const struct statevector* restrict psi,
 	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4* dgate)
 {
 	assert(psi->nqubits == dpsi_out->nqubits);
@@ -192,7 +192,7 @@ void apply_gate_backward(const struct mat4x4* gate, int i, int j, const struct s
 ///
 /// \brief Apply a two-qubit gate to qubits 'i' and 'j' of a statevector array.
 ///
-void apply_gate_to_array(const struct mat4x4* gate, int i, int j, const struct statevector_array* restrict psi, struct statevector_array* restrict psi_out)
+void apply_gate_to_array(const struct mat4x4* gate, const int i, const int j, const struct statevector_array* restrict psi, struct statevector_array* restrict psi_out)
 {
 	assert(psi->nqubits == psi_out->nqubits);
 	assert(psi->nstates == psi_out->nstates);
@@ -266,7 +266,7 @@ void apply_gate_to_array(const struct mat4x4* gate, int i, int j, const struct s
 ///
 /// \brief Gate gradients corresponding to backward pass for applying a two-qubit gate to qubits 'i' and 'j' of a statevector array.
 ///
-void apply_gate_backward_array(const struct mat4x4* gate, int i, int j, const struct statevector_array* restrict psi,
+void apply_gate_backward_array(const struct mat4x4* gate, const int i, const int j, const struct statevector_array* restrict psi,
 	const struct statevector* restrict dpsi_out, struct mat4x4* dgates)
 {
 	assert(psi->nqubits == dpsi_out->nqubits);
