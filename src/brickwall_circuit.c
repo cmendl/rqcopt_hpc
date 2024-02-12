@@ -326,7 +326,7 @@ int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nl
 		}
 	}
 
-	const intqs nentries = ((size_t)1 << psi_out->nqubits) * psi_out->nstates;
+	const intqs nentries = ((intqs)1 << psi_out->nqubits) * psi_out->nstates;
 	memset(psi_out->data, 0, nentries * sizeof(numeric));
 
 	// iterate over hole locations in layer 'l'

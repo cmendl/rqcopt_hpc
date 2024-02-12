@@ -69,7 +69,7 @@ char* test_apply_brickwall_unitary()
 		}
 
 		// compare with reference
-		if (uniform_distance((size_t)1 << L, chi.data, chi_ref.data) > 1e-12) {
+		if (uniform_distance((long)1 << L, chi.data, chi_ref.data) > 1e-12) {
 			return "quantum state after applying gate does not match reference";
 		}
 	}
@@ -204,7 +204,7 @@ char* test_brickwall_unitary_backward()
 			return "reading output statevector data from disk failed";
 		}
 		// compare output state of forward pass with reference
-		if (uniform_distance((size_t)1 << L, psi_out.data, psi_out_ref.data) > 1e-12) {
+		if (uniform_distance((long)1 << L, psi_out.data, psi_out_ref.data) > 1e-12) {
 			return "quantum state after applying brick wall quantum circuit does not match reference";
 		}
 
@@ -225,9 +225,9 @@ char* test_brickwall_unitary_backward()
 		};
 		struct statevector dpsi_num;
 		if (allocate_statevector(L, &dpsi_num) < 0) { return "memory allocation failed"; }
-		numerical_gradient(brickwall_unitary_forward_psi, &params_psi, (size_t)1 << L, psi.data, (size_t)1 << L, dpsi_out.data, h, dpsi_num.data);
+		numerical_gradient(brickwall_unitary_forward_psi, &params_psi, 1 << L, psi.data, 1 << L, dpsi_out.data, h, dpsi_num.data);
 		// compare
-		if (uniform_distance((size_t)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
+		if (uniform_distance((long)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
 			return "gradient with respect to 'psi' computed by 'brickwall_unitary_backward' does not match finite difference approximation";
 		}
 
@@ -239,7 +239,7 @@ char* test_brickwall_unitary_backward()
 			.perms = pperms,
 		};
 		struct mat4x4 dVlist_num[4];
-		numerical_gradient(brickwall_unitary_forward_gates, &params_gates, nlayers * 16, (numeric*)Vlist, (size_t)1 << L, dpsi_out.data, h, (numeric*)dVlist_num);
+		numerical_gradient(brickwall_unitary_forward_gates, &params_gates, nlayers * 16, (numeric*)Vlist, 1 << L, dpsi_out.data, h, (numeric*)dVlist_num);
 		// compare
 		if (uniform_distance(nlayers * 16, (numeric*)dVlist, (numeric*)dVlist_num) > 1e-8) {
 			return "gradient with respect to gates computed by 'brickwall_unitary_backward' does not match finite difference approximation";
@@ -370,7 +370,7 @@ char* test_brickwall_unitary_backward_hessian()
 			return "reading output statevector data from disk failed";
 		}
 		// compare output state of forward pass with reference
-		if (uniform_distance((size_t)1 << L, psi_out.data, psi_out_ref.data) > 1e-12) {
+		if (uniform_distance((long)1 << L, psi_out.data, psi_out_ref.data) > 1e-12) {
 			return "quantum state after applying brick wall quantum circuit does not match reference";
 		}
 
@@ -403,9 +403,9 @@ char* test_brickwall_unitary_backward_hessian()
 		};
 		struct statevector dpsi_num;
 		if (allocate_statevector(L, &dpsi_num) < 0) { return "memory allocation failed"; }
-		numerical_gradient(brickwall_unitary_forward_psi, &params_psi, (size_t)1 << L, psi.data, (size_t)1 << L, dpsi_out.data, h, dpsi_num.data);
+		numerical_gradient(brickwall_unitary_forward_psi, &params_psi, 1 << L, psi.data, 1 << L, dpsi_out.data, h, dpsi_num.data);
 		// compare
-		if (uniform_distance((size_t)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
+		if (uniform_distance((long)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
 			return "gradient with respect to 'psi' computed by 'brickwall_unitary_backward_hessian' does not match finite difference approximation";
 		}
 
@@ -417,7 +417,7 @@ char* test_brickwall_unitary_backward_hessian()
 			.perms = pperms,
 		};
 		struct mat4x4 dVlist_num[4];
-		numerical_gradient(brickwall_unitary_forward_gates, &params_gates, m, (numeric*)Vlist, (size_t)1 << L, dpsi_out.data, h, (numeric*)dVlist_num);
+		numerical_gradient(brickwall_unitary_forward_gates, &params_gates, m, (numeric*)Vlist, 1 << L, dpsi_out.data, h, (numeric*)dVlist_num);
 		// compare
 		if (uniform_distance(m, (numeric*)dVlist, (numeric*)dVlist_num) > 1e-8) {
 			return "gradient with respect to gates computed by 'brickwall_unitary_backward_hessian' does not match finite difference approximation";

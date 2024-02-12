@@ -31,13 +31,13 @@ static int ufunc(const struct statevector* restrict psi, void* udata, struct sta
 }
 
 
-char* test_unitary_target()
+char* test_brickwall_unitary_target()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_unitary_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_unitary_target failed";
+		return "'H5Fopen' in test_brickwall_unitary_target failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -65,7 +65,7 @@ char* test_unitary_target()
 	for (int i = 0; i < 2; i++)
 	{
 		double f;
-		if (unitary_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
+		if (brickwall_unitary_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
 			return "'unitary_target' failed internally";
 		}
 
@@ -97,7 +97,7 @@ struct unitary_target_params
 };
 
 // wrapper of unitary target function
-static void unitary_target_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+static void brickwall_unitary_target_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
 {
 	const struct unitary_target_params* params = p;
 
@@ -107,20 +107,20 @@ static void unitary_target_wrapper(const numeric* restrict x, void* p, numeric* 
 	}
 
 	double f;
-	unitary_target(params->ufunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
+	brickwall_unitary_target(params->ufunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
 	*y = f;
 
 	aligned_free(Vlist);
 }
 
 
-char* test_unitary_target_and_gradient()
+char* test_brickwall_unitary_target_and_gradient()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_unitary_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_unitary_target_and_gradient failed";
+		return "'H5Fopen' in test_brickwall_unitary_target_and_gradient failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -149,7 +149,7 @@ char* test_unitary_target_and_gradient()
 	{
 		double f;
 		struct mat4x4 dVlist[5];
-		if (unitary_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
+		if (brickwall_unitary_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
 			return "'unitary_target_and_gradient' failed internally";
 		}
 
@@ -176,7 +176,7 @@ char* test_unitary_target_and_gradient()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -184,7 +184,7 @@ char* test_unitary_target_and_gradient()
 			}
 		}
 		#else
-		numerical_gradient(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -215,14 +215,14 @@ char* test_unitary_target_and_gradient()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_unitary_target_and_gradient_vector()
+char* test_brickwall_unitary_target_and_gradient_vector()
 {
 	int L = 6;
 	int nlayers = 3;
 
-	hid_t file = H5Fopen("../test/data/test_unitary_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_unitary_target_and_gradient_vector failed";
+		return "'H5Fopen' in test_brickwall_unitary_target_and_gradient_vector failed";
 	}
 
 	struct mat4x4 Vlist[3];
@@ -250,7 +250,7 @@ char* test_unitary_target_and_gradient_vector()
 
 	double f;
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	if (unitary_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
+	if (brickwall_unitary_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
 		return "'unitary_target_and_gradient_vector' failed internally";
 	}
 
@@ -290,16 +290,16 @@ static void unitary_target_gradient_wrapper(const numeric* restrict x, void* p, 
 	const struct unitary_target_params* params = p;
 
 	double f;
-	unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
+	brickwall_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
 }
 
-char* test_unitary_target_gradient_hessian()
+char* test_brickwall_unitary_target_gradient_hessian()
 {
 	int L = 6;
 
-	hid_t file = H5Fopen("../test/data/test_unitary_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_unitary_target_gradient_hessian failed";
+		return "'H5Fopen' in test_brickwall_unitary_target_gradient_hessian failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -342,7 +342,7 @@ char* test_unitary_target_gradient_hessian()
 		double f;
 		struct mat4x4 dVlist[5];
 		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-		if (unitary_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
+		if (brickwall_unitary_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
 			return "'unitary_target_gradient_hessian' failed internally";
 		}
 
@@ -380,7 +380,7 @@ char* test_unitary_target_gradient_hessian()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -388,7 +388,7 @@ char* test_unitary_target_gradient_hessian()
 			}
 		}
 		#else
-		numerical_gradient(unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -454,14 +454,14 @@ char* test_unitary_target_gradient_hessian()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_unitary_target_gradient_vector_hessian_matrix()
+char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 {
 	int L = 6;
 	int nlayers = 5;
 
-	hid_t file = H5Fopen("../test/data/test_unitary_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_unitary_target_gradient_vector_hessian_matrix failed";
+		return "'H5Fopen' in test_brickwall_unitary_target_gradient_vector_hessian_matrix failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -491,7 +491,7 @@ char* test_unitary_target_gradient_vector_hessian_matrix()
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
 	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
 
-	if (unitary_target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
+	if (brickwall_unitary_target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
 		return "'unitary_target_gradient_vector_hessian_matrix' failed internally";
 	}
 
@@ -552,13 +552,13 @@ char* test_unitary_target_gradient_vector_hessian_matrix()
 #endif
 
 
-char* test_blockenc_target()
+char* test_brickwall_blockenc_target()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_blockenc_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_blockenc_target" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_blockenc_target failed";
+		return "'H5Fopen' in test_brickwall_blockenc_target failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -586,7 +586,7 @@ char* test_blockenc_target()
 	for (int i = 0; i < 2; i++)
 	{
 		double f;
-		if (blockenc_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
+		if (brickwall_blockenc_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
 			return "'blockenc_target' failed internally";
 		}
 
@@ -628,20 +628,20 @@ static void blockenc_target_wrapper(const numeric* restrict x, void* p, numeric*
 	}
 
 	double f;
-	blockenc_target(params->hfunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
+	brickwall_blockenc_target(params->hfunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
 	*y = f;
 
 	aligned_free(Vlist);
 }
 
 
-char* test_blockenc_target_and_gradient()
+char* test_brickwall_blockenc_target_and_gradient()
 {
 	int L = 8;
 
-	hid_t file = H5Fopen("../test/data/test_blockenc_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_blockenc_target_and_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_blockenc_target_and_gradient failed";
+		return "'H5Fopen' in test_brickwall_blockenc_target_and_gradient failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -670,7 +670,7 @@ char* test_blockenc_target_and_gradient()
 	{
 		double f;
 		struct mat4x4 dVlist[5];
-		if (blockenc_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
+		if (brickwall_blockenc_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
 			return "'blockenc_target_and_gradient' failed internally";
 		}
 
@@ -736,14 +736,14 @@ char* test_blockenc_target_and_gradient()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_blockenc_target_and_gradient_vector()
+char* test_brickwall_blockenc_target_and_gradient_vector()
 {
 	int L = 6;
 	int nlayers = 3;
 
-	hid_t file = H5Fopen("../test/data/test_blockenc_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_blockenc_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_blockenc_target_and_gradient_vector failed";
+		return "'H5Fopen' in test_brickwall_blockenc_target_and_gradient_vector failed";
 	}
 
 	struct mat4x4 Vlist[3];
@@ -771,7 +771,7 @@ char* test_blockenc_target_and_gradient_vector()
 
 	double f;
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	if (blockenc_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
+	if (brickwall_blockenc_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
 		return "'blockenc_target_and_gradient_vector' failed internally";
 	}
 
@@ -811,16 +811,16 @@ static void blockenc_target_gradient_wrapper(const numeric* restrict x, void* p,
 	const struct blockenc_target_params* params = p;
 
 	double f;
-	blockenc_target_and_gradient(params->hfunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
+	brickwall_blockenc_target_and_gradient(params->hfunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
 }
 
-char* test_blockenc_target_gradient_hessian()
+char* test_brickwall_blockenc_target_gradient_hessian()
 {
 	int L = 6;
 
-	hid_t file = H5Fopen("../test/data/test_blockenc_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_blockenc_target_gradient_hessian" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_blockenc_target_gradient_hessian failed";
+		return "'H5Fopen' in test_brickwall_blockenc_target_gradient_hessian failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -865,12 +865,12 @@ char* test_blockenc_target_gradient_hessian()
 		#ifdef COMPLEX_CIRCUIT
 		numeric* hess1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 		numeric* hess2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-		if (blockenc_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess1, hess2) < 0) {
+		if (brickwall_blockenc_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess1, hess2) < 0) {
 			return "'blockenc_target_gradient_hessian' failed internally";
 		}
 		#else
 		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-		if (blockenc_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
+		if (brickwall_blockenc_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
 			return "'blockenc_target_gradient_hessian' failed internally";
 		}
 		#endif
@@ -1044,14 +1044,14 @@ char* test_blockenc_target_gradient_hessian()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_blockenc_target_gradient_vector_hessian_matrix()
+char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix()
 {
 	int L = 6;
 	int nlayers = 5;
 
-	hid_t file = H5Fopen("../test/data/test_blockenc_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_blockenc_target_gradient_vector_hessian_matrix" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_blockenc_target_gradient_vector_hessian_matrix failed";
+		return "'H5Fopen' in test_brickwall_blockenc_target_gradient_vector_hessian_matrix failed";
 	}
 
 	struct mat4x4 Vlist[5];
@@ -1086,7 +1086,7 @@ char* test_blockenc_target_gradient_vector_hessian_matrix()
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
 	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
 
-	if (blockenc_target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
+	if (brickwall_blockenc_target_gradient_vector_hessian_matrix(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad, H) < 0) {
 		return "'blockenc_target_gradient_vector_hessian_matrix' failed internally";
 	}
 

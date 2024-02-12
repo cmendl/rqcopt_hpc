@@ -53,9 +53,9 @@ char* test_apply_gate()
 	apply_gate(&V, 3, 4, &psi, &chi3);
 
 	// compare with reference
-	if (uniform_distance((size_t)1 << L, chi1.data, chi1ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
-	if (uniform_distance((size_t)1 << L, chi2.data, chi2ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
-	if (uniform_distance((size_t)1 << L, chi3.data, chi3ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
+	if (uniform_distance((long)1 << L, chi1.data, chi1ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
+	if (uniform_distance((long)1 << L, chi2.data, chi2ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
+	if (uniform_distance((long)1 << L, chi3.data, chi3ref.data) > 1e-12) { return "quantum state after applying gate does not match reference"; }
 
 	free_statevector(&chi3ref);
 	free_statevector(&chi3);
@@ -166,10 +166,10 @@ char* test_apply_gate_backward()
 		};
 		struct statevector dpsi_num;
 		if (allocate_statevector(L, &dpsi_num) < 0) { return "memory allocation failed"; }
-		numerical_gradient(apply_gate_psi, &params_psi, (size_t)1 << L, psi.data, (size_t)1 << L, dpsi_out.data, h, dpsi_num.data);
+		numerical_gradient(apply_gate_psi, &params_psi, 1 << L, psi.data, 1 << L, dpsi_out.data, h, dpsi_num.data);
 
 		// compare
-		if (uniform_distance((size_t)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
+		if (uniform_distance((long)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
 			return "gradient of 'apply_gate' with respect to 'psi' does not match finite difference approximation";
 		}
 
@@ -180,7 +180,7 @@ char* test_apply_gate_backward()
 			.j = j_list[k],
 		};
 		struct mat4x4 dV_num;
-		numerical_gradient(apply_gate_v, &params_v, 16, V.data, (size_t)1 << L, dpsi_out.data, h, dV_num.data);
+		numerical_gradient(apply_gate_v, &params_v, 16, V.data, 1 << L, dpsi_out.data, h, dV_num.data);
 
 		// compare
 		if (uniform_distance(16, dV.data, dV_num.data) > 1e-8) {
@@ -243,9 +243,9 @@ char* test_apply_gate_to_array()
 	apply_gate_to_array(&V, 3, 4, &psi, &chi3);
 
 	// compare with reference
-	if (uniform_distance(((size_t)1 << L) * nstates, chi1.data, chi1ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
-	if (uniform_distance(((size_t)1 << L) * nstates, chi2.data, chi2ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
-	if (uniform_distance(((size_t)1 << L) * nstates, chi3.data, chi3ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
+	if (uniform_distance(((long)1 << L) * nstates, chi1.data, chi1ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
+	if (uniform_distance(((long)1 << L) * nstates, chi2.data, chi2ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
+	if (uniform_distance(((long)1 << L) * nstates, chi3.data, chi3ref.data) > 1e-12) { return "quantum state array after applying gate does not match reference"; }
 
 	free_statevector_array(&chi3ref);
 	free_statevector_array(&chi3);
@@ -287,7 +287,7 @@ char* test_apply_gate_placeholder()
 	// apply gate placeholder
 	apply_gate_placeholder(2, 5, &psi, &psi_out);
 	// compare with reference
-	if (uniform_distance(((size_t)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
+	if (uniform_distance(((long)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
 		return "quantum state array after applying gate placeholder does not match reference";
 	}
 
@@ -298,7 +298,7 @@ char* test_apply_gate_placeholder()
 	// apply gate placeholder
 	apply_gate_placeholder(5, 1, &psi, &psi_out);
 	// compare with reference
-	if (uniform_distance(((size_t)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
+	if (uniform_distance(((long)1 << L)*16, psi_out.data, psi_out_ref.data) > 1e-12) {
 		return "quantum state array after applying gate placeholder does not match reference";
 	}
 

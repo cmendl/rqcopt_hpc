@@ -27,7 +27,7 @@ static double f(const double* x, void* fdata)
 	struct f_target_data* data = fdata;
 
 	double f;
-	if (unitary_target(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f) < 0) {
+	if (brickwall_unitary_target(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f) < 0) {
 		fprintf(stderr, "target function evaluation failed internally\n");
 		return -1;
 	}
@@ -45,7 +45,7 @@ static double f_deriv(const double* restrict x, void* fdata, double* restrict gr
 	struct f_target_data* data = fdata;
 
 	double f;
-	if (unitary_target_gradient_vector_hessian_matrix(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f, grad, hess) < 0) {
+	if (brickwall_unitary_target_gradient_vector_hessian_matrix(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, &f, grad, hess) < 0) {
 		fprintf(stderr, "target function and derivative evaluation failed internally\n");
 		return -1;
 	}

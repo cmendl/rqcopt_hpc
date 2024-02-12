@@ -11,7 +11,7 @@
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int unitary_target(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+int brickwall_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -80,7 +80,7 @@ int unitary_target(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], 
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
+int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -182,7 +182,7 @@ int unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
+int brickwall_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL) {
@@ -190,7 +190,7 @@ int unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const str
 		return -1;
 	}
 
-	int ret = unitary_target_and_gradient(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist);
+	int ret = brickwall_unitary_target_and_gradient(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist);
 	if (ret < 0) {
 		return ret;
 	}
@@ -217,7 +217,7 @@ int unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const str
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[], numeric* hess)
+int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[], numeric* hess)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -355,7 +355,7 @@ static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, con
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
+int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL)
@@ -367,7 +367,7 @@ int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata
 	const int m = nlayers * 16;
 	numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 
-	int ret = unitary_target_gradient_hessian(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist, hess);
+	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist, hess);
 	if (ret < 0) {
 		return ret;
 	}
@@ -450,7 +450,7 @@ int unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+int brickwall_blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
 {
 	assert(L % 2 == 0);
 
@@ -552,7 +552,7 @@ int blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[],
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int blockenc_target_and_gradient(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
+int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
 {
 	assert(L % 2 == 0);
 
@@ -691,7 +691,7 @@ int blockenc_target_and_gradient(linear_func hfunc, void* hdata, const struct ma
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
+int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL) {
@@ -699,7 +699,7 @@ int blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const st
 		return -1;
 	}
 
-	int ret = blockenc_target_and_gradient(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist);
+	int ret = brickwall_blockenc_target_and_gradient(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist);
 	if (ret < 0) {
 		return ret;
 	}
@@ -730,7 +730,7 @@ int blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const st
 /// Returning two Hessian matrices for the complex version, since the matrices in 'Vlist'
 /// appear with and without complex-conjugation in target function.
 ///
-int blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
+int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
 	double* fval, struct mat4x4 dVlist[],
 	#ifdef COMPLEX_CIRCUIT
@@ -981,7 +981,7 @@ int blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
+int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
 {
 	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 	if (dVlist == NULL)
@@ -994,7 +994,7 @@ int blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdat
 	numeric* hess1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 	numeric* hess2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 
-	int ret = blockenc_target_gradient_hessian(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist, hess1, hess2);
+	int ret = brickwall_blockenc_target_gradient_hessian(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist, hess1, hess2);
 	if (ret < 0) {
 		return ret;
 	}

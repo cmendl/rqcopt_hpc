@@ -35,23 +35,23 @@ char* test_brickwall_unitary_backward_hessian();
 char* test_apply_quantum_circuit();
 char* test_quantum_circuit_backward();
 char* test_quantum_circuit_gates_hessian_vector_product();
-char* test_unitary_target();
-char* test_unitary_target_and_gradient();
+char* test_brickwall_unitary_target();
+char* test_brickwall_unitary_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
-char* test_unitary_target_and_gradient_vector();
+char* test_brickwall_unitary_target_and_gradient_vector();
 #endif
-char* test_unitary_target_gradient_hessian();
+char* test_brickwall_unitary_target_gradient_hessian();
 #ifdef COMPLEX_CIRCUIT
-char* test_unitary_target_gradient_vector_hessian_matrix();
+char* test_brickwall_unitary_target_gradient_vector_hessian_matrix();
 #endif
-char* test_blockenc_target();
-char* test_blockenc_target_and_gradient();
+char* test_brickwall_blockenc_target();
+char* test_brickwall_blockenc_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
-char* test_blockenc_target_and_gradient_vector();
+char* test_brickwall_blockenc_target_and_gradient_vector();
 #endif
-char* test_blockenc_target_gradient_hessian();
+char* test_brickwall_blockenc_target_gradient_hessian();
 #ifdef COMPLEX_CIRCUIT
-char* test_blockenc_target_gradient_vector_hessian_matrix();
+char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix();
 #endif
 char* test_truncated_cg();
 
@@ -86,23 +86,23 @@ int main()
 		TEST_FUNCTION_ENTRY(test_apply_quantum_circuit),
 		TEST_FUNCTION_ENTRY(test_quantum_circuit_backward),
 		TEST_FUNCTION_ENTRY(test_quantum_circuit_gates_hessian_vector_product),
-		TEST_FUNCTION_ENTRY(test_unitary_target),
-		TEST_FUNCTION_ENTRY(test_unitary_target_and_gradient),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
-		TEST_FUNCTION_ENTRY(test_unitary_target_and_gradient_vector),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_gradient_vector),
 		#endif
-		TEST_FUNCTION_ENTRY(test_unitary_target_gradient_hessian),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_hessian),
 		#ifdef COMPLEX_CIRCUIT
-		TEST_FUNCTION_ENTRY(test_unitary_target_gradient_vector_hessian_matrix),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_vector_hessian_matrix),
 		#endif
-		TEST_FUNCTION_ENTRY(test_blockenc_target),
-		TEST_FUNCTION_ENTRY(test_blockenc_target_and_gradient),
+		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target),
+		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
-		TEST_FUNCTION_ENTRY(test_blockenc_target_and_gradient_vector),
+		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_and_gradient_vector),
 		#endif
-		TEST_FUNCTION_ENTRY(test_blockenc_target_gradient_hessian),
+		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_gradient_hessian),
 		#ifdef COMPLEX_CIRCUIT
-		TEST_FUNCTION_ENTRY(test_blockenc_target_gradient_vector_hessian_matrix),
+		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_gradient_vector_hessian_matrix),
 		#endif
 		TEST_FUNCTION_ENTRY(test_truncated_cg),
 	};

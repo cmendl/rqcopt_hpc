@@ -20,7 +20,7 @@ def _ufunc_cplx(x):
                      + (-0.3 + 0.2j) * x[((i + 4) * 199) % n] for i in range(n)])
 
 
-def unitary_target_data():
+def brickwall_unitary_target_data():
 
     # random number generator
     rng = np.random.default_rng(41)
@@ -31,7 +31,7 @@ def unitary_target_data():
     max_nlayers = 5
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_unitary_target_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_unitary_target_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -53,7 +53,7 @@ def unitary_target_data():
         file.close()
 
 
-def unitary_target_and_gradient_data():
+def brickwall_unitary_target_and_gradient_data():
 
     # random number generator
     rng = np.random.default_rng(42)
@@ -89,7 +89,7 @@ def unitary_target_and_gradient_data():
         file.close()
 
 
-def unitary_target_and_gradient_vector_data():
+def brickwall_unitary_target_and_gradient_vector_data():
 
     # random number generator
     rng = np.random.default_rng(43)
@@ -147,7 +147,7 @@ def _brickwall_unitary_plain_hessian_matrix_matfree(Vlist, L, Ufunc, perms):
     return H.reshape((n * 16, n * 16))
 
 
-def unitary_target_gradient_hessian_data():
+def brickwall_unitary_target_gradient_hessian_data():
 
     # random number generator
     rng = np.random.default_rng(45)
@@ -191,7 +191,7 @@ def unitary_target_gradient_hessian_data():
         file.close()
 
 
-def unitary_target_gradient_vector_hessian_matrix_data():
+def brickwall_unitary_target_gradient_vector_hessian_matrix_data():
 
     # random number generator
     rng = np.random.default_rng(47)
@@ -233,7 +233,7 @@ def unitary_target_gradient_vector_hessian_matrix_data():
     file.close()
 
 
-def blockenc_target_data():
+def brickwall_blockenc_target_data():
 
     # random number generator
     rng = np.random.default_rng(48)
@@ -246,7 +246,7 @@ def blockenc_target_data():
     P = oc.blockenc_isometry(L)
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_blockenc_target_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_blockenc_target_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -268,7 +268,7 @@ def blockenc_target_data():
         file.close()
 
 
-def blockenc_target_and_gradient_data():
+def brickwall_blockenc_target_and_gradient_data():
 
     # random number generator
     rng = np.random.default_rng(49)
@@ -282,7 +282,7 @@ def blockenc_target_and_gradient_data():
     PPfunc = lambda psi: P @ (P.conj().T @ psi)
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_blockenc_target_and_gradient_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_blockenc_target_and_gradient_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -309,7 +309,7 @@ def blockenc_target_and_gradient_data():
         file.close()
 
 
-def blockenc_target_and_gradient_vector_data():
+def brickwall_blockenc_target_and_gradient_vector_data():
 
     # random number generator
     rng = np.random.default_rng(50)
@@ -325,7 +325,7 @@ def blockenc_target_and_gradient_vector_data():
 
     ctype = "cplx"
 
-    file = h5py.File(f"data/test_blockenc_target_and_gradient_vector_{ctype}.hdf5", "w")
+    file = h5py.File(f"data/test_brickwall_blockenc_target_and_gradient_vector_{ctype}.hdf5", "w")
 
     # general random 4x4 matrices (do not need to be unitary for this test)
     Vlist = np.stack([0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
@@ -388,7 +388,7 @@ def _squared_brickwall_unitary_plain_hessian_matrix_matfree(Vlist, L, Afunc, Bfu
         return H.reshape((n * 16, n * 16))
 
 
-def blockenc_target_gradient_hessian_data():
+def brickwall_blockenc_target_gradient_hessian_data():
 
     # random number generator
     rng = np.random.default_rng(50)
@@ -402,7 +402,7 @@ def blockenc_target_gradient_hessian_data():
     PPfunc = lambda psi: P @ (P.conj().T @ psi)
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_blockenc_target_gradient_hessian_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_blockenc_target_gradient_hessian_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -448,7 +448,7 @@ def blockenc_target_gradient_hessian_data():
         file.close()
 
 
-def blockenc_target_gradient_vector_hessian_matrix_data():
+def brickwall_blockenc_target_gradient_vector_hessian_matrix_data():
 
     # random number generator
     rng = np.random.default_rng(51)
@@ -464,7 +464,7 @@ def blockenc_target_gradient_vector_hessian_matrix_data():
 
     ctype = "cplx"
 
-    file = h5py.File(f"data/test_blockenc_target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
+    file = h5py.File(f"data/test_brickwall_blockenc_target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
 
     # random unitaries (unitary property required for Hessian matrix to be symmetric)
     Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
@@ -501,16 +501,16 @@ def blockenc_target_gradient_vector_hessian_matrix_data():
 
 
 def main():
-    unitary_target_data()
-    unitary_target_and_gradient_data()
-    unitary_target_and_gradient_vector_data()
-    unitary_target_gradient_hessian_data()
-    unitary_target_gradient_vector_hessian_matrix_data()
-    blockenc_target_data()
-    blockenc_target_and_gradient_data()
-    blockenc_target_and_gradient_vector_data()
-    blockenc_target_gradient_hessian_data()
-    blockenc_target_gradient_vector_hessian_matrix_data()
+    brickwall_unitary_target_data()
+    brickwall_unitary_target_and_gradient_data()
+    brickwall_unitary_target_and_gradient_vector_data()
+    brickwall_unitary_target_gradient_hessian_data()
+    brickwall_unitary_target_gradient_vector_hessian_matrix_data()
+    brickwall_blockenc_target_data()
+    brickwall_blockenc_target_and_gradient_data()
+    brickwall_blockenc_target_and_gradient_vector_data()
+    brickwall_blockenc_target_gradient_hessian_data()
+    brickwall_blockenc_target_gradient_vector_hessian_matrix_data()
 
 
 if __name__ == "__main__":

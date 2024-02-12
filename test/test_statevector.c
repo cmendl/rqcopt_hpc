@@ -39,7 +39,7 @@ char* test_transpose_statevector()
 	transpose_statevector(&psi, perm, &chi);
 
 	// compare with reference
-	if (uniform_distance((size_t)1 << L, chi.data, chiref.data) > 1e-12) {
+	if (uniform_distance((long)1 << L, chi.data, chiref.data) > 1e-12) {
 		return "transposed quantum state does not match reference";
 	}
 
