@@ -84,8 +84,8 @@ struct quantum_circuit_forward_psi_params
 	int ngates;
 };
 
-// wrapper of quantum_circuit_forward as a function of 'psi'
-static void quantum_circuit_forward_psi(const numeric* restrict x, void* p, numeric* restrict y)
+// wrapper of apply_quantum_circuit as a function of 'psi'
+static void apply_quantum_circuit_psi(const numeric* restrict x, void* p, numeric* restrict y)
 {
 	const struct quantum_circuit_forward_psi_params* params = p;
 
@@ -111,8 +111,8 @@ struct quantum_circuit_forward_gates_params
 	int ngates;
 };
 
-// wrapper of quantum_circuit_forward as a function of the gates
-static void quantum_circuit_forward_gates(const numeric* restrict x, void* p, numeric* restrict y)
+// wrapper of apply_quantum_circuit as a function of the gates
+static void apply_quantum_circuit_gates(const numeric* restrict x, void* p, numeric* restrict y)
 {
 	const struct quantum_circuit_forward_gates_params* params = p;
 
@@ -201,7 +201,7 @@ char* test_quantum_circuit_backward()
 	};
 	struct statevector dpsi_num;
 	if (allocate_statevector(nqubits, &dpsi_num) < 0) { return "memory allocation failed"; }
-	numerical_gradient(quantum_circuit_forward_psi, &params_psi, 1 << nqubits, psi.data, 1 << nqubits, dpsi_out.data, h, dpsi_num.data);
+	numerical_gradient(apply_quantum_circuit_psi, &params_psi, 1 << nqubits, psi.data, 1 << nqubits, dpsi_out.data, h, dpsi_num.data);
 	// compare
 	if (uniform_distance((long)1 << nqubits, dpsi.data, dpsi_num.data) > 1e-8) {
 		return "gradient with respect to 'psi' computed by 'quantum_circuit_backward' does not match finite difference approximation";
@@ -215,7 +215,7 @@ char* test_quantum_circuit_backward()
 		.ngates  = ngates,
 	};
 	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	numerical_gradient(quantum_circuit_forward_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, dpsi_out.data, h, (numeric*)dgates_num);
+	numerical_gradient(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, dpsi_out.data, h, (numeric*)dgates_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
 		return "gradient with respect to gates computed by 'quantum_circuit_backward' does not match finite difference approximation";

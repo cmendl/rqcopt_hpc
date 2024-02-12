@@ -31,9 +31,7 @@ def apply_quantum_circuit_data():
         wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
         file["wires"] = wires
 
-        psi_out = psi
-        for i in range(ngates):
-            psi_out = oc.apply_gate(gates[i], nqubits, wires[i][0], wires[i][1], psi_out)
+        psi_out = oc.apply_quantum_circuit(gates, wires, nqubits, psi)
         file["psi_out"] = interleave_complex(psi_out, ctype)
 
         file.close()
@@ -66,9 +64,7 @@ def quantum_circuit_backward_data():
         wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
         file["wires"] = wires
 
-        psi_out = psi
-        for i in range(ngates):
-            psi_out = oc.apply_gate(gates[i], nqubits, wires[i][0], wires[i][1], psi_out)
+        psi_out = oc.apply_quantum_circuit(gates, wires, nqubits, psi)
         file["psi_out"] = interleave_complex(psi_out, ctype)
 
         # fictitious upstream derivatives

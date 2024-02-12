@@ -20,6 +20,68 @@ def _ufunc_cplx(x):
                      + (-0.3 + 0.2j) * x[((i + 4) * 199) % n] for i in range(n)])
 
 
+def circuit_unitary_target_data():
+
+    # random number generator
+    rng = np.random.default_rng(495)
+
+    # system size
+    nqubits = 7
+    # number of gates
+    ngates  = 5
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_circuit_unitary_target_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        gates = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(ngates)])
+        for i in range(ngates):
+            file[f"G{i}"] = interleave_complex(gates[i], ctype)
+
+        # random wires which the gates act on
+        wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
+        file["wires"] = wires
+
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
+        file["f"] = f
+
+        file.close()
+
+
+def circuit_unitary_target_and_gradient_data():
+
+    # random number generator
+    rng = np.random.default_rng(623)
+
+    # system size
+    nqubits = 8
+    # number of gates
+    ngates  = 5
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_circuit_unitary_target_and_gradient_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        gates = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(ngates)])
+        for i in range(ngates):
+            file[f"G{i}"] = interleave_complex(gates[i], ctype)
+
+        # random wires which the gates act on
+        wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
+        file["wires"] = wires
+
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
+        file["f"] = f
+
+        file.close()
+
+
 def brickwall_unitary_target_data():
 
     # random number generator
@@ -47,7 +109,7 @@ def brickwall_unitary_target_data():
 
         for i, nlayers in enumerate([4, 5]):
             # target function value
-            f = oc.brickwall_opt_matfree._f_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
+            f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
             file[f"f{i}"] = f
 
         file.close()
@@ -64,7 +126,7 @@ def brickwall_unitary_target_and_gradient_data():
     max_nlayers = 5
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_unitary_target_and_gradient_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_unitary_target_and_gradient_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -80,7 +142,7 @@ def brickwall_unitary_target_and_gradient_data():
 
         for i, nlayers in enumerate([4, 5]):
             # target function value
-            f = oc.brickwall_opt_matfree._f_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
+            f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
             file[f"f{i}"] = f
             # gate gradients
             dVlist = -oc.brickwall_unitary_grad_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
@@ -102,7 +164,7 @@ def brickwall_unitary_target_and_gradient_vector_data():
 
     ctype = "cplx"
 
-    file = h5py.File(f"data/test_unitary_target_and_gradient_vector_{ctype}.hdf5", "w")
+    file = h5py.File(f"data/test_brickwall_unitary_target_and_gradient_vector_{ctype}.hdf5", "w")
 
     # general random 4x4 matrices (do not need to be unitary for this test)
     Vlist = np.stack([0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
@@ -117,7 +179,7 @@ def brickwall_unitary_target_and_gradient_vector_data():
     ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
     # target function value
-    f = oc.brickwall_opt_matfree._f_unitary_target_matfree(Vlist, L, ufunc, perms)
+    f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist, L, ufunc, perms)
     file["f"] = f
     # gate gradients as real vector
     grad = -oc.brickwall_unitary_gradient_vector_matfree(Vlist, L, ufunc, perms)
@@ -158,7 +220,7 @@ def brickwall_unitary_target_gradient_hessian_data():
     max_nlayers = 5
 
     for ctype in ["real", "cplx"]:
-        file = h5py.File(f"data/test_unitary_target_gradient_hessian_{ctype}.hdf5", "w")
+        file = h5py.File(f"data/test_brickwall_unitary_target_gradient_hessian_{ctype}.hdf5", "w")
 
         # general random 4x4 matrices (do not need to be unitary for this test)
         Vlist = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(max_nlayers)])
@@ -179,7 +241,7 @@ def brickwall_unitary_target_gradient_hessian_data():
 
         for i, nlayers in enumerate([4, 5]):
             # target function value
-            f = oc.brickwall_opt_matfree._f_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
+            f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
             file[f"f{i}"] = f
             # gate gradients
             dVlist = -oc.brickwall_unitary_grad_matfree(Vlist[:nlayers], L, ufunc, perms[:nlayers])
@@ -204,7 +266,7 @@ def brickwall_unitary_target_gradient_vector_hessian_matrix_data():
 
     ctype = "cplx"
 
-    file = h5py.File(f"data/test_unitary_target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
+    file = h5py.File(f"data/test_brickwall_unitary_target_gradient_vector_hessian_matrix_{ctype}.hdf5", "w")
 
     # random unitaries (unitary property required for Hessian matrix to be symmetric)
     Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
@@ -219,7 +281,7 @@ def brickwall_unitary_target_gradient_vector_hessian_matrix_data():
     ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
 
     # target function value
-    f = oc.brickwall_opt_matfree._f_unitary_target_matfree(Vlist, L, ufunc, perms)
+    f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist, L, ufunc, perms)
     file["f"] = f
 
     # gate gradients as real vector
@@ -501,6 +563,8 @@ def brickwall_blockenc_target_gradient_vector_hessian_matrix_data():
 
 
 def main():
+    circuit_unitary_target_data()
+    circuit_unitary_target_and_gradient_data()
     brickwall_unitary_target_data()
     brickwall_unitary_target_and_gradient_data()
     brickwall_unitary_target_and_gradient_vector_data()

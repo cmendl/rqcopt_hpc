@@ -2,7 +2,214 @@
 #include <stdio.h>
 #include <assert.h>
 #include "target.h"
+#include "quantum_circuit.h"
 #include "brickwall_circuit.h"
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -Re tr[U^{\dagger} C],
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state.
+///
+int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval)
+{
+	// temporary statevectors
+	struct statevector psi = { 0 };
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Upsi = { 0 };
+	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Cpsi = { 0 };
+	if (allocate_statevector(nqubits, &Cpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+
+	double f = 0;
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << nqubits;
+	for (intqs b = 0; b < n; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, n * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		ret = apply_quantum_circuit(gates, ngates, wires, &psi, &Cpsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'apply_quantum_circuit' failed, return value: %i\n", ret);
+			return -1;
+		}
+
+		// f += Re <Upsi | Wpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += creal(Upsi.data[a] * Cpsi.data[a]);
+		}
+	}
+
+	free_statevector(&Cpsi);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -Re tr[U^{\dagger} C] and its gate gradients,
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state.
+///
+int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, struct mat4x4 dgates[])
+{
+	// temporary statevectors
+	struct statevector psi;
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Upsi;
+	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Cpsi;
+	if (allocate_statevector(nqubits, &Cpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+
+	struct quantum_circuit_cache cache;
+	if (allocate_quantum_circuit_cache(nqubits, ngates, &cache) < 0) {
+		fprintf(stderr, "'allocate_quantum_circuit_cache' failed");
+		return -1;
+	}
+
+	struct mat4x4* dgates_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (dgates_unit == NULL) {
+		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
+		return -1;
+	}
+
+	for (int i = 0; i < ngates; i++)
+	{
+		memset(dgates[i].data, 0, sizeof(dgates[i].data));
+	}
+
+	double f = 0;
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << nqubits;
+	for (intqs b = 0; b < n; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, n * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		// quantum circuit forward pass
+		if (quantum_circuit_forward(gates, ngates, wires, &psi, &cache, &Cpsi) < 0) {
+			fprintf(stderr, "'quantum_circuit_forward' failed internally");
+			return -3;
+		}
+
+		// f += Re <Upsi | Cpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += creal(Upsi.data[a] * Cpsi.data[a]);
+		}
+
+		// quantum circuit backward pass
+		// note: overwriting 'psi' with gradient
+		if (quantum_circuit_backward(gates, ngates, wires, &cache, &Upsi, &psi, dgates_unit) < 0) {
+			fprintf(stderr, "'quantum_circuit_backward' failed internally");
+			return -4;
+		}
+		// accumulate gate gradients for current unit vector
+		for (int i = 0; i < ngates; i++)
+		{
+			add_matrix(&dgates[i], &dgates_unit[i]);
+		}
+	}
+
+	aligned_free(dgates_unit);
+	free_quantum_circuit_cache(&cache);
+	free_statevector(&Cpsi);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
+
+
+#ifdef COMPLEX_CIRCUIT
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Represent target function -Re tr[U^{\dagger} C] and its gradient as real vector,
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state.
+///
+int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, double* grad_vec)
+{
+	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (dgates == NULL) {
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
+		return -1;
+	}
+
+	int ret = circuit_unitary_target_and_gradient(ufunc, udata, gates, ngates, wires, nqubits, fval, dgates);
+	if (ret < 0) {
+		return ret;
+	}
+
+	// project gradient onto unitary manifold, represent as anti-symmetric matrix and then concatenate to a vector
+	for (int i = 0; i < ngates; i++)
+	{
+		// conjugate gate gradient entries (by derivative convention)
+		conjugate_matrix(&dgates[i]);
+		unitary_tangent_to_real(&gates[i], &dgates[i], &grad_vec[i * 16]);
+	}
+
+	aligned_free(dgates);
+
+	return 0;
+}
+
+#endif
 
 
 //________________________________________________________________________________________________________________________

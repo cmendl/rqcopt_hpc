@@ -7,6 +7,23 @@
 typedef int (*linear_func)(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out);
 
 
+int circuit_unitary_target(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
+	double* fval);
+
+
+int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
+	double* fval, struct mat4x4 dgates[]);
+
+
+#ifdef COMPLEX_CIRCUIT
+int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
+	double* fval, double* grad_vec);
+#endif
+
+
 int brickwall_unitary_target(linear_func ufunc, void* udata,
 	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
 	double* fval);
