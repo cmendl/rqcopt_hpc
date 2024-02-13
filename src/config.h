@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdlib.h>
-#include <malloc.h>
 
 
 #ifdef COMPLEX_CIRCUIT

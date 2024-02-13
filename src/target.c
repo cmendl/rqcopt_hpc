@@ -214,6 +214,78 @@ int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, c
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Evaluate the Hessian-vector product for target function -Re tr[U^{\dagger} C],
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state.
+///
+int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata, const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits, struct mat4x4 dgates[])
+{
+	// temporary statevectors
+	struct statevector psi;
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Upsi;
+	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+
+	struct mat4x4* dgates_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (dgates_unit == NULL) {
+		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
+		return -1;
+	}
+
+	for (int i = 0; i < ngates; i++)
+	{
+		memset(dgates[i].data, 0, sizeof(dgates[i].data));
+	}
+
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << nqubits;
+	for (intqs b = 0; b < n; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, n * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		// circuit unitary Hessian-vector product computation
+		if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &Upsi, dgates_unit) < 0) {
+			fprintf(stderr, "'quantum_circuit_gates_hessian_vector_product' failed internally");
+			return -3;
+		}
+
+		// accumulate gate gradients for current unit vector
+		for (int i = 0; i < ngates; i++)
+		{
+			add_matrix(&dgates[i], &dgates_unit[i]);
+		}
+	}
+
+	aligned_free(dgates_unit);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Evaluate target function -Re tr[U^{\dagger} W],
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.

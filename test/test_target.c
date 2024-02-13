@@ -186,6 +186,111 @@ char* test_circuit_unitary_target_and_gradient()
 }
 
 
+struct circuit_unitary_target_directed_gradient_params
+{
+	linear_func ufunc;
+	const struct mat4x4* gatedirs;
+	const int* wires;
+	int ngates;
+	int nqubits;
+};
+
+// directed gradient computation with respect to gates for the quantum circuit target function
+static void circuit_unitary_target_directed_gradient(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct circuit_unitary_target_directed_gradient_params* params = p;
+
+	double f;
+	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, params->ngates * sizeof(struct mat4x4));
+
+	circuit_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f, dgates);
+
+	// compute inner products with gate gradient directions
+	numeric dg = 0;
+	for (int i = 0; i < params->ngates; i++)
+	{
+		for (int j = 0; j < 16; j++)
+		{
+			dg += dgates[i].data[j] * params->gatedirs[i].data[j];
+		}
+	}
+	*y = dg;
+
+	aligned_free(dgates);
+}
+
+char* test_circuit_unitary_target_hessian_vector_product()
+{
+	const int nqubits = 7;
+	const int ngates  = 6;
+
+	hid_t file = H5Fopen("../test/data/test_circuit_unitary_target_hessian_vector_product" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_circuit_unitary_target_hessian_vector_product failed";
+	}
+
+	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	for (int i = 0; i < ngates; i++)
+	{
+		char varname[32];
+		sprintf(varname, "G%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, gates[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	for (int i = 0; i < ngates; i++)
+	{
+		char varname[32];
+		sprintf(varname, "Z%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, gatedirs[i].data) < 0) {
+			return "reading derivative directions for two-qubit quantum gates from disk failed";
+		}
+	}
+
+	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
+		return "reading wire indices from disk failed";
+	}
+
+	// second derivatives of gates (Hessian-vector product output vector)
+	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+
+	if (circuit_unitary_target_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, dgates) < 0) {
+		return "'circuit_unitary_target_hessian_vector_product' failed internally";
+	}
+
+	// numerical gradient
+	const double h = 1e-5;
+	struct circuit_unitary_target_directed_gradient_params params = {
+		.ufunc    = ufunc,
+		.wires    = wires,
+		.gatedirs = gatedirs,
+		.ngates   = ngates,
+		.nqubits  = nqubits,
+	};
+	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	numeric dy = 1;
+	numerical_gradient(circuit_unitary_target_directed_gradient, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+
+	// compare
+	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
+		return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_hessian_vector_product' does not match finite difference approximation";
+	}
+
+	aligned_free(dgates_num);
+	aligned_free(dgates);
+	aligned_free(wires);
+	aligned_free(gatedirs);
+	aligned_free(gates);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
 char* test_brickwall_unitary_target()
 {
 	int L = 8;
@@ -764,7 +869,7 @@ char* test_brickwall_blockenc_target()
 }
 
 
-struct blockenc_target_params
+struct brickwall_blockenc_target_params
 {
 	linear_func hfunc;
 	int nqubits;
@@ -775,7 +880,7 @@ struct blockenc_target_params
 // wrapper of block encoding target function
 static void blockenc_target_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
 {
-	const struct blockenc_target_params* params = p;
+	const struct brickwall_blockenc_target_params* params = p;
 
 	struct mat4x4* Vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < params->nlayers; i++) {
@@ -843,7 +948,7 @@ char* test_brickwall_blockenc_target_and_gradient()
 
 		// numerical gradient
 		const double h = 1e-5;
-		struct blockenc_target_params params = {
+		struct brickwall_blockenc_target_params params = {
 			.hfunc   = ufunc,
 			.nqubits = L,
 			.nlayers = nlayers[i],
@@ -961,9 +1066,9 @@ char* test_brickwall_blockenc_target_and_gradient_vector()
 
 
 // wrapper of block encoding target gradient function
-static void blockenc_target_gradient_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+static void brickwall_blockenc_target_gradient_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
 {
-	const struct blockenc_target_params* params = p;
+	const struct brickwall_blockenc_target_params* params = p;
 
 	double f;
 	brickwall_blockenc_target_and_gradient(params->hfunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
@@ -1076,7 +1181,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		}
 
 		const double h = 1e-5;
-		struct blockenc_target_params params = {
+		struct brickwall_blockenc_target_params params = {
 			.hfunc   = ufunc,
 			.nqubits = L,
 			.nlayers = nlayers[i],
@@ -1120,9 +1225,9 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		// numerical gradient
 		struct mat4x4 dVZlist_num[5];
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#else
-		numerical_gradient(blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#endif
 		// Hessian matrix times gradient direction
 		struct mat4x4 dVZlist[5];
@@ -1138,7 +1243,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 			return "second derivative with respect to gates computed by 'blockenc_target_gradient_hessian' does not match finite difference approximation";
 		}
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_conjugated_wirtinger(blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_conjugated_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		// Hessian matrix times gradient direction
 		cblas_zgemv(CblasRowMajor, CblasNoTrans, m, m, &alpha, hess2, m, (numeric*)Zlist, 1, &beta, (numeric*)dVZlist, 1);
 		// compare

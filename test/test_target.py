@@ -82,6 +82,36 @@ def circuit_unitary_target_and_gradient_data():
         file.close()
 
 
+def circuit_unitary_target_hessian_vector_product_data():
+
+    # random number generator
+    rng = np.random.default_rng(821)
+
+    # system size
+    nqubits = 7
+    # number of gates
+    ngates  = 6
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_circuit_unitary_target_hessian_vector_product_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        gates = np.stack([1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(ngates)])
+        for i in range(ngates):
+            file[f"G{i}"] = interleave_complex(gates[i], ctype)
+
+        # gate gradient directions
+        gatedirs = [1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(ngates)]
+        for i in range(ngates):
+            file[f"Z{i}"] = interleave_complex(gatedirs[i], ctype)
+
+        # random wires which the gates act on
+        wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
+        file["wires"] = wires
+
+        file.close()
+
+
 def brickwall_unitary_target_data():
 
     # random number generator
@@ -565,6 +595,7 @@ def brickwall_blockenc_target_gradient_vector_hessian_matrix_data():
 def main():
     circuit_unitary_target_data()
     circuit_unitary_target_and_gradient_data()
+    circuit_unitary_target_hessian_vector_product_data()
     brickwall_unitary_target_data()
     brickwall_unitary_target_and_gradient_data()
     brickwall_unitary_target_and_gradient_vector_data()
