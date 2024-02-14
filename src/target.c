@@ -214,11 +214,13 @@ int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, c
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate the Hessian-vector product for target function -Re tr[U^{\dagger} C],
+/// \brief Evaluate target function -Re tr[U^{\dagger} C], its gate gradients and the Hessian-vector product,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
-int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata, const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits, struct mat4x4 dgates[])
+int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
+	double* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[])
 {
 	// temporary statevectors
 	struct statevector psi;
@@ -228,6 +230,11 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 	}
 	struct statevector Upsi;
 	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Cpsi;
+	if (allocate_statevector(nqubits, &Cpsi) < 0) {
 		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
 		return -1;
 	}
@@ -243,6 +250,18 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 		memset(dgates[i].data, 0, sizeof(dgates[i].data));
 	}
 
+	struct mat4x4* hess_gatedirs_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (hess_gatedirs_unit == NULL) {
+		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
+		return -1;
+	}
+
+	for (int i = 0; i < ngates; i++)
+	{
+		memset(hess_gatedirs[i].data, 0, sizeof(hess_gatedirs[i].data));
+	}
+
+	double f = 0;
 	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
@@ -264,21 +283,32 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 		}
 
 		// circuit unitary Hessian-vector product computation
-		if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &Upsi, dgates_unit) < 0) {
+		if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &Upsi, &Cpsi, dgates_unit, hess_gatedirs_unit) < 0) {
 			fprintf(stderr, "'quantum_circuit_gates_hessian_vector_product' failed internally");
 			return -3;
 		}
 
-		// accumulate gate gradients for current unit vector
+		// f += Re <Upsi | Cpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += creal(Upsi.data[a] * Cpsi.data[a]);
+		}
+
+		// accumulate gate gradients and Hessian-vector products for current unit vector
 		for (int i = 0; i < ngates; i++)
 		{
 			add_matrix(&dgates[i], &dgates_unit[i]);
+			add_matrix(&hess_gatedirs[i], &hess_gatedirs_unit[i]);
 		}
 	}
 
+	aligned_free(hess_gatedirs_unit);
 	aligned_free(dgates_unit);
+	free_statevector(&Cpsi);
 	free_statevector(&Upsi);
 	free_statevector(&psi);
+
+	*fval = f;
 
 	return 0;
 }

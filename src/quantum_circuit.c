@@ -142,35 +142,26 @@ int quantum_circuit_backward(const struct mat4x4 gates[], const int ngates, cons
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Hessian-vector product of a quantum circuit with respect to gates in direction 'gatedirs'.
+/// \brief Quantum circuit output state, gradient and Hessian-vector product with respect to gates in direction 'gatedirs'.
 ///
 int quantum_circuit_gates_hessian_vector_product(const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[],
-	const struct statevector* restrict psi, const struct statevector* restrict phi, struct mat4x4 dgates[])
+	const struct statevector* restrict psi, const struct statevector* restrict phi,
+	struct statevector* restrict psi_out, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[])
 {
 	assert(psi->nqubits == phi->nqubits);
+	assert(psi->nqubits == psi_out->nqubits);
 
 	struct quantum_circuit_cache cache;
 	if (allocate_quantum_circuit_cache(psi->nqubits, ngates, &cache) < 0) {
 		fprintf(stderr, "allocating quantum circuit cache failed\n");
 		return -1;
 	}
-	struct statevector psi_out;
-	allocate_statevector(psi->nqubits, &psi_out);
-	int ret = quantum_circuit_forward(gates, ngates, wires, psi, &cache, &psi_out);
+
+	int ret = quantum_circuit_forward(gates, ngates, wires, psi, &cache, psi_out);
 	if (ret < 0) {
 		return ret;
 	}
-	free_statevector(&psi_out);
 
-	struct mat4x4* gates_rev = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	int* wires_rev = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
-	for (int i = 0; i < ngates; i++)
-	{
-		int j = ngates - i - 1;
-		transpose(&gates[i], &gates_rev[j]);
-		wires_rev[2*j    ] = wires[2*i    ];
-		wires_rev[2*j + 1] = wires[2*i + 1];
-	}
 	struct quantum_circuit_cache cache_rev;
 	if (allocate_quantum_circuit_cache(phi->nqubits, ngates, &cache_rev) < 0) {
 		fprintf(stderr, "allocating quantum circuit cache failed\n");
@@ -179,32 +170,35 @@ int quantum_circuit_gates_hessian_vector_product(const struct mat4x4 gates[], co
 	struct statevector phi_out;
 	allocate_statevector(phi->nqubits, &phi_out);
 	// apply quantum circuit in reverse order
-	ret = quantum_circuit_forward(gates_rev, ngates, wires_rev, phi, &cache_rev, &phi_out);
-	if (ret < 0) {
-		return ret;
+	memcpy(cache_rev.psi_list[ngates - 1].data, phi->data, ((size_t)1 << phi->nqubits) * sizeof(numeric));
+	for (int i = ngates - 1; i >= 0; i--)
+	{
+		struct statevector* dpsi0 = (i > 0 ? &cache_rev.psi_list[i - 1] : &phi_out);
+		apply_gate_backward(&gates[i], wires[2*i], wires[2*i + 1], &cache.psi_list[i], &cache_rev.psi_list[i], dpsi0, &dgates[i]);
 	}
 	free_statevector(&phi_out);
+
+	// perform a forward-backward pass, reversing the computational steps for gradient backpropagation
 
 	struct statevector tmp1, tmp2;
 	allocate_statevector(psi->nqubits, &tmp1);
 	allocate_statevector(psi->nqubits, &tmp2);
 
-	// perform a forward-backward pass, reversing the computational steps for gradient backpropagation
-
 	struct statevector dphi;
 	allocate_statevector(phi->nqubits, &dphi);
 	// first iteration i = 0
 	{
-		zero_matrix(&dgates[0]);
+		zero_matrix(&hess_gatedirs[0]);
 		apply_gate(&gatedirs[0], wires[0], wires[1], &cache.psi_list[0], &dphi);
 	}
 	for (int i = 1; i < ngates; i++)  // continue with i = 1
 	{
-		const int j = ngates - i - 1;
+		struct mat4x4 gate_rev;
+		transpose(&gates[i], &gate_rev);
 		struct mat4x4 dgate;
 		// skip for first iteration since logically, 'dphi' is initially the zero vector
-		apply_gate_backward(&gates_rev[j], wires_rev[2*j], wires_rev[2*j + 1], &cache_rev.psi_list[j], &dphi, &tmp1, &dgate);
-		transpose(&dgate, &dgates[i]);
+		apply_gate_backward(&gate_rev, wires[2*i], wires[2*i + 1], &cache_rev.psi_list[i], &dphi, &tmp1, &dgate);
+		transpose(&dgate, &hess_gatedirs[i]);
 		apply_gate(&gatedirs[i], wires[2*i], wires[2*i + 1], &cache.psi_list[i], &tmp2);
 		add_statevectors(&tmp1, &tmp2, &dphi);
 	}
@@ -217,17 +211,17 @@ int quantum_circuit_gates_hessian_vector_product(const struct mat4x4 gates[], co
 		int i = ngates - 1;
 		struct mat4x4 gatedir_t;
 		transpose(&gatedirs[i], &gatedir_t);
-		apply_gate(&gatedir_t, wires[2*i], wires[2*i + 1], &cache_rev.psi_list[0], &dpsi);
+		apply_gate(&gatedir_t, wires[2*i], wires[2*i + 1], &cache_rev.psi_list[i], &dpsi);
 	}
 	for (int i = ngates - 2; i >= 0; i--)  // continue with i = ngates - 2
 	{
 		struct mat4x4 dgate;
 		// skip for first iteration since logically, 'dpsi' is initially the zero vector
 		apply_gate_backward(&gates[i], wires[2*i], wires[2*i + 1], &cache.psi_list[i], &dpsi, &tmp1, &dgate);
-		add_matrix(&dgates[i], &dgate);
+		add_matrix(&hess_gatedirs[i], &dgate);
 		struct mat4x4 gatedir_t;
 		transpose(&gatedirs[i], &gatedir_t);
-		apply_gate(&gatedir_t, wires[2*i], wires[2*i + 1], &cache_rev.psi_list[ngates - i - 1], &tmp2);
+		apply_gate(&gatedir_t, wires[2*i], wires[2*i + 1], &cache_rev.psi_list[i], &tmp2);
 		add_statevectors(&tmp1, &tmp2, &dpsi);
 	}
 	free_statevector(&dpsi);
@@ -235,8 +229,6 @@ int quantum_circuit_gates_hessian_vector_product(const struct mat4x4 gates[], co
 	free_statevector(&tmp2);
 	free_statevector(&tmp1);
 
-	aligned_free(gates_rev);
-	aligned_free(wires_rev);
 	free_quantum_circuit_cache(&cache_rev);
 	free_quantum_circuit_cache(&cache);
 

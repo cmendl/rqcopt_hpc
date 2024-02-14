@@ -184,7 +184,7 @@ char* test_quantum_circuit_backward()
 		return "quantum state after applying quantum circuit does not match reference";
 	}
 
-	// brickwall unitary backward pass
+	// quantum circuit backward pass
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (quantum_circuit_backward(gates, ngates, wires, &cache, &dpsi_out, &dpsi, dgates) < 0) {
 		return "'quantum_circuit_backward' failed internally";
@@ -291,9 +291,11 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		return "'H5Fopen' in test_quantum_circuit_gates_hessian_vector_product failed";
 	}
 
-	struct statevector psi, phi;
-	if (allocate_statevector(nqubits, &psi) < 0) { return "memory allocation failed"; }
-	if (allocate_statevector(nqubits, &phi) < 0) { return "memory allocation failed"; }
+	struct statevector psi, phi, psi_out, psi_out_ref;
+	if (allocate_statevector(nqubits, &psi)         < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(nqubits, &phi)         < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(nqubits, &psi_out)     < 0) { return "memory allocation failed"; }
+	if (allocate_statevector(nqubits, &psi_out_ref) < 0) { return "memory allocation failed"; }
 
 	if (read_hdf5_dataset(file, "psi", H5T_NATIVE_DOUBLE, psi.data) < 0) {
 		return "reading input statevector data from disk failed";
@@ -328,16 +330,38 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		return "reading wire indices from disk failed";
 	}
 
-	// second derivatives of gates (Hessian-vector product output vector)
+	// quantum circuit output state, gradient and second derivatives of gates (Hessian-vector product output vector)
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-
-	if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &phi, dgates) < 0) {
+	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &phi, &psi_out, dgates, hess_gatedirs) < 0) {
 		return "'quantum_circuit_gates_hessian_vector_product' failed internally";
+	}
+
+	if (read_hdf5_dataset(file, "psi_out", H5T_NATIVE_DOUBLE, psi_out_ref.data) < 0) {
+		return "reading output statevector data from disk failed";
+	}
+	// compare output state with reference
+	if (uniform_distance((long)1 << nqubits, psi_out.data, psi_out_ref.data) > 1e-12) {
+		return "quantum state after applying quantum circuit does not match reference";
 	}
 
 	const double h = 1e-5;
 
 	// numerical gradient with respect to gates
+	struct quantum_circuit_forward_gates_params params_gates = {
+		.psi     = &psi,
+		.wires   = wires,
+		.nqubits = nqubits,
+		.ngates  = ngates,
+	};
+	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	numerical_gradient(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, phi.data, h, (numeric*)dgates_num);
+	// compare
+	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
+		return "gradient with respect to gates computed by 'quantum_circuit_gates_hessian_vector_product' does not match finite difference approximation";
+	}
+
+	// numerical gradient of the directed gradient with respect to gates
 	struct quantum_circuit_directed_gradient_gates_params params = {
 		.wires    = wires,
 		.psi      = &psi,
@@ -345,19 +369,23 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		.gatedirs = gatedirs,
 		.ngates   = ngates,
 	};
-	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	numeric dy = 1;
-	numerical_gradient(quantum_circuit_directed_gradient_gates, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+	numerical_gradient(quantum_circuit_directed_gradient_gates, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
 	// compare
-	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
+	if (uniform_distance(ngates * 16, (numeric*)hess_gatedirs, (numeric*)hess_gatedirs_num) > 1e-8) {
 		return "Hessian-vector product with respect to gates computed by 'quantum_circuit_gates_hessian_vector_product' does not match finite difference approximation";
 	}
 
+	aligned_free(hess_gatedirs_num);
+	aligned_free(hess_gatedirs);
 	aligned_free(dgates_num);
 	aligned_free(dgates);
 	aligned_free(wires);
 	aligned_free(gatedirs);
 	aligned_free(gates);
+	free_statevector(&psi_out_ref);
+	free_statevector(&psi_out);
 	free_statevector(&phi);
 	free_statevector(&psi);
 

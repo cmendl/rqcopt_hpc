@@ -254,32 +254,86 @@ char* test_circuit_unitary_target_hessian_vector_product()
 		return "reading wire indices from disk failed";
 	}
 
-	// second derivatives of gates (Hessian-vector product output vector)
+	// quantum circuit unitary target function, its gate gradients and second derivatives of gates (Hessian-vector product output vector)
+	double f;
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-
-	if (circuit_unitary_target_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, dgates) < 0) {
+	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (circuit_unitary_target_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, dgates, hess_gatedirs) < 0) {
 		return "'circuit_unitary_target_hessian_vector_product' failed internally";
 	}
 
-	// numerical gradient
-	const double h = 1e-5;
-	struct circuit_unitary_target_directed_gradient_params params = {
-		.ufunc    = ufunc,
-		.wires    = wires,
-		.gatedirs = gatedirs,
-		.ngates   = ngates,
-		.nqubits  = nqubits,
-	};
-	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	numeric dy = 1;
-	numerical_gradient(circuit_unitary_target_directed_gradient, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
-
-	// compare
-	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
-		return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_hessian_vector_product' does not match finite difference approximation";
+	double f_ref;
+	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+		return "reading reference target function value from disk failed";
 	}
 
-	aligned_free(dgates_num);
+	// compare with reference
+	if (fabs(f - f_ref) > 1e-12) {
+		return "computed target function value not match reference";
+	}
+
+	const double h = 1e-5;
+
+	// numerical gradient of target function
+	{
+		struct circuit_unitary_target_params params = {
+			.ufunc   = ufunc,
+			.wires   = wires,
+			.nqubits = nqubits,
+			.ngates  = ngates,
+		};
+
+		struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+
+		numeric dy = 1;
+
+		#ifdef COMPLEX_CIRCUIT
+		numerical_gradient_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+		// convert from Wirtinger convention
+		for (int i = 0; i < ngates; i++) {
+			for (int j = 0; j < 16; j++) {
+				dgates_num[i].data[j] = 2 * dgates_num[i].data[j];
+			}
+		}
+		#else
+		numerical_gradient(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+		#endif
+
+		// compare
+		for (int i = 0; i < ngates; i++) {
+			if (uniform_distance(16, dgates[i].data, dgates_num[i].data) > 1e-8) {
+				return "target function gradient with respect to gates does not match finite difference approximation";
+			}
+		}
+
+		aligned_free(dgates_num);
+	}
+
+	// numerical gradient of the directed gradient
+	{
+		struct circuit_unitary_target_directed_gradient_params params = {
+			.ufunc    = ufunc,
+			.wires    = wires,
+			.gatedirs = gatedirs,
+			.ngates   = ngates,
+			.nqubits  = nqubits,
+		};
+
+		struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+
+		numeric dy = 1;
+
+		numerical_gradient(circuit_unitary_target_directed_gradient, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
+
+		// compare
+		if (uniform_distance(ngates * 16, (numeric*)hess_gatedirs, (numeric*)hess_gatedirs_num) > 1e-8) {
+			return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_hessian_vector_product' does not match finite difference approximation";
+		}
+
+		aligned_free(hess_gatedirs_num);
+	}
+
+	aligned_free(hess_gatedirs);
 	aligned_free(dgates);
 	aligned_free(wires);
 	aligned_free(gatedirs);

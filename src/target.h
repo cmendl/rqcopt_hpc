@@ -26,7 +26,7 @@ int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata,
 
 int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
-	struct mat4x4 dgates[]);
+	double* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[]);
 
 
 //________________________________________________________________________________________________________________________
@@ -59,6 +59,9 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	double* fval, double* grad_vec, double* H);
 #endif
 
+
+//________________________________________________________________________________________________________________________
+//
 
 
 int brickwall_blockenc_target(linear_func hfunc, void* hdata,

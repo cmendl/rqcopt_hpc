@@ -109,6 +109,12 @@ def circuit_unitary_target_hessian_vector_product_data():
         wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
         file["wires"] = wires
 
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
+        file["f"] = f
+
         file.close()
 
 

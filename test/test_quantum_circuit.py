@@ -106,6 +106,9 @@ def quantum_circuit_gates_hessian_vector_product_data():
         wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
         file["wires"] = wires
 
+        psi_out = oc.apply_quantum_circuit(gates, wires, nqubits, psi)
+        file["psi_out"] = interleave_complex(psi_out, ctype)
+
         # fictitious upstream derivatives
         dphi = rng.standard_normal(2**nqubits) if ctype == "real" else oc.crandn(2**nqubits, rng)
         file["phi"] = interleave_complex(dphi, ctype)

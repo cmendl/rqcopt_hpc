@@ -32,4 +32,5 @@ int quantum_circuit_backward(const struct mat4x4 gates[], const int ngates, cons
 
 
 int quantum_circuit_gates_hessian_vector_product(const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[],
-	const struct statevector* restrict psi, const struct statevector* restrict phi, struct mat4x4 dgates[]);
+	const struct statevector* restrict psi, const struct statevector* restrict phi,
+	struct statevector* restrict psi_out, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[]);
