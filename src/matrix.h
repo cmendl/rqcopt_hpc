@@ -34,33 +34,31 @@ void sub_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict
 void transpose(const struct mat4x4* restrict a, struct mat4x4* restrict at);
 void adjoint(const struct mat4x4* restrict a, struct mat4x4* restrict ah);
 
+
 void symm(const struct mat4x4* restrict w, struct mat4x4* restrict z);
 void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z);
 
 
 #ifdef COMPLEX_CIRCUIT
+static const int num_tangent_params = 16;
+#else
+static const int num_tangent_params = 6;
+#endif
 
 void real_to_antisymm(const double* r, struct mat4x4* w);
 void antisymm_to_real(const struct mat4x4* w, double* r);
 
-void real_to_unitary_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
-void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
+void real_to_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
+void tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
 
-#else
 
-void real_to_skew(const double* r, struct mat4x4* w);
-void skew_to_real(const struct mat4x4* w, double* r);
-
-void real_to_ortho_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z);
-void ortho_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r);
-
-#endif
+void project_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p);
 
 
 void multiply_matrices(const struct mat4x4* restrict a, const struct mat4x4* restrict b, struct mat4x4* restrict c);
 
 
-void project_unitary_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p);
+void symmetric_triple_matrix_product(const struct mat4x4* restrict a, const struct mat4x4* restrict b, const struct mat4x4* restrict c, struct mat4x4* restrict ret);
 
 
 int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv);

@@ -48,10 +48,12 @@ void scale_matrix(struct mat4x4* restrict a, const double x)
 ///
 void conjugate_matrix(struct mat4x4* a)
 {
+	#ifdef COMPLEX_CIRCUIT
 	for (int i = 0; i < 16; i++)
 	{
 		a->data[i] = conj(a->data[i]);
 	}
+	#endif
 }
 
 
@@ -206,15 +208,14 @@ void antisymm(const struct mat4x4* restrict w, struct mat4x4* restrict z)
 }
 
 
-#ifdef COMPLEX_CIRCUIT
-
-
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Map a real-valued square matrix to an anti-symmetric matrix of the same dimension.
+/// \brief Isometrically map a real-valued square matrix or vector with 6 entries to an anti-symmetric matrix.
 ///
 void real_to_antisymm(const double* r, struct mat4x4* w)
 {
+	#ifdef COMPLEX_CIRCUIT
+
 	// diagonal entries
 	w->data[ 0] = I * r[ 0];
 	w->data[ 5] = I * r[ 5];
@@ -236,57 +237,9 @@ void real_to_antisymm(const double* r, struct mat4x4* w)
 	w->data[12] = -conj(w->data[ 3]);
 	w->data[13] = -conj(w->data[ 7]);
 	w->data[14] = -conj(w->data[11]);
-}
 
+	#else
 
-//________________________________________________________________________________________________________________________
-///
-/// \brief Map an anti-symmetric matrix to a real-valued square matrix of the same dimension.
-///
-void antisymm_to_real(const struct mat4x4* w, double* r)
-{
-	for (int i = 0; i < 16; i++)
-	{
-		r[i] = creal(w->data[i]) + cimag(w->data[i]);
-	}
-}
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Map a real-valued square matrix to a tangent vector of the unitary matrix manifold at point 'v'.
-///
-void real_to_unitary_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z)
-{
-	struct mat4x4 a;
-	real_to_antisymm(r, &a);
-	multiply_matrices(v, &a, z);
-}
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Map a tangent vector of the unitary matrix manifold at point 'v' to a real-valued square matrix.
-///
-void unitary_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r)
-{
-	struct mat4x4 w, t;
-	adjoint(v, &w);
-	multiply_matrices(&w, z, &t);
-	antisymm(&t, &w);
-	antisymm_to_real(&w, r);
-}
-
-
-#else // COMPLEX_CIRCUIT not defined
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Isometrically map a real vector with 6 entries to a real skew-symmetric matrix.
-///
-void real_to_skew(const double* r, struct mat4x4* w)
-{
 	// diagonal entries
 	w->data[ 0] = 0;
 	w->data[ 5] = 0;
@@ -311,15 +264,26 @@ void real_to_skew(const double* r, struct mat4x4* w)
 	w->data[12] = -w->data[ 3];
 	w->data[13] = -w->data[ 7];
 	w->data[14] = -w->data[11];
+
+	#endif
 }
 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Isometrically map a real skew-symmetric matrix to a real vector with 6 entries.
+/// \brief Isometrically map an anti-symmetric or skew-symmetric matrix to a real-valued square matrix or vector with 6 entries.
 ///
-void skew_to_real(const struct mat4x4* w, double* r)
+void antisymm_to_real(const struct mat4x4* w, double* r)
 {
+	#ifdef COMPLEX_CIRCUIT
+
+	for (int i = 0; i < 16; i++)
+	{
+		r[i] = creal(w->data[i]) + cimag(w->data[i]);
+	}
+
+	#else
+
 	// sqrt(2) factor to preserve inner products
 	const double sqrt2 = 1.41421356237309505;
 
@@ -329,36 +293,55 @@ void skew_to_real(const struct mat4x4* w, double* r)
 	r[3] = sqrt2 * w->data[ 6];
 	r[4] = sqrt2 * w->data[ 7];
 	r[5] = sqrt2 * w->data[11];
+
+	#endif
 }
 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Map a real vector with 6 entries to a tangent vector of the orthogonal matrix manifold at point 'v'.
+/// \brief Map a real-valued square matrix (unitary case) or a real vector with 6 entries (orthogonal case)
+/// to a tangent vector of the unitary/orthogonal matrix manifold at point 'v'.
 ///
-void real_to_ortho_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z)
+void real_to_tangent(const double* r, const struct mat4x4* restrict v, struct mat4x4* restrict z)
 {
 	struct mat4x4 a;
-	real_to_skew(r, &a);
+	real_to_antisymm(r, &a);
 	multiply_matrices(v, &a, z);
 }
 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Map a tangent vector of the orthogonal matrix manifold at point 'v' to a real vector with 6 entries.
+/// \brief Map a tangent vector of the unitary/orthogonal matrix manifold at point 'v'
+/// to a real-valued square matrix (unitary case) or a real vector with 6 entries (orthogonal case).
 ///
-void ortho_tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r)
+void tangent_to_real(const struct mat4x4* restrict v, const struct mat4x4* restrict z, double* r)
 {
 	struct mat4x4 w, t;
 	adjoint(v, &w);
 	multiply_matrices(&w, z, &t);
 	antisymm(&t, &w);
-	skew_to_real(&w, r);
+	antisymm_to_real(&w, r);
 }
 
 
-#endif
+//________________________________________________________________________________________________________________________
+///
+/// \brief Project 'z' onto the tangent plane at the unitary or orthogonal matrix 'u'.
+///
+void project_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p)
+{
+	// formula remains valid for 'u' an isometry (element of the Stiefel manifold)
+
+	struct mat4x4 v, w;
+
+	adjoint(u, &v);
+	multiply_matrices(&v, z, &w);   // w = u^{\dagger} @ z
+	symm(&w, &v);                   // v = symm(w)
+	multiply_matrices(u, &v, &w);   // w = u @ v
+	sub_matrices(z, &w, p);         // p = z - w
+}
 
 
 //________________________________________________________________________________________________________________________
@@ -385,19 +368,20 @@ void multiply_matrices(const struct mat4x4* restrict a, const struct mat4x4* res
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Project 'z' onto the tangent plane at the unitary matrix 'u'.
+/// \brief Compute (a @ b @ c + c @ b @ a) / 2.
 ///
-void project_unitary_tangent(const struct mat4x4* restrict u, const struct mat4x4* restrict z, struct mat4x4* restrict p)
+void symmetric_triple_matrix_product(const struct mat4x4* restrict a, const struct mat4x4* restrict b, const struct mat4x4* restrict c, struct mat4x4* restrict ret)
 {
-	// formula remains valid for 'u' an isometry (element of the Stiefel manifold)
+	struct mat4x4 u, v;
 
-	struct mat4x4 v, w;
+	multiply_matrices(a, b, &u);
+	multiply_matrices(&u, c, ret);
 
-	adjoint(u, &v);
-	multiply_matrices(&v, z, &w);   // w = u^{\dagger} @ z
-	symm(&w, &v);                   // v = symm(w)
-	multiply_matrices(u, &v, &w);   // w = u @ v
-	sub_matrices(z, &w, p);         // p = z - w
+	multiply_matrices(c, b, &u);
+	multiply_matrices(&u, a, &v);
+
+	add_matrix(ret, &v);
+	scale_matrix(ret, 0.5);
 }
 
 

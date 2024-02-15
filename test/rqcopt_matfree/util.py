@@ -59,7 +59,7 @@ def skew_to_real(w):
     return np.sqrt(2) * w[np.triu_indices(len(w), k=1)]
 
 
-def project_unitary_tangent(u, z):
+def project_tangent(u, z):
     """
     Project `z` onto the tangent plane at the unitary matrix `u`.
     """

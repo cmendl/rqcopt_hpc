@@ -201,7 +201,7 @@ char* test_quantum_circuit_backward()
 	};
 	struct statevector dpsi_num;
 	if (allocate_statevector(nqubits, &dpsi_num) < 0) { return "memory allocation failed"; }
-	numerical_gradient(apply_quantum_circuit_psi, &params_psi, 1 << nqubits, psi.data, 1 << nqubits, dpsi_out.data, h, dpsi_num.data);
+	numerical_gradient_backward(apply_quantum_circuit_psi, &params_psi, 1 << nqubits, psi.data, 1 << nqubits, dpsi_out.data, h, dpsi_num.data);
 	// compare
 	if (uniform_distance((long)1 << nqubits, dpsi.data, dpsi_num.data) > 1e-8) {
 		return "gradient with respect to 'psi' computed by 'quantum_circuit_backward' does not match finite difference approximation";
@@ -215,7 +215,7 @@ char* test_quantum_circuit_backward()
 		.ngates  = ngates,
 	};
 	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	numerical_gradient(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, dpsi_out.data, h, (numeric*)dgates_num);
+	numerical_gradient_backward(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, dpsi_out.data, h, (numeric*)dgates_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
 		return "gradient with respect to gates computed by 'quantum_circuit_backward' does not match finite difference approximation";
@@ -355,7 +355,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		.ngates  = ngates,
 	};
 	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	numerical_gradient(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, phi.data, h, (numeric*)dgates_num);
+	numerical_gradient_backward(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, phi.data, h, (numeric*)dgates_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
 		return "gradient with respect to gates computed by 'quantum_circuit_gates_hessian_vector_product' does not match finite difference approximation";
@@ -371,7 +371,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 	};
 	struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	numeric dy = 1;
-	numerical_gradient(quantum_circuit_directed_gradient_gates, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
+	numerical_gradient_backward(quantum_circuit_directed_gradient_gates, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)hess_gatedirs, (numeric*)hess_gatedirs_num) > 1e-8) {
 		return "Hessian-vector product with respect to gates computed by 'quantum_circuit_gates_hessian_vector_product' does not match finite difference approximation";

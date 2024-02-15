@@ -1,6 +1,6 @@
 import numpy as np
 from .gate import apply_gate
-from .util import project_unitary_tangent, antisymm, real_to_antisymm, antisymm_to_real
+from .util import project_tangent, antisymm, real_to_antisymm, antisymm_to_real
 
 
 def apply_parallel_gates(V, L: int, psi, perm=None):
@@ -96,12 +96,12 @@ def parallel_gates_hess_matfree(V, L, Z, Ufunc, perm=None, unitary_proj=False):
                 assert chi.shape == (4,)
                 G[:, (b >> i) & 3] += chi
     if unitary_proj:
-        G = project_unitary_tangent(V, G)
+        G = project_tangent(V, G)
         # additional terms resulting from the projection of the gradient
         # onto the Stiefel manifold (unitary matrices)
         grad = parallel_gates_grad_matfree(V, L, Ufunc, perm)
         G -= 0.5 * (Z @ grad.conj().T @ V + V @ grad.conj().T @ Z)
-        if not np.allclose(Z, project_unitary_tangent(V, Z)):
+        if not np.allclose(Z, project_tangent(V, Z)):
             G -= 0.5 * (Z @ V.conj().T + V @ Z.conj().T) @ grad
     return G
 
@@ -186,7 +186,7 @@ def brickwall_unitary_hess_matfree(Vlist, L, Z, k, Ufunc, perms, unitary_proj=Fa
                 perms[k+1:]), perms[k]), perms[j+1:k]))
         dVj = parallel_gates_grad_matfree(Vlist[j], L, UdZk, perms[j])
         if unitary_proj:
-            dVlist[j] += project_unitary_tangent(Vlist[j], dVj)
+            dVlist[j] += project_tangent(Vlist[j], dVj)
         else:
             dVlist[j] += dVj
 
@@ -209,7 +209,7 @@ def brickwall_unitary_hess_matfree(Vlist, L, Z, k, Ufunc, perms, unitary_proj=Fa
                 perms[k]), perms[:k])), perms[j+1:]))
         dVj = parallel_gates_grad_matfree(Vlist[j], L, UdZk, perms[j])
         if unitary_proj:
-            dVlist[j] += project_unitary_tangent(Vlist[j], dVj)
+            dVlist[j] += project_tangent(Vlist[j], dVj)
         else:
             dVlist[j] += dVj
 
@@ -264,7 +264,7 @@ def squared_brickwall_unitary_hess_matfree(Vlist, L, Z, k, Afunc, Bfunc, perms, 
     H1 = brickwall_unitary_hess_matfree(Vlist, L, Z, k, lambda psi: Bfunc(apply_brickwall_unitary(Vlist, L, Afunc(psi), perms)), perms, unitary_proj)
     H2 = brickwall_unitary_grad_matfree(Vlist, L, lambda psi: Bfunc(apply_brickwall_unitary_directed_grad(Vlist, L, Z, k, Afunc(psi), perms)), perms)
     if unitary_proj:
-        H2 = np.stack([project_unitary_tangent(Vlist[j], dVj) for j, dVj in enumerate(H2)])
+        H2 = np.stack([project_tangent(Vlist[j], dVj) for j, dVj in enumerate(H2)])
     return 2 * (H1 + H2)
 
 

@@ -68,7 +68,7 @@ char* test_circuit_unitary_target()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	aligned_free(wires);
@@ -139,7 +139,7 @@ char* test_circuit_unitary_target_and_gradient()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	// numerical gradient
@@ -157,7 +157,7 @@ char* test_circuit_unitary_target_and_gradient()
 
 	numeric dy = 1;
 	#ifdef COMPLEX_CIRCUIT
-	numerical_gradient_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+	numerical_gradient_backward_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 	// convert from Wirtinger convention
 	for (int i = 0; i < ngates; i++) {
 		for (int j = 0; j < 16; j++) {
@@ -165,7 +165,7 @@ char* test_circuit_unitary_target_and_gradient()
 		}
 	}
 	#else
-	numerical_gradient(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+	numerical_gradient_backward(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 	#endif
 
 	// compare
@@ -219,6 +219,15 @@ static void circuit_unitary_target_directed_gradient(const numeric* restrict x, 
 	aligned_free(dgates);
 }
 
+// wrapper of 'circuit_unitary_target_and_gradient' function
+static void circuit_unitary_target_and_gradient_wapper(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct circuit_unitary_target_params* params = p;
+
+	double f;
+	circuit_unitary_target_and_gradient(params->ufunc, NULL, (const struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f, (struct mat4x4*)y);
+}
+
 char* test_circuit_unitary_target_hessian_vector_product()
 {
 	const int nqubits = 7;
@@ -269,7 +278,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	const double h = 1e-5;
@@ -288,7 +297,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 		numeric dy = 1;
 
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+		numerical_gradient_backward_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 		// convert from Wirtinger convention
 		for (int i = 0; i < ngates; i++) {
 			for (int j = 0; j < 16; j++) {
@@ -296,7 +305,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 			}
 		}
 		#else
-		numerical_gradient(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
+		numerical_gradient_backward(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 		#endif
 
 		// compare
@@ -323,7 +332,28 @@ char* test_circuit_unitary_target_hessian_vector_product()
 
 		numeric dy = 1;
 
-		numerical_gradient(circuit_unitary_target_directed_gradient, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
+		numerical_gradient_backward(circuit_unitary_target_directed_gradient, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
+
+		// compare
+		if (uniform_distance(ngates * 16, (numeric*)hess_gatedirs, (numeric*)hess_gatedirs_num) > 1e-8) {
+			return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_hessian_vector_product' does not match finite difference approximation";
+		}
+
+		aligned_free(hess_gatedirs_num);
+	}
+
+	// alternative calculation of the Hessian-vector product using forward-mode differentiation
+	{
+		struct circuit_unitary_target_params params = {
+			.ufunc   = ufunc,
+			.wires   = wires,
+			.ngates  = ngates,
+			.nqubits = nqubits,
+		};
+
+		struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+
+		numerical_gradient_forward(circuit_unitary_target_and_gradient_wapper, &params, ngates * 16, (numeric*)gates, (numeric*)gatedirs, ngates * 16, h, (numeric*)hess_gatedirs_num);
 
 		// compare
 		if (uniform_distance(ngates * 16, (numeric*)hess_gatedirs, (numeric*)hess_gatedirs_num) > 1e-8) {
@@ -343,6 +373,128 @@ char* test_circuit_unitary_target_hessian_vector_product()
 
 	return 0;
 }
+
+
+// projected gradient computation with respect to gates for the quantum circuit target function
+static void circuit_unitary_target_and_projected_gradient_wrapper(const numeric* restrict x, void* p, numeric* restrict y)
+{
+	const struct circuit_unitary_target_params* params = p;
+
+	const struct mat4x4* gates = (const struct mat4x4*)x;
+	struct mat4x4* dgates_proj = (struct mat4x4*)y;
+
+	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, params->ngates * num_tangent_params * sizeof(double));
+
+	double f;
+	circuit_unitary_target_and_projected_gradient(ufunc, NULL, gates, params->ngates, params->wires, params->nqubits, &f, grad_vec);
+
+	// convert gradient vectors back to matrices in tangent plane
+	for (int i = 0; i < params->ngates; i++)
+	{
+		real_to_tangent(&grad_vec[i * num_tangent_params], &gates[i], &dgates_proj[i]);
+	}
+
+	aligned_free(grad_vec);
+}
+
+char* test_circuit_unitary_target_projected_hessian_vector_product()
+{
+	const int nqubits = 7;
+	const int ngates  = 6;
+
+	hid_t file = H5Fopen("../test/data/test_circuit_unitary_target_projected_hessian_vector_product" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_circuit_unitary_target_projected_hessian_vector_product failed";
+	}
+
+	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	for (int i = 0; i < ngates; i++)
+	{
+		char varname[32];
+		sprintf(varname, "G%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, gates[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	for (int i = 0; i < ngates; i++)
+	{
+		char varname[32];
+		sprintf(varname, "Z%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, gatedirs[i].data) < 0) {
+			return "reading derivative directions for two-qubit quantum gates from disk failed";
+		}
+	}
+
+	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
+		return "reading wire indices from disk failed";
+	}
+
+	// quantum circuit unitary target function, its projected gate gradients and second derivatives of gates (Hessian-vector product output vector)
+	double f;
+	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
+	double* hvp_vec  = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
+	if (circuit_unitary_target_projected_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, grad_vec, hvp_vec) < 0) {
+		return "'circuit_unitary_target_projected_hessian_vector_product' failed internally";
+	}
+
+	double f_ref;
+	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
+		return "reading reference target function value from disk failed";
+	}
+	// compare with reference
+	if (fabs(f - f_ref) > 1e-12) {
+		return "computed target function value does not match reference";
+	}
+
+	// numerical (forward-mode) gradient of the projected gradient
+
+	const double h = 1e-5;
+
+	struct circuit_unitary_target_params params = {
+		.ufunc   = ufunc,
+		.wires   = wires,
+		.ngates  = ngates,
+		.nqubits = nqubits,
+	};
+	struct mat4x4* hess_gatedirs_proj_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	numerical_gradient_forward(circuit_unitary_target_and_projected_gradient_wrapper, &params, ngates * 16, (numeric*)gates, (numeric*)gatedirs, ngates * 16/*ngates * num_tangent_params * sizeof(double) / sizeof(numeric)*/, h, (numeric*)hess_gatedirs_proj_num);
+
+	// numerical gradient will (in general) not be within tangent plane, so need to project again
+	double* hvp_vec_num = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
+	for (int i = 0; i < ngates; i++)
+	{
+		// tangent_to_real implicitly also projects into tangent plane
+		tangent_to_real(&gates[i], &hess_gatedirs_proj_num[i], &hvp_vec_num[i * num_tangent_params]);
+	}
+
+	// compare
+	double d_hvp = 0;
+	for (int i = 0; i < ngates * num_tangent_params; i++) {
+		d_hvp = fmax(d_hvp, fabs(hvp_vec[i] - hvp_vec_num[i]));
+	}
+	if (d_hvp > 1e-8) {
+		return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_projected_hessian_vector_product' does not match finite difference approximation";
+	}
+
+	aligned_free(hess_gatedirs_proj_num);
+	aligned_free(hvp_vec_num);
+	aligned_free(hvp_vec);
+	aligned_free(grad_vec);
+	aligned_free(wires);
+	aligned_free(gatedirs);
+	aligned_free(gates);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+//
 
 
 char* test_brickwall_unitary_target()
@@ -392,7 +544,7 @@ char* test_brickwall_unitary_target()
 
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 	}
 
@@ -476,7 +628,7 @@ char* test_brickwall_unitary_target_and_gradient()
 
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 
 		// numerical gradient
@@ -490,7 +642,7 @@ char* test_brickwall_unitary_target_and_gradient()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -498,7 +650,7 @@ char* test_brickwall_unitary_target_and_gradient()
 			}
 		}
 		#else
-		numerical_gradient(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -575,7 +727,7 @@ char* test_brickwall_unitary_target_and_gradient_vector()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
@@ -679,7 +831,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		}
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 
 		const double h = 1e-5;
@@ -694,7 +846,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -702,7 +854,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 			}
 		}
 		#else
-		numerical_gradient(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -727,9 +879,9 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		// numerical gradient
 		struct mat4x4 dVZlist_num[5];
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(brickwall_unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_backward_wirtinger(brickwall_unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#else
-		numerical_gradient(brickwall_unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_backward(brickwall_unitary_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#endif
 		// Hessian matrix times gradient direction
 		struct mat4x4 dVZlist[5];
@@ -816,7 +968,7 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
@@ -866,6 +1018,10 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 #endif
 
 
+//________________________________________________________________________________________________________________________
+//
+
+
 char* test_brickwall_blockenc_target()
 {
 	int L = 8;
@@ -913,7 +1069,7 @@ char* test_brickwall_blockenc_target()
 
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 	}
 
@@ -997,7 +1153,7 @@ char* test_brickwall_blockenc_target_and_gradient()
 
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 
 		// numerical gradient
@@ -1011,7 +1167,7 @@ char* test_brickwall_blockenc_target_and_gradient()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward_wirtinger(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -1019,7 +1175,7 @@ char* test_brickwall_blockenc_target_and_gradient()
 			}
 		}
 		#else
-		numerical_gradient(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -1096,7 +1252,7 @@ char* test_brickwall_blockenc_target_and_gradient_vector()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
@@ -1231,7 +1387,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		}
 		// compare with reference
 		if (fabs(f - f_ref) > 1e-12) {
-			return "computed target function value not match reference";
+			return "computed target function value does not match reference";
 		}
 
 		const double h = 1e-5;
@@ -1246,7 +1402,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		struct mat4x4 dVlist_num[5];
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward_wirtinger(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		// convert from Wirtinger convention
 		for (int j = 0; j < nlayers[i]; j++) {
 			for (int k = 0; k < 16; k++) {
@@ -1254,7 +1410,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 			}
 		}
 		#else
-		numerical_gradient(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
+		numerical_gradient_backward(blockenc_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
 		// compare
 		for (int j = 0; j < nlayers[i]; j++) {
@@ -1279,9 +1435,9 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		// numerical gradient
 		struct mat4x4 dVZlist_num[5];
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_backward_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#else
-		numerical_gradient(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_backward(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		#endif
 		// Hessian matrix times gradient direction
 		struct mat4x4 dVZlist[5];
@@ -1297,7 +1453,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 			return "second derivative with respect to gates computed by 'blockenc_target_gradient_hessian' does not match finite difference approximation";
 		}
 		#ifdef COMPLEX_CIRCUIT
-		numerical_gradient_conjugated_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
+		numerical_gradient_backward_conjugated_wirtinger(brickwall_blockenc_target_gradient_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, nlayers[i] * 16, (numeric*)Zlist, h, (numeric*)dVZlist_num);
 		// Hessian matrix times gradient direction
 		cblas_zgemv(CblasRowMajor, CblasNoTrans, m, m, &alpha, hess2, m, (numeric*)Zlist, 1, &beta, (numeric*)dVZlist, 1);
 		// compare
@@ -1411,7 +1567,7 @@ char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix()
 
 	// compare with reference
 	if (fabs(f - f_ref) > 1e-12) {
-		return "computed target function value not match reference";
+		return "computed target function value does not match reference";
 	}
 
 	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));

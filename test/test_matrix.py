@@ -5,34 +5,23 @@ import rqcopt_matfree as oc
 from io_util import interleave_complex
 
 
-def real_to_unitary_tangent_data():
+def real_to_tangent_data():
 
     # random number generator
     rng = np.random.default_rng(41)
 
-    ctype = "cplx"
+    for ctype in ["real", "cplx"]:
 
-    r = 0.5 * rng.standard_normal((4, 4))
-    v = unitary_group.rvs(4, random_state=rng)
+        if ctype == "real":
+            r = 0.5 * rng.standard_normal(6)
+            v = ortho_group.rvs(4, random_state=rng)
+        else:
+            r = 0.5 * rng.standard_normal((4, 4))
+            v = unitary_group.rvs(4, random_state=rng)
 
-    with h5py.File(f"data/test_real_to_unitary_tangent_{ctype}.hdf5", "w") as file:
-        file["r"] = r
-        file["v"] = interleave_complex(v, ctype)
-
-
-def real_to_ortho_tangent_data():
-
-    # random number generator
-    rng = np.random.default_rng(41)
-
-    ctype = "real"
-
-    r = 0.5 * rng.standard_normal(6)
-    v = ortho_group.rvs(4, random_state=rng)
-
-    with h5py.File(f"data/test_real_to_ortho_tangent_{ctype}.hdf5", "w") as file:
-        file["r"] = r
-        file["v"] = interleave_complex(v, ctype)
+        with h5py.File(f"data/test_real_to_tangent_{ctype}.hdf5", "w") as file:
+            file["r"] = r
+            file["v"] = interleave_complex(v, ctype)
 
 
 def multiply_data():
@@ -51,7 +40,7 @@ def multiply_data():
             file["c"] = interleave_complex(c, ctype)
 
 
-def project_unitary_tangent_data():
+def project_tangent_data():
 
     # random number generator
     rng = np.random.default_rng(43)
@@ -60,10 +49,10 @@ def project_unitary_tangent_data():
         u = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
         z = rng.standard_normal((4, 4)) if ctype == "real" else oc.crandn((4, 4), rng)
 
-        p = oc.project_unitary_tangent(u, z)
+        p = oc.project_tangent(u, z)
 
         # save to disk
-        with h5py.File(f"data/test_project_unitary_tangent_{ctype}.hdf5", "w") as file:
+        with h5py.File(f"data/test_project_tangent_{ctype}.hdf5", "w") as file:
             file["u"] = interleave_complex(u, ctype)
             file["z"] = interleave_complex(z, ctype)
             file["p"] = interleave_complex(p, ctype)
@@ -84,10 +73,9 @@ def polar_factor_data():
 
 
 def main():
-    real_to_unitary_tangent_data()
-    real_to_ortho_tangent_data()
+    real_to_tangent_data()
     multiply_data()
-    project_unitary_tangent_data()
+    project_tangent_data()
     polar_factor_data()
 
 

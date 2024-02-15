@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import unitary_group
+from scipy.stats import ortho_group, unitary_group
 import h5py
 from io_util import interleave_complex
 import rqcopt_matfree as oc
@@ -102,6 +102,42 @@ def circuit_unitary_target_hessian_vector_product_data():
 
         # gate gradient directions
         gatedirs = [1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(ngates)]
+        for i in range(ngates):
+            file[f"Z{i}"] = interleave_complex(gatedirs[i], ctype)
+
+        # random wires which the gates act on
+        wires = np.array([rng.choice(nqubits, 2, replace=False) for _ in range(ngates)])
+        file["wires"] = wires
+
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
+        file["f"] = f
+
+        file.close()
+
+
+def circuit_unitary_target_projected_hessian_vector_product_data():
+
+    # random number generator
+    rng = np.random.default_rng(301)
+
+    # system size
+    nqubits = 7
+    # number of gates
+    ngates  = 6
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_circuit_unitary_target_projected_hessian_vector_product_{ctype}.hdf5", "w")
+
+        # random unitaries (unitary property required for tangent space projection)
+        gates = [ortho_group.rvs(4, random_state=rng) if ctype == "real" else unitary_group.rvs(4, random_state=rng) for _ in range(ngates)]
+        for i in range(ngates):
+            file[f"G{i}"] = interleave_complex(gates[i], ctype)
+
+        # gate gradient directions
+        gatedirs = [oc.project_tangent(gates[i], 1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng)) for i in range(ngates)]
         for i in range(ngates):
             file[f"Z{i}"] = interleave_complex(gatedirs[i], ctype)
 
@@ -602,6 +638,7 @@ def main():
     circuit_unitary_target_data()
     circuit_unitary_target_and_gradient_data()
     circuit_unitary_target_hessian_vector_product_data()
+    circuit_unitary_target_projected_hessian_vector_product_data()
     brickwall_unitary_target_data()
     brickwall_unitary_target_and_gradient_data()
     brickwall_unitary_target_and_gradient_vector_data()

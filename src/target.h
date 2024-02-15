@@ -16,17 +16,18 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
 	double* fval, struct mat4x4 dgates[]);
 
-
-#ifdef COMPLEX_CIRCUIT
-int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata,
+int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
 	double* fval, double* grad_vec);
-#endif
 
 
 int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
 	double* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[]);
+
+int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
+	double* fval, double* restrict grad_vec, double* restrict hvp_vec);
 
 
 //________________________________________________________________________________________________________________________

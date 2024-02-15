@@ -166,7 +166,7 @@ char* test_apply_gate_backward()
 		};
 		struct statevector dpsi_num;
 		if (allocate_statevector(L, &dpsi_num) < 0) { return "memory allocation failed"; }
-		numerical_gradient(apply_gate_psi, &params_psi, 1 << L, psi.data, 1 << L, dpsi_out.data, h, dpsi_num.data);
+		numerical_gradient_backward(apply_gate_psi, &params_psi, 1 << L, psi.data, 1 << L, dpsi_out.data, h, dpsi_num.data);
 
 		// compare
 		if (uniform_distance((long)1 << L, dpsi.data, dpsi_num.data) > 1e-8) {
@@ -180,7 +180,7 @@ char* test_apply_gate_backward()
 			.j = j_list[k],
 		};
 		struct mat4x4 dV_num;
-		numerical_gradient(apply_gate_v, &params_v, 16, V.data, 1 << L, dpsi_out.data, h, dV_num.data);
+		numerical_gradient_backward(apply_gate_v, &params_v, 16, V.data, 1 << L, dpsi_out.data, h, dV_num.data);
 
 		// compare
 		if (uniform_distance(16, dV.data, dV_num.data) > 1e-8) {

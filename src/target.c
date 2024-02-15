@@ -122,12 +122,10 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
 	{
-		int ret;
-
 		memset(psi.data, 0, n * sizeof(numeric));
 		psi.data[b] = 1;
 
-		ret = ufunc(&psi, udata, &Upsi);
+		int ret = ufunc(&psi, udata, &Upsi);
 		if (ret < 0) {
 			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
 			return -2;
@@ -175,15 +173,13 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 }
 
 
-#ifdef COMPLEX_CIRCUIT
-
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Represent target function -Re tr[U^{\dagger} C] and its gradient as real vector,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
-int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, double* grad_vec)
+int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, double* grad_vec)
 {
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (dgates == NULL) {
@@ -201,15 +197,13 @@ int circuit_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, c
 	{
 		// conjugate gate gradient entries (by derivative convention)
 		conjugate_matrix(&dgates[i]);
-		unitary_tangent_to_real(&gates[i], &dgates[i], &grad_vec[i * 16]);
+		tangent_to_real(&gates[i], &dgates[i], &grad_vec[i * num_tangent_params]);
 	}
 
 	aligned_free(dgates);
 
 	return 0;
 }
-
-#endif
 
 
 //________________________________________________________________________________________________________________________
@@ -266,12 +260,10 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
 	{
-		int ret;
-
 		memset(psi.data, 0, n * sizeof(numeric));
 		psi.data[b] = 1;
 
-		ret = ufunc(&psi, udata, &Upsi);
+		int ret = ufunc(&psi, udata, &Upsi);
 		if (ret < 0) {
 			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
 			return -2;
@@ -309,6 +301,63 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 	free_statevector(&psi);
 
 	*fval = f;
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -Re tr[U^{\dagger} C], its projected gate gradients and the Hessian-vector product,
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state.
+///
+int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
+	double* fval, double* restrict grad_vec, double* restrict hvp_vec)
+{
+	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (dgates == NULL) {
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
+		return -1;
+	}
+
+	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	if (hess_gatedirs == NULL) {
+		fprintf(stderr, "allocating temporary memory for Hessian-vector product matrices failed\n");
+		return -1;
+	}
+
+	if (circuit_unitary_target_hessian_vector_product(ufunc, udata, gates, gatedirs, ngates, wires, nqubits, fval, dgates, hess_gatedirs) < 0) {
+		fprintf(stderr, "'circuit_unitary_target_hessian_vector_product' failed internally");
+		return -2;
+	}
+
+	for (int i = 0; i < ngates; i++)
+	{
+		// project gradient onto Stiefel manifold
+		// conjugate gate gradient entries (by derivative convention)
+		conjugate_matrix(&dgates[i]);
+		tangent_to_real(&gates[i], &dgates[i], &grad_vec[i * num_tangent_params]);
+
+		// project Hessian-vector products
+		// conjugate gate gradient entries (by derivative convention)
+		conjugate_matrix(&hess_gatedirs[i]);
+		// additional terms resulting from the projection of the gradient onto the Stiefel manifold
+		struct mat4x4 gradh;
+		// note: dgates[i] has already been conjugated
+		adjoint(&dgates[i], &gradh);
+		// D -= 0.5 * (Z @ grad^{\dagger} @ G + G @ grad^{\dagger} @ Z)
+		struct mat4x4 pderiv;
+		symmetric_triple_matrix_product(&gatedirs[i], &gradh, &gates[i], &pderiv);
+		struct mat4x4 phvp;
+		sub_matrices(&hess_gatedirs[i], &pderiv, &phvp);
+		// represent tangent vector of Stiefel manifold at gates[i] as real vector
+		tangent_to_real(&gates[i], &phvp, &hvp_vec[i * num_tangent_params]);
+	}
+
+	aligned_free(hess_gatedirs);
+	aligned_free(dgates);
 
 	return 0;
 }
@@ -509,7 +558,7 @@ int brickwall_unitary_target_and_gradient_vector(linear_func ufunc, void* udata,
 	{
 		// conjugate gate gradient entries (by derivative convention)
 		conjugate_matrix(&dVlist[i]);
-		unitary_tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * num_tangent_params]);
 	}
 
 	aligned_free(dVlist);
@@ -641,25 +690,6 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Compute (a @ b @ c + c @ b @ a) / 2.
-///
-static void symmetric_triple_matrix_product(const struct mat4x4* restrict a, const struct mat4x4* restrict b, const struct mat4x4* restrict c, struct mat4x4* restrict ret)
-{
-	struct mat4x4 u, v;
-
-	multiply_matrices(a, b, &u);
-	multiply_matrices(&u, c, ret);
-
-	multiply_matrices(c, b, &u);
-	multiply_matrices(&u, a, &v);
-
-	add_matrix(ret, &v);
-	scale_matrix(ret, 0.5);
-}
-
-
-//________________________________________________________________________________________________________________________
-///
 /// \brief Evaluate target function -Re tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
 /// where W is the brickwall circuit constructed from the gates in Vlist,
 /// using the provided matrix-free application of U to a state.
@@ -686,7 +716,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	{
 		// conjugate gate gradient entries (by derivative convention)
 		conjugate_matrix(&dVlist[i]);
-		unitary_tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
 	}
 
 	// project blocks of Hessian matrix
@@ -700,7 +730,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 				double r[16] = { 0 };
 				r[k] = 1;
 				struct mat4x4 Z;
-				real_to_unitary_tangent(r, &Vlist[j], &Z);
+				real_to_tangent(r, &Vlist[j], &Z);
 
 				// could use zgemv for matrix vector multiplication, but not performance critical
 				struct mat4x4 G = { 0 };
@@ -715,7 +745,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 				if (i == j)
 				{
 					struct mat4x4 Gproj;
-					project_unitary_tangent(&Vlist[i], &G, &Gproj);
+					project_tangent(&Vlist[i], &G, &Gproj);
 					memcpy(G.data, Gproj.data, sizeof(G.data));
 					// additional terms resulting from the projection of the gradient
 					// onto the Stiefel manifold (unitary matrices)
@@ -728,7 +758,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 				}
 
 				// represent tangent vector of Stiefel manifold at Vlist[i] as real vector
-				unitary_tangent_to_real(&Vlist[i], &G, r);
+				tangent_to_real(&Vlist[i], &G, r);
 				for (int x = 0; x < 16; x++) {
 					H[((i*16 + x)*nlayers + j)*16 + k] = r[x];
 				}
@@ -1018,7 +1048,7 @@ int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata
 	{
 		// conjugate gate gradient entries (by derivative convention)
 		conjugate_matrix(&dVlist[i]);
-		unitary_tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
 	}
 
 	aligned_free(dVlist);
@@ -1313,7 +1343,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 	{
 		// conjugate gate gradient entries (by derivative convention)
 		conjugate_matrix(&dVlist[i]);
-		unitary_tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
 	}
 
 	// project blocks of Hessian matrix
@@ -1327,7 +1357,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 				double r[16] = { 0 };
 				r[k] = 1;
 				struct mat4x4 Z;
-				real_to_unitary_tangent(r, &Vlist[j], &Z);
+				real_to_tangent(r, &Vlist[j], &Z);
 
 				// could use zgemv for matrix vector multiplication, but not performance critical
 				struct mat4x4 G1 = { 0 };
@@ -1346,7 +1376,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 				if (i == j)
 				{
 					struct mat4x4 Gproj;
-					project_unitary_tangent(&Vlist[i], &G, &Gproj);
+					project_tangent(&Vlist[i], &G, &Gproj);
 					memcpy(G.data, Gproj.data, sizeof(G.data));
 					// additional terms resulting from the projection of the gradient
 					// onto the Stiefel manifold (unitary matrices)
@@ -1359,7 +1389,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 				}
 
 				// represent tangent vector of Stiefel manifold at Vlist[i] as real vector
-				unitary_tangent_to_real(&Vlist[i], &G, r);
+				tangent_to_real(&Vlist[i], &G, r);
 				for (int x = 0; x < 16; x++) {
 					H[((i*16 + x)*nlayers + j)*16 + k] = r[x];
 				}

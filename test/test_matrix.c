@@ -72,13 +72,10 @@ char* test_antisymm()
 }
 
 
-#ifdef COMPLEX_CIRCUIT
-
-
 char* test_real_to_antisymm()
 {
-	double r[16];
-	for (int i = 0; i < 16; i++)
+	double* r = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	for (int i = 0; i < num_tangent_params; i++)
 	{
 		r[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
 	}
@@ -93,105 +90,33 @@ char* test_real_to_antisymm()
 		return "matrix returned by 'real_to_antisymm' is not anti-symmetric";
 	}
 
-	double s[16];
+	double* s = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
 	antisymm_to_real(&w, s);
 	// 's' must match 'r'
 	double d = 0;
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < num_tangent_params; i++)
 	{
 		d = fmax(d, fabs(s[i] - r[i]));
 	}
 	if (d > 1e-14) {
-		return "converting from real to anti-symmetric matrix and back does not result in original matrix";
+		return "converting from real vector to anti-symmetric matrix and back does not result in original vector";
 	}
+
+	aligned_free(s);
+	aligned_free(r);
 
 	return 0;
 }
 
 
-char* test_real_to_unitary_tangent()
+char* test_real_to_tangent()
 {
-	hid_t file = H5Fopen("../test/data/test_real_to_unitary_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_real_to_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_real_to_unitary_tangent failed";
+		return "'H5Fopen' in test_real_to_tangent failed";
 	}
 
-	double r[16];
-	if (read_hdf5_dataset(file, "r", H5T_NATIVE_DOUBLE, r) < 0) {
-		return "reading matrix entries from disk failed";
-	}
-
-	struct mat4x4 v;
-	if (read_hdf5_dataset(file, "v", H5T_NATIVE_DOUBLE, v.data) < 0) {
-		return "reading matrix entries from disk failed";
-	}
-
-	struct mat4x4 z;
-	real_to_unitary_tangent(r, &v, &z);
-
-	double s[16];
-	unitary_tangent_to_real(&v, &z, s);
-	// 's' must match 'r'
-	double d = 0;
-	for (int i = 0; i < 16; i++)
-	{
-		d = fmax(d, fabs(s[i] - r[i]));
-	}
-	if (d > 1e-14) {
-		return "converting from real to unitary tangent matrix and back does not result in original matrix";
-	}
-
-	H5Fclose(file);
-
-	return 0;
-}
-
-
-#else
-
-
-char* test_real_to_skew()
-{
-	double r[6];
-	for (int i = 0; i < 6; i++)
-	{
-		r[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
-	}
-
-	struct mat4x4 w;
-	real_to_skew(r, &w);
-
-	// 'w' must indeed be skew-symmetric
-	struct mat4x4 z;
-	antisymm(&w, &z);
-	if (uniform_distance(16, w.data, z.data) > 1e-14) {
-		return "matrix returned by 'real_to_skew' is not skew-symmetric";
-	}
-
-	double s[6];
-	skew_to_real(&w, s);
-	// 's' must match 'r'
-	double d = 0;
-	for (int i = 0; i < 6; i++)
-	{
-		d = fmax(d, fabs(s[i] - r[i]));
-	}
-	if (d > 1e-14) {
-		return "converting from real vector to a skew-symmetric matrix and back does not result in original vector";
-	}
-
-	return 0;
-}
-
-
-char* test_real_to_ortho_tangent()
-{
-	hid_t file = H5Fopen("../test/data/test_real_to_ortho_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (file < 0) {
-		return "'H5Fopen' in test_real_to_ortho_tangent failed";
-	}
-
-	double r[6];
+	double* r = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
 	if (read_hdf5_dataset(file, "r", H5T_NATIVE_DOUBLE, r) < 0) {
 		return "reading vector entries from disk failed";
 	}
@@ -202,19 +127,22 @@ char* test_real_to_ortho_tangent()
 	}
 
 	struct mat4x4 z;
-	real_to_ortho_tangent(r, &v, &z);
+	real_to_tangent(r, &v, &z);
 
-	double s[6];
-	ortho_tangent_to_real(&v, &z, s);
+	double* s = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	tangent_to_real(&v, &z, s);
 	// 's' must match 'r'
 	double d = 0;
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < num_tangent_params; i++)
 	{
 		d = fmax(d, fabs(s[i] - r[i]));
 	}
 	if (d > 1e-14) {
-		return "converting from real vector to orthogonal tangent matrix and back does not result in original vector";
+		return "converting from real vector to tangent matrix and back does not result in original vector";
 	}
+
+	aligned_free(s);
+	aligned_free(r);
 
 	H5Fclose(file);
 
@@ -222,7 +150,37 @@ char* test_real_to_ortho_tangent()
 }
 
 
-#endif
+char* test_project_tangent()
+{
+	hid_t file = H5Fopen("../test/data/test_project_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_project_tangent failed";
+	}
+
+	struct mat4x4 u;
+	if (read_hdf5_dataset(file, "u", H5T_NATIVE_DOUBLE, u.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 z;
+	if (read_hdf5_dataset(file, "z", H5T_NATIVE_DOUBLE, z.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+	struct mat4x4 pref;
+	if (read_hdf5_dataset(file, "p", H5T_NATIVE_DOUBLE, pref.data) < 0) {
+		return "reading matrix entries from disk failed";
+	}
+
+	struct mat4x4 p;
+	project_tangent(&u, &z, &p);
+	// compare
+	if (uniform_distance(16, p.data, pref.data) > 1e-12) {
+		return "projected matrix does not agree with reference";
+	}
+
+	H5Fclose(file);
+
+	return 0;
+}
 
 
 char* test_multiply()
@@ -252,39 +210,6 @@ char* test_multiply()
 	// compare
 	if (uniform_distance(16, c.data, cref.data) > 1e-12) {
 		return "matrix product does not agree with reference";
-	}
-
-	H5Fclose(file);
-
-	return 0;
-}
-
-
-char* test_project_unitary_tangent()
-{
-	hid_t file = H5Fopen("../test/data/test_project_unitary_tangent" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (file < 0) {
-		return "'H5Fopen' in test_project_unitary_tangent failed";
-	}
-
-	struct mat4x4 u;
-	if (read_hdf5_dataset(file, "u", H5T_NATIVE_DOUBLE, u.data) < 0) {
-		return "reading matrix entries from disk failed";
-	}
-	struct mat4x4 z;
-	if (read_hdf5_dataset(file, "z", H5T_NATIVE_DOUBLE, z.data) < 0) {
-		return "reading matrix entries from disk failed";
-	}
-	struct mat4x4 pref;
-	if (read_hdf5_dataset(file, "p", H5T_NATIVE_DOUBLE, pref.data) < 0) {
-		return "reading matrix entries from disk failed";
-	}
-
-	struct mat4x4 p;
-	project_unitary_tangent(&u, &z, &p);
-	// compare
-	if (uniform_distance(16, p.data, pref.data) > 1e-12) {
-		return "projected matrix does not agree with reference";
 	}
 
 	H5Fclose(file);
@@ -361,5 +286,4 @@ char* test_polar_factor()
 	H5Fclose(file);
 
 	return 0;
-
 }
