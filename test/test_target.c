@@ -56,18 +56,18 @@ char* test_circuit_unitary_target()
 		return "reading wire indices from disk failed";
 	}
 
-	double f;
+	numeric f;
 	if (circuit_unitary_target(ufunc, NULL, gates, ngates, wires, nqubits, &f) < 0) {
 		return "'circuit_unitary_target' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 
@@ -94,7 +94,7 @@ static void circuit_unitary_target_wrapper(const numeric* restrict x, void* p, n
 {
 	const struct circuit_unitary_target_params* params = p;
 
-	double f;
+	numeric f;
 	circuit_unitary_target(params->ufunc, NULL, (struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f);
 	*y = f;
 }
@@ -125,20 +125,19 @@ char* test_circuit_unitary_target_and_gradient()
 		return "reading wire indices from disk failed";
 	}
 
-
-	double f;
+	numeric f;
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (circuit_unitary_target_and_gradient(ufunc, NULL, gates, ngates, wires, nqubits, &f, dgates) < 0) {
 		return "'circuit_unitary_target_and_gradient' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 
@@ -158,12 +157,6 @@ char* test_circuit_unitary_target_and_gradient()
 	numeric dy = 1;
 	#ifdef COMPLEX_CIRCUIT
 	numerical_gradient_backward_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
-	// convert from Wirtinger convention
-	for (int i = 0; i < ngates; i++) {
-		for (int j = 0; j < 16; j++) {
-			dgates_num[i].data[j] = 2 * dgates_num[i].data[j];
-		}
-	}
 	#else
 	numerical_gradient_backward(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 	#endif
@@ -200,7 +193,7 @@ static void circuit_unitary_target_directed_gradient(const numeric* restrict x, 
 {
 	const struct circuit_unitary_target_directed_gradient_params* params = p;
 
-	double f;
+	numeric f;
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, params->ngates * sizeof(struct mat4x4));
 
 	circuit_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f, dgates);
@@ -224,7 +217,7 @@ static void circuit_unitary_target_and_gradient_wapper(const numeric* restrict x
 {
 	const struct circuit_unitary_target_params* params = p;
 
-	double f;
+	numeric f;
 	circuit_unitary_target_and_gradient(params->ufunc, NULL, (const struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f, (struct mat4x4*)y);
 }
 
@@ -264,20 +257,20 @@ char* test_circuit_unitary_target_hessian_vector_product()
 	}
 
 	// quantum circuit unitary target function, its gate gradients and second derivatives of gates (Hessian-vector product output vector)
-	double f;
+	numeric f;
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (circuit_unitary_target_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, dgates, hess_gatedirs) < 0) {
 		return "'circuit_unitary_target_hessian_vector_product' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 
@@ -298,12 +291,6 @@ char* test_circuit_unitary_target_hessian_vector_product()
 
 		#ifdef COMPLEX_CIRCUIT
 		numerical_gradient_backward_wirtinger(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
-		// convert from Wirtinger convention
-		for (int i = 0; i < ngates; i++) {
-			for (int j = 0; j < 16; j++) {
-				dgates_num[i].data[j] = 2 * dgates_num[i].data[j];
-			}
-		}
 		#else
 		numerical_gradient_backward(circuit_unitary_target_wrapper, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)dgates_num);
 		#endif
@@ -385,7 +372,7 @@ static void circuit_unitary_target_and_projected_gradient_wrapper(const numeric*
 
 	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, params->ngates * num_tangent_params * sizeof(double));
 
-	double f;
+	numeric f;
 	circuit_unitary_target_and_projected_gradient(ufunc, NULL, gates, params->ngates, params->wires, params->nqubits, &f, grad_vec);
 
 	// convert gradient vectors back to matrices in tangent plane
@@ -433,19 +420,19 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 	}
 
 	// quantum circuit unitary target function, its projected gate gradients and second derivatives of gates (Hessian-vector product output vector)
-	double f;
+	numeric f;
 	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
 	double* hvp_vec  = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
 	if (circuit_unitary_target_projected_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, grad_vec, hvp_vec) < 0) {
 		return "'circuit_unitary_target_projected_hessian_vector_product' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 

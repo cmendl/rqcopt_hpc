@@ -8,11 +8,11 @@
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} C],
+/// \brief Evaluate target function -tr[U^{\dagger} C],
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
-int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval)
+int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, numeric* fval)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -31,7 +31,7 @@ int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 g
 		return -1;
 	}
 
-	double f = 0;
+	numeric f = 0;
 	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
@@ -58,10 +58,10 @@ int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 g
 			return -1;
 		}
 
-		// f += Re <Upsi | Wpsi>
+		// f += <Upsi | Wpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f += creal(Upsi.data[a] * Cpsi.data[a]);
+			f += Upsi.data[a] * Cpsi.data[a];
 		}
 	}
 
@@ -77,11 +77,11 @@ int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 g
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} C] and its gate gradients,
+/// \brief Evaluate target function -tr[U^{\dagger} C] and its gate gradients,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
-int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, struct mat4x4 dgates[])
+int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, numeric* fval, struct mat4x4 dgates[])
 {
 	// temporary statevectors
 	struct statevector psi;
@@ -117,7 +117,7 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 		memset(dgates[i].data, 0, sizeof(dgates[i].data));
 	}
 
-	double f = 0;
+	numeric f = 0;
 	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
@@ -142,10 +142,10 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 			return -3;
 		}
 
-		// f += Re <Upsi | Cpsi>
+		// f += <Upsi | Cpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f += creal(Upsi.data[a] * Cpsi.data[a]);
+			f += Upsi.data[a] * Cpsi.data[a];
 		}
 
 		// quantum circuit backward pass
@@ -175,11 +175,11 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Represent target function -Re tr[U^{\dagger} C] and its gradient as real vector,
+/// \brief Represent target function -tr[U^{\dagger} C] and its gradient as real vector,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
-int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, double* fval, double* grad_vec)
+int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, numeric* fval, double* grad_vec)
 {
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (dgates == NULL) {
@@ -208,13 +208,13 @@ int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} C], its gate gradients and the Hessian-vector product,
+/// \brief Evaluate target function -tr[U^{\dagger} C], its gate gradients and the Hessian-vector product,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
 int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
-	double* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[])
+	numeric* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[])
 {
 	// temporary statevectors
 	struct statevector psi;
@@ -255,7 +255,7 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 		memset(hess_gatedirs[i].data, 0, sizeof(hess_gatedirs[i].data));
 	}
 
-	double f = 0;
+	numeric f = 0;
 	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << nqubits;
 	for (intqs b = 0; b < n; b++)
@@ -280,10 +280,10 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 			return -3;
 		}
 
-		// f += Re <Upsi | Cpsi>
+		// f += <Upsi | Cpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f += creal(Upsi.data[a] * Cpsi.data[a]);
+			f += Upsi.data[a] * Cpsi.data[a];
 		}
 
 		// accumulate gate gradients and Hessian-vector products for current unit vector
@@ -308,13 +308,13 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} C], its projected gate gradients and the Hessian-vector product,
+/// \brief Evaluate target function -tr[U^{\dagger} C], its projected gate gradients and the Hessian-vector product,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
 ///
 int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
-	double* fval, double* restrict grad_vec, double* restrict hvp_vec)
+	numeric* fval, double* restrict grad_vec, double* restrict hvp_vec)
 {
 	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
 	if (dgates == NULL) {
@@ -350,10 +350,9 @@ int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, v
 		// D -= 0.5 * (Z @ grad^{\dagger} @ G + G @ grad^{\dagger} @ Z)
 		struct mat4x4 pderiv;
 		symmetric_triple_matrix_product(&gatedirs[i], &gradh, &gates[i], &pderiv);
-		struct mat4x4 phvp;
-		sub_matrices(&hess_gatedirs[i], &pderiv, &phvp);
+		sub_matrix(&hess_gatedirs[i], &pderiv);
 		// represent tangent vector of Stiefel manifold at gates[i] as real vector
-		tangent_to_real(&gates[i], &phvp, &hvp_vec[i * num_tangent_params]);
+		tangent_to_real(&gates[i], &hess_gatedirs[i], &hvp_vec[i * num_tangent_params]);
 	}
 
 	aligned_free(hess_gatedirs);

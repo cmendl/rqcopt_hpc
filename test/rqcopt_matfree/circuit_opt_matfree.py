@@ -14,5 +14,5 @@ def _f_circuit_unitary_target_matfree(gates, wires, nqubits: int, ufunc):
         psi[b] = 1
         Upsi = ufunc(psi)
         Vpsi = apply_quantum_circuit(gates, wires, nqubits, psi)
-        f -= np.vdot(Vpsi, Upsi).real
+        f -= np.vdot(Upsi, Vpsi)
     return f

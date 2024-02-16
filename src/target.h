@@ -9,25 +9,25 @@ typedef int (*linear_func)(const struct statevector* restrict psi, void* fdata, 
 
 int circuit_unitary_target(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
-	double* fval);
+	numeric* fval);
 
 
 int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
-	double* fval, struct mat4x4 dgates[]);
+	numeric* fval, struct mat4x4 dgates[]);
 
 int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
-	double* fval, double* grad_vec);
+	numeric* fval, double* grad_vec);
 
 
 int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
-	double* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[]);
+	numeric* fval, struct mat4x4 dgates[], struct mat4x4 hess_gatedirs[]);
 
 int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
-	double* fval, double* restrict grad_vec, double* restrict hvp_vec);
+	numeric* fval, double* restrict grad_vec, double* restrict hvp_vec);
 
 
 //________________________________________________________________________________________________________________________

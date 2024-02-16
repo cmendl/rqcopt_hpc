@@ -46,7 +46,7 @@ def circuit_unitary_target_data():
 
         # target function value
         f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
-        file["f"] = f
+        file["f"] = interleave_complex(f, ctype)
 
         file.close()
 
@@ -77,7 +77,7 @@ def circuit_unitary_target_and_gradient_data():
 
         # target function value
         f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
-        file["f"] = f
+        file["f"] = interleave_complex(f, ctype)
 
         file.close()
 
@@ -113,7 +113,7 @@ def circuit_unitary_target_hessian_vector_product_data():
 
         # target function value
         f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
-        file["f"] = f
+        file["f"] = interleave_complex(f, ctype)
 
         file.close()
 
@@ -149,7 +149,7 @@ def circuit_unitary_target_projected_hessian_vector_product_data():
 
         # target function value
         f = oc.circuit_opt_matfree._f_circuit_unitary_target_matfree(gates, wires, nqubits, ufunc)
-        file["f"] = f
+        file["f"] = interleave_complex(f, ctype)
 
         file.close()
 
