@@ -53,6 +53,7 @@ char* test_brickwall_blockenc_target_gradient_hessian();
 char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix();
 #endif
 char* test_truncated_cg();
+char* test_truncated_cg_old();
 
 
 #define TEST_FUNCTION_ENTRY(fname) { .func = fname, .name = #fname }
@@ -103,6 +104,7 @@ int main()
 		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_gradient_vector_hessian_matrix),
 		#endif
 		TEST_FUNCTION_ENTRY(test_truncated_cg),
+		TEST_FUNCTION_ENTRY(test_truncated_cg_old),
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

@@ -107,7 +107,7 @@ void optimize_brickwall_circuit(linear_func ufunc, void* udata, const struct mat
 
 	// perform optimization
 	int rdata = nlayers;
-	riemannian_trust_region_optimize(f, f_deriv, &fdata, retract_unitary_list, &rdata,
+	riemannian_trust_region_optimize_old(f, f_deriv, &fdata, retract_unitary_list, &rdata,
 		nlayers * 16, (const double*)Vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)Vlist_opt);
 }
 

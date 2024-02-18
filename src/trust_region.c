@@ -80,7 +80,7 @@ static double move_to_boundary(const double* b, const double* d, int n, double r
 ///     The conjugate gradient method and trust regions in large scale optimization
 ///     SIAM Journal on Numerical Analysis 20, 626-637 (1983)
 ///
-bool truncated_cg(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z)
+bool truncated_cg_old(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z)
 {
 	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
 	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
@@ -143,6 +143,82 @@ bool truncated_cg(const double* grad, const double* hess, int n, double radius, 
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Truncated CG (tCG) method for the trust-region subproblem:
+///    minimize   <grad, z> + 1/2 <z, H z>
+///    subject to <z, z> <= radius^2
+///
+/// References:
+///   - Algorithm 11 in:
+///     P.-A. Absil, R. Mahony, Rodolphe Sepulchre
+///     Optimization Algorithms on Matrix Manifolds
+///     Princeton University Press (2008)
+///   - Trond Steihaug
+///     The conjugate gradient method and trust regions in large scale optimization
+///     SIAM Journal on Numerical Analysis 20, 626-637 (1983)
+///
+bool truncated_cg(const double* restrict x, const double* restrict grad, const hessian_vector_product_func f_hvp, void* fdata, const int n, const double radius, const struct truncated_cg_params* params, double* restrict z)
+{
+	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* Hd = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+
+	// r = grad
+	memcpy(r, grad, n * sizeof(double));
+	double rsq = cblas_ddot(n, r, 1, r, 1);
+	const double stoptol = fmax(params->abstol, params->reltol * sqrt(rsq));
+
+	// initialize z = 0 (zero vector)
+	memset(z, 0, n * sizeof(double));
+
+	// initialize d = -r
+	memcpy(d, r, n * sizeof(double));
+	cblas_dscal(n, -1.0, d, 1);
+
+	for (int j = 0; j < params->maxiter; j++)
+	{
+		// Hd = H @ d
+		f_hvp(x, fdata, d, Hd);
+		double dHd = cblas_ddot(n, d, 1, Hd, 1);
+		double t = move_to_boundary(z, d, n, radius);
+		double alpha = rsq / dHd;
+		if (dHd <= 0 || alpha > t)
+		{
+			// return with move to boundary
+			// z += t * d
+			cblas_daxpy(n, t, d, 1, z, 1);
+			aligned_free(Hd);
+			aligned_free(d);
+			aligned_free(r);
+			return true;
+		}
+		// update iterates
+		// r += alpha * Hd
+		cblas_daxpy(n, alpha, Hd, 1, r, 1);
+		// z += alpha * d
+		cblas_daxpy(n, alpha, d, 1, z, 1);
+		double rsq_next = cblas_ddot(n, r, 1, r, 1);
+		if (sqrt(rsq_next) <= stoptol)
+		{
+			// early stopping
+			break;
+		}
+		double beta = rsq_next / rsq;
+		// d = -r + beta * d
+		cblas_dscal(n, beta, d, 1);
+		cblas_daxpy(n, -1.0, r, 1, d, 1);
+		rsq = rsq_next;
+	}
+
+	// early stopping or maxiter reached
+	aligned_free(Hd);
+	aligned_free(d);
+	aligned_free(r);
+	return false;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Optimization via the Riemannian trust-region (RTR) algorithm.
 ///
 /// Reference:
@@ -151,7 +227,7 @@ bool truncated_cg(const double* grad, const double* hess, int n, double radius, 
 ///     Optimization Algorithms on Matrix Manifolds
 ///     Princeton University Press (2008)
 ///
-void riemannian_trust_region_optimize(target_func f, target_gradient_hessian_func f_deriv, void* fdata, retract_func retract, void* rdata,
+void riemannian_trust_region_optimize_old(target_func f, target_gradient_hessian_func f_deriv, void* fdata, retract_func retract, void* rdata,
 	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
@@ -174,7 +250,7 @@ void riemannian_trust_region_optimize(target_func f, target_gradient_hessian_fun
 	for (int k = 0; k < niter; k++)
 	{
 		double fx = f_deriv(x, fdata, grad, hess);
-		bool on_boundary = truncated_cg(grad, hess, n, radius, &params->tcg_params, eta);
+		bool on_boundary = truncated_cg_old(grad, hess, n, radius, &params->tcg_params, eta);
 		retract(x, eta, rdata, x_next);
 
 		f_iter[k] = fx;
@@ -209,6 +285,81 @@ void riemannian_trust_region_optimize(target_func f, target_gradient_hessian_fun
 	aligned_free(Heta);
 	aligned_free(eta);
 	aligned_free(hess);
+	aligned_free(grad);
+	aligned_free(x_next);
+	aligned_free(x);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Optimization via the Riemannian trust-region (RTR) algorithm.
+///
+/// Reference:
+///     Algorithm 10 in:
+///     P.-A. Absil, R. Mahony, Rodolphe Sepulchre
+///     Optimization Algorithms on Matrix Manifolds
+///     Princeton University Press (2008)
+///
+void riemannian_trust_region_optimize(const target_func f, const target_gradient_func f_deriv, const hessian_vector_product_func f_hvp, void* fdata,
+	retract_func retract, void* rdata,
+	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
+{
+	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
+
+	double* x = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	memcpy(x, x_init, m * sizeof(double));
+
+	double* x_next = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+
+	double radius = params->radius_init;
+	if (params->g_func != NULL) {
+		params->g_iter[0] = params->g_func(x, params->g_data);
+	}
+
+	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* eta  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* Heta = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+
+	for (int k = 0; k < niter; k++)
+	{
+		double fx = f_deriv(x, fdata, grad);
+		bool on_boundary = truncated_cg(x, grad, f_hvp, fdata, n, radius, &params->tcg_params, eta);
+		retract(x, eta, rdata, x_next);
+
+		f_iter[k] = fx;
+
+		// Eq. (7.7)
+		// Heta = H @ eta
+		f_hvp(x, fdata, eta, Heta);
+		double rho = (f(x_next, fdata) - fx) / (cblas_ddot(n, grad, 1, eta, 1) + 0.5 * cblas_ddot(n, eta, 1, Heta, 1));
+		if (rho < 0.25) {
+			// reduce radius
+			radius *= 0.25;
+		}
+		else if (rho > 0.75 && on_boundary) {
+			// enlarge radius
+			radius = fmin(2 * radius, params->maxradius);
+		}
+
+		if (rho > params->rho_trust) {
+			// swap pointers (instead of copying data from x_next to x)
+			double* y = x;
+			x = x_next;
+			x_next = y;
+		}
+
+		if (params->g_func != NULL) {
+			params->g_iter[k + 1] = params->g_func(x, params->g_data);
+		}
+	}
+
+	memcpy(x_final, x, m * sizeof(double));
+	// target function value at final iteration
+	f_iter[niter] = f_deriv(x, fdata, grad);
+
+	aligned_free(Heta);
+	aligned_free(eta);
 	aligned_free(grad);
 	aligned_free(x_next);
 	aligned_free(x);
