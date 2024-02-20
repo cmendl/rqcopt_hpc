@@ -458,11 +458,7 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 	}
 
 	// compare
-	double d_hvp = 0;
-	for (int i = 0; i < ngates * num_tangent_params; i++) {
-		d_hvp = fmax(d_hvp, fabs(hvp_vec[i] - hvp_vec_num[i]));
-	}
-	if (d_hvp > 1e-8) {
+	if (uniform_distance_real(ngates * num_tangent_params, hvp_vec, hvp_vec_num) > 1e-8) {
 		return "Hessian-vector product with respect to gates computed by 'circuit_unitary_target_projected_hessian_vector_product' does not match finite difference approximation";
 	}
 

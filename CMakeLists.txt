@@ -11,11 +11,15 @@ set(CMAKE_C_FLAGS "-Wall -Wextra -O3")
 
 add_compile_definitions(COMPLEX_CIRCUIT)
 
-set(RQCOPT_SOURCES "src/matrix.c" "src/statevector.c" "src/gate.c" "src/quantum_circuit.c" "src/brickwall_circuit.c" "src/target.c" "src/trust_region.c" "src/brickwall_opt.c" "src/util.c")
+set(RQCOPT_SOURCES "src/matrix.c" "src/statevector.c" "src/gate.c" "src/quantum_circuit.c" "src/brickwall_circuit.c" "src/target.c" "src/trust_region.c" "src/circuit_opt.c" "src/brickwall_opt.c" "src/util.c")
 
 add_executable(            rqcopt_ising1d ${RQCOPT_SOURCES} "examples/ising1d/ising1d_dynamics_opt.c" "examples/timing/timing.c")
 target_include_directories(rqcopt_ising1d PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
 target_link_libraries(     rqcopt_ising1d PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
+
+add_executable(            rqcopt_molecular ${RQCOPT_SOURCES} "examples/molecular/molecular_dynamics_opt.c" "examples/timing/timing.c")
+target_include_directories(rqcopt_molecular PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
+target_link_libraries(     rqcopt_molecular PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
 
 add_library(               rqcopt_pymodule SHARED ${RQCOPT_SOURCES} "pymodule/rqcopt_module.c")
 target_include_directories(rqcopt_pymodule PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} "src")

@@ -51,6 +51,65 @@ double relative_distance(long n, const numeric* x, const numeric* y, double eps)
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Get the number of dimensions (degree) of an HDF5 dataset.
+///
+herr_t get_hdf5_dataset_ndims(hid_t file, const char* name, int* ndims)
+{
+	hid_t dset = H5Dopen(file, name, H5P_DEFAULT);
+	if (dset < 0)
+	{
+		fprintf(stderr, "'H5Dopen' for '%s' failed, return value: %" PRId64 "\n", name, dset);
+		return -1;
+	}
+
+	hid_t space = H5Dget_space(dset);
+	if (space < 0)
+	{
+		fprintf(stderr, "'H5Dget_space' for '%s' failed, return value: %" PRId64 "\n", name, space);
+		return -1;
+	}
+
+	*ndims = H5Sget_simple_extent_ndims(space);
+
+	H5Sclose(space);
+	H5Dclose(dset);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Get the dimensions of an HDF5 dataset.
+///
+herr_t get_hdf5_dataset_dims(hid_t file, const char* name, hsize_t* dims)
+{
+	hid_t dset = H5Dopen(file, name, H5P_DEFAULT);
+	if (dset < 0)
+	{
+		fprintf(stderr, "'H5Dopen' for '%s' failed, return value: %" PRId64 "\n", name, dset);
+		return -1;
+	}
+
+	hid_t space = H5Dget_space(dset);
+	if (space < 0)
+	{
+		fprintf(stderr, "'H5Dget_space' for '%s' failed, return value: %" PRId64 "\n", name, space);
+		return -1;
+	}
+
+	// get dimensions
+	H5Sget_simple_extent_dims(space, dims, NULL);
+
+	H5Sclose(space);
+	H5Dclose(dset);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Read an HDF5 dataset from a file.
 ///
 herr_t read_hdf5_dataset(hid_t file, const char* name, hid_t mem_type, void* data)
@@ -58,18 +117,45 @@ herr_t read_hdf5_dataset(hid_t file, const char* name, hid_t mem_type, void* dat
 	hid_t dset = H5Dopen(file, name, H5P_DEFAULT);
 	if (dset < 0)
 	{
-		fprintf(stderr, "'H5Aopen' for '%s' failed, return value: %" PRId64 "\n", name, dset);
+		fprintf(stderr, "'H5Dopen' for '%s' failed, return value: %" PRId64 "\n", name, dset);
 		return -1;
 	}
 
 	herr_t status = H5Dread(dset, mem_type, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
 	if (status < 0)
 	{
-		fprintf(stderr, "'H5Aread' failed, return value: %d\n", status);
+		fprintf(stderr, "'H5Dread' failed, return value: %d\n", status);
 		return status;
 	}
 
 	H5Dclose(dset);
+
+	return 0;
+}
+
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Read an HDF5 attribute from a file.
+///
+herr_t read_hdf5_attribute(hid_t file, const char* name, hid_t mem_type, void* data)
+{
+	hid_t attr = H5Aopen(file, name, H5P_DEFAULT);
+	if (attr < 0)
+	{
+		fprintf(stderr, "'H5Aopen' for '%s' failed, return value: %" PRId64 "\n", name, attr);
+		return -1;
+	}
+
+	herr_t status = H5Aread(attr, mem_type, data);
+	if (status < 0)
+	{
+		fprintf(stderr, "'H5Aread' failed, return value: %d\n", status);
+		return status;
+	}
+
+	H5Aclose(attr);
 
 	return 0;
 }
