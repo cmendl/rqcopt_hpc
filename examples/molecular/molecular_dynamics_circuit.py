@@ -9,12 +9,15 @@ Reference:
 
 import numpy as np
 import scipy
+import time
 import matplotlib.pyplot as plt
 import h5py
 import qib
 from qib.operator import FieldOperatorTerm, IFOType, IFODesc
 from circuit import circuit_unitary
 from io_util import interleave_complex, decode_complex
+# compiled Python module; ensure that it is on the Python search path
+import rqcopt_hpc as oc_hpc
 
 
 def fermionic_simulation_gate(tkin: float, vint: float, t: float):
@@ -69,7 +72,7 @@ def construct_fermionic_swapnet(tkin, vint, dt: float):
     return gates, wires
 
 
-def main():
+def main(run_opt=False):
 
     # number of qubits (or orbitals)
     nqubits = 5
@@ -124,8 +127,8 @@ def main():
         dt = t / nsteps
         print("dt:", dt)
         gates, wires = construct_fermionic_swapnet(tkin, vint, dt)
-        V = circuit_unitary(nqubits, gates, wires)
-        W = np.linalg.matrix_power(V, nsteps)
+        C = circuit_unitary(nqubits, gates, wires)
+        W = np.linalg.matrix_power(C, nsteps)
         err_stra[i] = np.linalg.norm(W - expiH, ord=2)
         print(f"err_stra[{i}]: {err_stra[i]}")
         fval = -np.trace(expiH.conj().T @ W).real
@@ -157,16 +160,22 @@ def main():
         file.attrs["nqubits"] = nqubits
         file.attrs["t"] = float(t)
 
-    # optimized circuit
-    with h5py.File("molecular_dynamics_opt.hdf5", "r") as file:
-        # parameters must agree
-        assert np.array_equal(file["tkin"], tkin)
-        assert np.array_equal(file["vint"], vint)
-        assert np.array_equal(file["wires"], wires)
-        assert file.attrs["nqubits"] == nqubits
-        assert file.attrs["t"] == t
-        gates_opt = decode_complex(file["gates"][:], "cplx")
-        f_iter = file["f_iter"][:]
+    if run_opt:
+        t_start = time.perf_counter()
+        gates_opt, f_iter = oc_hpc.optimize_quantum_circuit(nqubits, expiH, gates_start, wires, 10)
+        t_run = time.perf_counter() - t_start
+        print(f"completed optimization in {t_run:g} seconds")
+    else:
+        # load optimized circuit gates from disk
+        with h5py.File("molecular_dynamics_opt.hdf5", "r") as file:
+            # parameters must agree
+            assert np.array_equal(file["tkin"], tkin)
+            assert np.array_equal(file["vint"], vint)
+            assert np.array_equal(file["wires"], wires)
+            assert file.attrs["nqubits"] == nqubits
+            assert file.attrs["t"] == t
+            gates_opt = decode_complex(file["gates"][:], "cplx")
+            f_iter = file["f_iter"][:]
 
     # rescaled and shifted target function
     print("f_iter:", f_iter)
@@ -176,11 +185,11 @@ def main():
     plt.title(f"Optimization target function for a quantum circuit with {len(gates)} gates")
     plt.show()
 
-    V_opt = circuit_unitary(nqubits, gates_opt, wires)
-    err_opt = np.linalg.norm(V_opt - expiH, ord=2)
+    C_opt = circuit_unitary(nqubits, gates_opt, wires)
+    err_opt = np.linalg.norm(C_opt - expiH, ord=2)
     print(f"err_opt: {err_opt} (after {len(f_iter) - 1} iterations)")
     print(f"before:  {err_stra[0]}")
 
 
 if __name__ == "__main__":
-    main()
+    main(run_opt=True)

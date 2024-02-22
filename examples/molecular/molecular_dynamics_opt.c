@@ -11,12 +11,12 @@
 static int ufunc(const struct statevector* restrict psi, void* udata, struct statevector* restrict psi_out)
 {
 	const intqs n = (intqs)1 << psi->nqubits;
-	const numeric* U = (numeric*)udata;
+	const numeric* u = (numeric*)udata;
 
 	// apply U
 	numeric alpha = 1;
 	numeric beta  = 0;
-	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, U, n, psi->data, 1, &beta, psi_out->data, 1);
+	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, u, n, psi->data, 1, &beta, psi_out->data, 1);
 
 	return 0;
 }

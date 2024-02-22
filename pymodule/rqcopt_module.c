@@ -5,24 +5,270 @@
 #include <cblas.h>
 #include <memory.h>
 #include <stdbool.h>
+#include "circuit_opt.h"
 #include "brickwall_opt.h"
 #include "util.h"
 
 
 #ifdef COMPLEX_CIRCUIT
 
-static int ufunc(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out)
+// preliminary version: storing the full matrix and performing a matrix-vector multiplication, for simplicity
+static int ufunc(const struct statevector* restrict psi, void* udata, struct statevector* restrict psi_out)
 {
 	const intqs n = (intqs)1 << psi->nqubits;
-	const numeric* U = (numeric*)fdata;
+	const numeric* u = (numeric*)udata;
 
 	// apply U
 	numeric alpha = 1;
 	numeric beta  = 0;
-	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, U, n, psi->data, 1, &beta, psi_out->data, 1);
+	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, u, n, psi->data, 1, &beta, psi_out->data, 1);
 
 	return 0;
 }
+
+#endif
+
+
+#ifdef COMPLEX_CIRCUIT
+
+static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
+{
+	// suppress "unused parameter" warning
+	(void)self;
+
+	// number of qubits
+	int nqubits;
+	// target unitary
+	PyArrayObject* u_obj;
+	// initial to-be optimized quantum gates
+	PyObject* gates_start_obj;
+	// quantum wires the gates act on
+	PyObject* wires_obj;
+	// number of iterations
+	int niter;
+
+	if (!PyArg_ParseTuple(args, "iOOOi", &nqubits, &u_obj, &gates_start_obj, &wires_obj, &niter)) {
+		PyErr_SetString(PyExc_SyntaxError, "error parsing input; syntax: optimize_quantum_circuit(nqubits, U, gates_start, wires, niter)");
+		return NULL;
+	}
+
+	if (nqubits <= 0) {
+		char msg[1024];
+		sprintf(msg, "'nqubits' must be positive, received nqubits = %i", nqubits);
+		PyErr_SetString(PyExc_ValueError, msg);
+		return NULL;
+	}
+
+	const intqs n = (intqs)1 << nqubits;
+
+	if (PyArray_NDIM(u_obj) != 2) {
+		char msg[1024];
+		sprintf(msg, "'U' must have degree 2, received %i", PyArray_NDIM(u_obj));
+		PyErr_SetString(PyExc_ValueError, msg);
+		return NULL;
+	}
+	if (PyArray_DIM(u_obj, 0) != n || PyArray_DIM(u_obj, 1) != n) {
+		char msg[1024];
+		sprintf(msg, "'U' must have dimensions 2^nqubits x 2^nqubits, received a %li x %li matrix and nqubits = %i", PyArray_DIM(u_obj, 0), PyArray_DIM(u_obj, 1), nqubits);
+		PyErr_SetString(PyExc_ValueError, msg);
+		return NULL;
+	}
+
+	if (PyArray_TYPE(u_obj) != NPY_CDOUBLE) {
+		PyErr_SetString(PyExc_TypeError, "'U' must have 'complex double' entries");
+		return NULL;
+	}
+
+	if (!(PyArray_FLAGS(u_obj) & NPY_ARRAY_C_CONTIGUOUS)) {
+		PyErr_SetString(PyExc_SyntaxError, "'U' does not have contiguous C storage format");
+		return NULL;
+	}
+
+	numeric* u = PyArray_DATA(u_obj);
+
+	if (!PySequence_Check(gates_start_obj)) {
+		PyErr_SetString(PyExc_SyntaxError, "'gates_start' must be a sequence");
+		return NULL;
+	}
+
+	const int ngates = PySequence_Length(gates_start_obj);
+	if (ngates <= 0) {
+		PyErr_SetString(PyExc_ValueError, "sequence of initial quantum gates cannot be empty");
+		return NULL;
+	}
+
+	if (!PySequence_Check(wires_obj)) {
+		PyErr_SetString(PyExc_SyntaxError, "'wires' must be a sequence");
+		return NULL;
+	}
+
+	if (PySequence_Length(wires_obj) != ngates) {
+		PyErr_SetString(PyExc_ValueError, "'gates_start' and 'wires' sequences must have the same length");
+		return NULL;
+	}
+
+	if (niter <= 0) {
+		char msg[1024];
+		sprintf(msg, "'niter' must be a positive integer, received %i", niter);
+		PyErr_SetString(PyExc_ValueError, msg);
+		return NULL;
+	}
+
+	// read initial to-be optimized quantum gates
+	struct mat4x4* gates_start = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	for (int i = 0; i < ngates; i++)
+	{
+		PyObject* gate_obj = PySequence_GetItem(gates_start_obj, i);
+		PyArrayObject* gate_obj_arr = (PyArrayObject*)PyArray_ContiguousFromObject(gate_obj, NPY_CDOUBLE, 2, 2);
+		if (gate_obj_arr == NULL)
+		{
+			char msg[1024];
+			sprintf(msg, "cannot interpret gates_start[%i] as complex matrix", i);
+			PyErr_SetString(PyExc_SyntaxError, msg);
+			Py_DECREF(gate_obj);
+			aligned_free(gates_start);
+			return NULL;
+		}
+
+		if (PyArray_DIM(gate_obj_arr, 0) != 4 || PyArray_DIM(gate_obj_arr, 1) != 4)
+		{
+			char msg[1024];
+			sprintf(msg, "gates_start[%i] must be a 4 x 4 matrix, received a %li x %li matrix", i, PyArray_DIM(gate_obj_arr, 0), PyArray_DIM(gate_obj_arr, 1));
+			PyErr_SetString(PyExc_ValueError, msg);
+			Py_DECREF(gate_obj_arr);
+			Py_DECREF(gate_obj);
+			aligned_free(gates_start);
+			return NULL;
+		}
+
+		memcpy(&gates_start[i], PyArray_DATA(gate_obj_arr), sizeof(struct mat4x4));
+
+		Py_DECREF(gate_obj_arr);
+		Py_DECREF(gate_obj);
+	}
+
+	// read quantum wire permutations
+	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	for (int i = 0; i < ngates; i++)
+	{
+		PyObject* wire_obj = PySequence_GetItem(wires_obj, i);
+		if (!PySequence_Check(wire_obj)) {
+			char msg[1024];
+			sprintf(msg, "'wires[%i]' must be a sequence", i);
+			PyErr_SetString(PyExc_SyntaxError, msg);
+			Py_DECREF(wire_obj);
+			aligned_free(wires);
+			aligned_free(gates_start);
+			return NULL;
+		}
+
+		if (PySequence_Length(wire_obj) != 2) {
+			char msg[1024];
+			sprintf(msg, "'wires[%i]' must be a sequence of length 2", i);
+			PyErr_SetString(PyExc_ValueError, msg);
+			Py_DECREF(wire_obj);
+			aligned_free(wires);
+			aligned_free(gates_start);
+			return NULL;
+		}
+
+		for (int j = 0; j < 2; j++)
+		{
+			PyObject* p_obj = PySequence_GetItem(wire_obj, j);
+
+			wires[2 * i + j] = (int)PyLong_AsLong(p_obj);
+			if (PyErr_Occurred()) {
+				char msg[1024];
+				sprintf(msg, "cannot interpret 'wires[%i][%i]' as integer", i, j);
+				PyErr_SetString(PyExc_ValueError, msg);
+				Py_DECREF(p_obj);
+				Py_DECREF(wire_obj);
+				aligned_free(wires);
+				aligned_free(gates_start);
+				return NULL;
+			}
+
+			Py_DECREF(p_obj);
+
+			if (wires[2 * i + j] < 0 || wires[2 * i + j] >= nqubits) {
+				char msg[1024];
+				sprintf(msg, "index 'wires[%i][%i] = %i' outside of [0, nqubits) index range", i, j, wires[2 * i + j]);
+				PyErr_SetString(PyExc_ValueError, msg);
+				Py_DECREF(wire_obj);
+				aligned_free(wires);
+				aligned_free(gates_start);
+				return NULL;
+			}
+		}
+
+		Py_DECREF(wire_obj);
+
+		if (wires[2 * i] == wires[2 * i + 1]) {
+			char msg[1024];
+			sprintf(msg, "wire indices for gate %i are not distinct, received index %i twice", i, wires[2 * i]);
+			PyErr_SetString(PyExc_ValueError, msg);
+			aligned_free(wires);
+			aligned_free(gates_start);
+			return NULL;
+		}
+	}
+
+	// parameters for optimization
+	struct rtr_params params;
+	set_rtr_default_params(ngates * 16, &params);
+
+	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
+	struct mat4x4* gates_opt = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+
+	// perform optimization
+	optimize_quantum_circuit(ufunc, u, gates_start, ngates, nqubits, wires, &params, niter, f_iter, gates_opt);
+
+	aligned_free(wires);
+	aligned_free(gates_start);
+
+	// construct return value
+	// f_iter
+	npy_intp dims_f_iter[1] = { niter + 1 };
+	PyArrayObject* f_iter_obj = (PyArrayObject*)PyArray_SimpleNew(1, dims_f_iter, NPY_DOUBLE);
+	if (f_iter_obj == NULL) {
+		PyErr_SetString(PyExc_RuntimeError, "error creating to-be-returned 'f_iter' array");
+		aligned_free(gates_opt);
+		aligned_free(f_iter);
+		return NULL;
+	}
+	memcpy(PyArray_DATA(f_iter_obj), f_iter, (niter + 1) * sizeof(double));
+	aligned_free(f_iter);
+	// gates_opt
+	npy_intp dims_gates[3] = { ngates, 4, 4 };
+	PyArrayObject* gates_opt_obj = (PyArrayObject*)PyArray_SimpleNew(3, dims_gates, NPY_CDOUBLE);
+	if (gates_opt_obj == NULL) {
+		PyErr_SetString(PyExc_RuntimeError, "error creating to-be-returned 'gates_opt' tensor");
+		aligned_free(gates_opt);
+		return NULL;
+	}
+	memcpy(PyArray_DATA(gates_opt_obj), gates_opt, ngates * sizeof(struct mat4x4));
+	aligned_free(gates_opt);
+
+	return PyTuple_Pack(2, gates_opt_obj, f_iter_obj);
+}
+
+#else
+
+static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
+{
+	// suppress "unused parameter" warning
+	(void)self;
+	(void)args;
+
+	PyErr_SetString(PyExc_RuntimeError, "cannot perform optimization - please re-build with support for complex numbers enabled");
+
+	return NULL;
+}
+
+#endif
+
+
+#ifdef COMPLEX_CIRCUIT
 
 static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 {
@@ -299,6 +545,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 
 
 static PyMethodDef methods[] = {
+	{ "optimize_quantum_circuit",   optimize_quantum_circuit_py,   METH_VARARGS, "Optimize the two-qubit gates in a quantum circuit to approximate a unitary matrix using a trust-region method." },
 	{ "optimize_brickwall_circuit", optimize_brickwall_circuit_py, METH_VARARGS, "Optimize the quantum gates in a brickwall layout to approximate a unitary matrix using a trust-region method." },
 	{ NULL, NULL, 0, NULL }     // sentinel
 };
