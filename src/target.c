@@ -364,190 +364,101 @@ int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, v
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} W],
-/// where W is the brickwall circuit constructed from the gates in Vlist,
-/// using the provided matrix-free application of U to a state.
+/// \brief Convert a brickwall to a sequential circuit.
 ///
-int brickwall_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+static inline void brickwall_to_sequential(const int nqubits, const int nlayers, const struct mat4x4* restrict vlist, const int* perms[], struct mat4x4* restrict gates, int* restrict wires)
 {
-	// temporary statevectors
-	struct statevector psi = { 0 };
-	if (allocate_statevector(L, &psi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-	struct statevector Upsi = { 0 };
-	if (allocate_statevector(L, &Upsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-	struct statevector Wpsi = { 0 };
-	if (allocate_statevector(L, &Wpsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-
-	double f = 0;
-	// implement trace via summation over unit vectors
-	const intqs n = (intqs)1 << L;
-	for (intqs b = 0; b < n; b++)
-	{
-		int ret;
-
-		memset(psi.data, 0, n * sizeof(numeric));
-		psi.data[b] = 1;
-
-		ret = ufunc(&psi, udata, &Upsi);
-		if (ret < 0) {
-			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
-			return -2;
-		}
-		// negate and complex-conjugate entries
-		for (intqs a = 0; a < n; a++)
-		{
-			Upsi.data[a] = -conj(Upsi.data[a]);
-		}
-
-		ret = apply_brickwall_unitary(Vlist, nlayers, perms, &psi, &Wpsi);
-		if (ret < 0) {
-			fprintf(stderr, "call of 'apply_brickwall_unitary' failed, return value: %i\n", ret);
-			return -1;
-		}
-
-		// f += Re <Upsi | Wpsi>
-		for (intqs a = 0; a < n; a++)
-		{
-			f += creal(Upsi.data[a] * Wpsi.data[a]);
-		}
-	}
-
-	free_statevector(&Wpsi);
-	free_statevector(&Upsi);
-	free_statevector(&psi);
-
-	*fval = f;
-
-	return 0;
-}
-
-
-//________________________________________________________________________________________________________________________
-///
-/// \brief Evaluate target function -Re tr[U^{\dagger} W] and its gate gradients,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
-/// using the provided matrix-free application of U to a state.
-///
-int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
-{
-	// temporary statevectors
-	struct statevector psi = { 0 };
-	if (allocate_statevector(L, &psi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-	struct statevector Upsi = { 0 };
-	if (allocate_statevector(L, &Upsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-	struct statevector Wpsi = { 0 };
-	if (allocate_statevector(L, &Wpsi) < 0) {
-		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", L);
-		return -1;
-	}
-
-	struct brickwall_unitary_cache cache = { 0 };
-	if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-		fprintf(stderr, "'allocate_brickwall_unitary_cache' failed");
-		return -1;
-	}
-
-	struct mat4x4* dVlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist_unit == NULL) {
-		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
-		return -1;
-	}
+	assert(nqubits % 2 == 0);
+	const int ngateslayer = nqubits / 2;
 
 	for (int i = 0; i < nlayers; i++)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
-	}
-
-	double f = 0;
-	// implement trace via summation over unit vectors
-	const intqs n = (intqs)1 << L;
-	for (intqs b = 0; b < n; b++)
-	{
-		int ret;
-
-		memset(psi.data, 0, n * sizeof(numeric));
-		psi.data[b] = 1;
-
-		ret = ufunc(&psi, udata, &Upsi);
-		if (ret < 0) {
-			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
-			return -2;
-		}
-		// negate and complex-conjugate entries
-		for (intqs a = 0; a < n; a++)
+		for (int j = 0; j < ngateslayer; j++)
 		{
-			Upsi.data[a] = -conj(Upsi.data[a]);
-		}
-
-		// brickwall unitary forward pass
-		if (brickwall_unitary_forward(Vlist, nlayers, perms, &psi, &cache, &Wpsi) < 0) {
-			fprintf(stderr, "'brickwall_unitary_forward' failed internally");
-			return -3;
-		}
-
-		// f += Re <Upsi | Wpsi>
-		for (intqs a = 0; a < n; a++)
-		{
-			f += creal(Upsi.data[a] * Wpsi.data[a]);
-		}
-
-		// brickwall unitary backward pass
-		// note: overwriting 'psi' with gradient
-		if (brickwall_unitary_backward(Vlist, nlayers, perms, &cache, &Upsi, &psi, dVlist_unit) < 0) {
-			fprintf(stderr, "'brickwall_unitary_backward' failed internally");
-			return -4;
-		}
-		// accumulate gate gradients for current unit vector
-		for (int i = 0; i < nlayers; i++)
-		{
-			add_matrix(&dVlist[i], &dVlist_unit[i]);
+			// duplicate gate vlist[i]
+			memcpy(gates[i*ngateslayer + j].data, vlist[i].data, sizeof(vlist[i].data));
+			wires[2 * (i*ngateslayer + j)    ] = perms[i][2*j    ];
+			wires[2 * (i*ngateslayer + j) + 1] = perms[i][2*j + 1];
 		}
 	}
-
-	aligned_free(dVlist_unit);
-	free_brickwall_unitary_cache(&cache);
-	free_statevector(&Wpsi);
-	free_statevector(&Upsi);
-	free_statevector(&psi);
-
-	*fval = f;
-
-	return 0;
 }
 
 
-#ifdef COMPLEX_CIRCUIT
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -tr[U^{\dagger} W],
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], numeric* fval)
+{
+	const int ngates = nlayers * (L / 2);
+
+	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	brickwall_to_sequential(L, nlayers, vlist, perms, gates, wires);
+
+	int ret = circuit_unitary_target(ufunc, udata, gates, ngates, wires, L, fval);
+
+	aligned_free(wires);
+	aligned_free(gates);
+
+	return ret;
+}
+
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Represent target function -Re tr[U^{\dagger} W] and its gradient as real vector,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// \brief Evaluate target function -tr[U^{\dagger} W] and its gate gradients,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int brickwall_unitary_target_and_gradient_vector(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
+int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], numeric* fval, struct mat4x4 dvlist[])
 {
-	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist == NULL) {
+	const int ngates = nlayers * (L / 2);
+
+	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	brickwall_to_sequential(L, nlayers, vlist, perms, gates, wires);
+
+	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	int ret = circuit_unitary_target_and_gradient(ufunc, udata, gates, ngates, wires, L, fval, dgates);
+
+	// accumulate gradients
+	const int ngateslayer = L / 2;
+	for (int i = 0; i < nlayers; i++)
+	{
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
+
+		for (int j = 0; j < ngateslayer; j++)
+		{
+			add_matrix(&dvlist[i], &dgates[i*ngateslayer + j]);
+		}
+	}
+
+	aligned_free(dgates);
+	aligned_free(wires);
+	aligned_free(gates);
+
+	return ret;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Represent target function -tr[U^{\dagger} W] and its gradient as real vector,
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], numeric* fval, double* grad_vec)
+{
+	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
 	}
 
-	int ret = brickwall_unitary_target_and_gradient(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist);
+	int ret = brickwall_unitary_target_and_gradient(ufunc, udata, vlist, nlayers, L, perms, fval, dvlist);
 	if (ret < 0) {
 		return ret;
 	}
@@ -556,25 +467,23 @@ int brickwall_unitary_target_and_gradient_vector(linear_func ufunc, void* udata,
 	for (int i = 0; i < nlayers; i++)
 	{
 		// conjugate gate gradient entries (by derivative convention)
-		conjugate_matrix(&dVlist[i]);
-		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * num_tangent_params]);
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * num_tangent_params]);
 	}
 
-	aligned_free(dVlist);
+	aligned_free(dvlist);
 
 	return 0;
 }
 
-#endif
-
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} W], its gate gradients and Hessian,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// \brief Evaluate target function -tr[U^{\dagger} W], its gate gradients and Hessian,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[], numeric* hess)
+int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], numeric* fval, struct mat4x4 dvlist[], numeric* hess)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -593,21 +502,21 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 		return -1;
 	}
 
-	struct brickwall_unitary_cache cache = { 0 };
-	if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-		fprintf(stderr, "'allocate_brickwall_unitary_cache' failed");
+	struct quantum_circuit_cache cache = { 0 };
+	if (allocate_quantum_circuit_cache(L, nlayers * (L / 2), &cache) < 0) {
+		fprintf(stderr, "'allocate_quantum_circuit_cache' failed");
 		return -1;
 	}
 
-	struct mat4x4* dVlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist_unit == NULL) {
+	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
 	}
 
 	for (int i = 0; i < nlayers; i++)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
 	}
 
 	const int m = nlayers * 16;
@@ -619,7 +528,7 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 		return -1;
 	}
 
-	double f = 0;
+	numeric f = 0;
 	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << L;
 	for (intqs b = 0; b < n; b++)
@@ -641,20 +550,20 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 		}
 
 		// brickwall unitary forward pass
-		if (brickwall_unitary_forward(Vlist, nlayers, perms, &psi, &cache, &Wpsi) < 0) {
+		if (brickwall_unitary_forward(vlist, nlayers, perms, &psi, &cache, &Wpsi) < 0) {
 			fprintf(stderr, "'brickwall_unitary_forward' failed internally");
 			return -3;
 		}
 
-		// f += Re <Upsi | Wpsi>
+		// f += <Upsi | Wpsi>
 		for (intqs a = 0; a < n; a++)
 		{
-			f += creal(Upsi.data[a] * Wpsi.data[a]);
+			f += Upsi.data[a] * Wpsi.data[a];
 		}
 
 		// brickwall unitary backward pass and Hessian computation
 		// note: overwriting 'psi' with gradient
-		if (brickwall_unitary_backward_hessian(Vlist, nlayers, perms, &cache, &Upsi, &psi, dVlist_unit, hess_unit) < 0) {
+		if (brickwall_unitary_backward_hessian(vlist, nlayers, perms, &cache, &Upsi, &psi, dvlist_unit, hess_unit) < 0) {
 			fprintf(stderr, "'brickwall_unitary_backward_hessian' failed internally");
 			return -4;
 		}
@@ -662,7 +571,7 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 		// accumulate gate gradients for current unit vector
 		for (int i = 0; i < nlayers; i++)
 		{
-			add_matrix(&dVlist[i], &dVlist_unit[i]);
+			add_matrix(&dvlist[i], &dvlist_unit[i]);
 		}
 
 		// accumulate Hessian matrix for current unit vector
@@ -673,8 +582,8 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 	}
 
 	aligned_free(hess_unit);
-	aligned_free(dVlist_unit);
-	free_brickwall_unitary_cache(&cache);
+	aligned_free(dvlist_unit);
+	free_quantum_circuit_cache(&cache);
 	free_statevector(&Wpsi);
 	free_statevector(&Upsi);
 	free_statevector(&psi);
@@ -689,14 +598,14 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -Re tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// \brief Evaluate target function -tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
+int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], numeric* fval, double* grad_vec, double* H)
 {
-	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist == NULL)
+	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL)
 	{
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
@@ -705,7 +614,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	const int m = nlayers * 16;
 	numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 
-	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, Vlist, nlayers, L, perms, fval, dVlist, hess);
+	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, vlist, nlayers, L, perms, fval, dvlist, hess);
 	if (ret < 0) {
 		return ret;
 	}
@@ -714,8 +623,8 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	for (int i = 0; i < nlayers; i++)
 	{
 		// conjugate gate gradient entries (by derivative convention)
-		conjugate_matrix(&dVlist[i]);
-		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
 	}
 
 	// project blocks of Hessian matrix
@@ -729,7 +638,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 				double r[16] = { 0 };
 				r[k] = 1;
 				struct mat4x4 Z;
-				real_to_tangent(r, &Vlist[j], &Z);
+				real_to_tangent(r, &vlist[j], &Z);
 
 				// could use zgemv for matrix vector multiplication, but not performance critical
 				struct mat4x4 G = { 0 };
@@ -744,20 +653,20 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 				if (i == j)
 				{
 					struct mat4x4 Gproj;
-					project_tangent(&Vlist[i], &G, &Gproj);
+					project_tangent(&vlist[i], &G, &Gproj);
 					memcpy(G.data, Gproj.data, sizeof(G.data));
 					// additional terms resulting from the projection of the gradient
 					// onto the Stiefel manifold (unitary matrices)
 					struct mat4x4 gradh;
-					adjoint(&dVlist[i], &gradh);
+					adjoint(&dvlist[i], &gradh);
 					// G -= 0.5 * (Z @ grad^{\dagger} @ V + V @ grad^{\dagger} @ Z)
 					struct mat4x4 T;
-					symmetric_triple_matrix_product(&Z, &gradh, &Vlist[i], &T);
+					symmetric_triple_matrix_product(&Z, &gradh, &vlist[i], &T);
 					sub_matrix(&G, &T);
 				}
 
-				// represent tangent vector of Stiefel manifold at Vlist[i] as real vector
-				tangent_to_real(&Vlist[i], &G, r);
+				// represent tangent vector of Stiefel manifold at vlist[i] as real vector
+				tangent_to_real(&vlist[i], &G, r);
 				for (int x = 0; x < 16; x++) {
 					H[((i*16 + x)*nlayers + j)*16 + k] = r[x];
 				}
@@ -773,7 +682,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	}
 
 	aligned_free(hess);
-	aligned_free(dVlist);
+	aligned_free(dvlist);
 
 	return 0;
 }
@@ -785,10 +694,10 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 ///
 /// \brief Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2
 /// to approximate the matrix H based on block-encoding with projector P,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int brickwall_blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval)
+int brickwall_blockenc_target(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], double* fval)
 {
 	assert(L % 2 == 0);
 
@@ -845,7 +754,7 @@ int brickwall_blockenc_target(linear_func hfunc, void* hdata, const struct mat4x
 			chi.data[c] = 1;
 		}
 
-		ret = apply_brickwall_unitary(Vlist, nlayers, perms, &chi, &Wchi);
+		ret = apply_brickwall_unitary(vlist, nlayers, perms, &chi, &Wchi);
 		if (ret < 0) {
 			fprintf(stderr, "call of 'apply_brickwall_unitary' failed, return value: %i\n", ret);
 			return -1;
@@ -887,10 +796,10 @@ int brickwall_blockenc_target(linear_func hfunc, void* hdata, const struct mat4x
 ///
 /// \brief Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2 and its gate gradients
 /// to approximate the matrix H based on block-encoding with projector P,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dVlist[])
+int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], double* fval, struct mat4x4 dvlist[])
 {
 	assert(L % 2 == 0);
 
@@ -918,21 +827,21 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 		return -1;
 	}
 
-	struct brickwall_unitary_cache cache = { 0 };
-	if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-		fprintf(stderr, "'allocate_brickwall_unitary_cache' failed");
+	struct quantum_circuit_cache cache = { 0 };
+	if (allocate_quantum_circuit_cache(L, nlayers * (L / 2), &cache) < 0) {
+		fprintf(stderr, "'allocate_quantum_circuit_cache' failed");
 		return -1;
 	}
 
-	struct mat4x4* dVlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist_unit == NULL) {
+	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
 	}
 
 	for (int i = 0; i < nlayers; i++)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
 	}
 
 	double f = 0;
@@ -965,7 +874,7 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 		}
 
 		// brickwall unitary forward pass
-		if (brickwall_unitary_forward(Vlist, nlayers, perms, &chi, &cache, &Wchi) < 0) {
+		if (brickwall_unitary_forward(vlist, nlayers, perms, &chi, &cache, &Wchi) < 0) {
 			fprintf(stderr, "'brickwall_unitary_forward' failed internally");
 			return -3;
 		}
@@ -997,19 +906,19 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 
 		// brickwall unitary backward pass, using 'chi' as upstream gradient
 		// note: overwriting 'Wchi' with gradient
-		if (brickwall_unitary_backward(Vlist, nlayers, perms, &cache, &chi, &Wchi, dVlist_unit) < 0) {
+		if (brickwall_unitary_backward(vlist, nlayers, perms, &cache, &chi, &Wchi, dvlist_unit) < 0) {
 			fprintf(stderr, "'brickwall_unitary_backward' failed internally");
 			return -4;
 		}
 		// accumulate gate gradients for current unit vector
 		for (int i = 0; i < nlayers; i++)
 		{
-			add_matrix(&dVlist[i], &dVlist_unit[i]);
+			add_matrix(&dvlist[i], &dvlist_unit[i]);
 		}
 	}
 
-	aligned_free(dVlist_unit);
-	free_brickwall_unitary_cache(&cache);
+	aligned_free(dvlist_unit);
+	free_quantum_circuit_cache(&cache);
 	free_statevector(&Wchi);
 	free_statevector(&chi);
 	free_statevector(&Hpsi);
@@ -1026,18 +935,18 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Represent target function || P^{\dagger} W P - H ||_F^2 / 2 and its gradient as real vector,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
+int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec)
 {
-	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist == NULL) {
+	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
 	}
 
-	int ret = brickwall_blockenc_target_and_gradient(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist);
+	int ret = brickwall_blockenc_target_and_gradient(hfunc, hdata, vlist, nlayers, L, perms, fval, dvlist);
 	if (ret < 0) {
 		return ret;
 	}
@@ -1046,11 +955,11 @@ int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata
 	for (int i = 0; i < nlayers; i++)
 	{
 		// conjugate gate gradient entries (by derivative convention)
-		conjugate_matrix(&dVlist[i]);
-		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
 	}
 
-	aligned_free(dVlist);
+	aligned_free(dvlist);
 
 	return 0;
 }
@@ -1062,15 +971,15 @@ int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata
 ///
 /// \brief Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2, its gate gradients and Hessian
 /// to approximate the matrix H based on block-encoding with projector P,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-/// Returning two Hessian matrices for the complex version, since the matrices in 'Vlist'
+/// Returning two Hessian matrices for the complex version, since the matrices in 'vlist'
 /// appear with and without complex-conjugation in target function.
 ///
 int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
-	double* fval, struct mat4x4 dVlist[],
+	const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[],
+	double* fval, struct mat4x4 dvlist[],
 	#ifdef COMPLEX_CIRCUIT
 	numeric* hess1, numeric* hess2
 	#else
@@ -1102,9 +1011,9 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		return -1;
 	}
 
-	struct brickwall_unitary_cache cache = { 0 };
-	if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-		fprintf(stderr, "'allocate_brickwall_unitary_cache' failed");
+	struct quantum_circuit_cache cache = { 0 };
+	if (allocate_quantum_circuit_cache(L, nlayers * (L / 2), &cache) < 0) {
+		fprintf(stderr, "'allocate_quantum_circuit_cache' failed");
 		return -1;
 	}
 
@@ -1125,15 +1034,15 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		return -1;
 	}
 
-	struct mat4x4* dVlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist_unit == NULL) {
+	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
 	}
 
 	for (int i = 0; i < nlayers; i++)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
 	}
 
 	const int m = nlayers * 16;
@@ -1185,7 +1094,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		}
 
 		// brickwall unitary forward pass
-		if (brickwall_unitary_forward(Vlist, nlayers, perms, &chi, &cache, &Wchi) < 0) {
+		if (brickwall_unitary_forward(vlist, nlayers, perms, &chi, &cache, &Wchi) < 0) {
 			fprintf(stderr, "'brickwall_unitary_forward' failed internally");
 			return -3;
 		}
@@ -1217,7 +1126,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 
 		// brickwall unitary backward pass and Hessian computation
 		// note: overwriting 'Wchi' with gradient
-		if (brickwall_unitary_backward_hessian(Vlist, nlayers, perms, &cache, &chi, &Wchi, dVlist_unit, hess_unit1) < 0) {
+		if (brickwall_unitary_backward_hessian(vlist, nlayers, perms, &cache, &chi, &Wchi, dvlist_unit, hess_unit1) < 0) {
 			fprintf(stderr, "'brickwall_unitary_backward_hessian' failed internally");
 			return -4;
 		}
@@ -1225,7 +1134,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		// contribution by outer product of gradients to Hessian
 		for (int l = 0; l < nlayers; l++)
 		{
-			if (apply_brickwall_unitary_gate_placeholder(Vlist, nlayers, perms, l, &cache, &tmp) < 0) {
+			if (apply_brickwall_unitary_gate_placeholder(vlist, nlayers, perms, l, &cache, &tmp) < 0) {
 				fprintf(stderr, "'apply_brickwall_unitary_gate_placeholder' failed internally");
 				return -4;
 			}
@@ -1274,7 +1183,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		// accumulate gate gradients for current unit vector
 		for (int i = 0; i < nlayers; i++)
 		{
-			add_matrix(&dVlist[i], &dVlist_unit[i]);
+			add_matrix(&dvlist[i], &dvlist_unit[i]);
 		}
 
 		// accumulate Hessian matrix for current unit vector
@@ -1291,14 +1200,14 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 
 	aligned_free(hess_unit2);
 	aligned_free(hess_unit1);
-	aligned_free(dVlist_unit);
+	aligned_free(dvlist_unit);
 	free_statevector_array(&tmp);
 	for (int i = 0; i < nlayers; i++)
 	{
 		free_statevector_array(&phi[i]);
 	}
 	aligned_free(phi);
-	free_brickwall_unitary_cache(&cache);
+	free_quantum_circuit_cache(&cache);
 	free_statevector(&Wchi);
 	free_statevector(&chi);
 	free_statevector(&Hpsi);
@@ -1316,13 +1225,13 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 ///
 /// \brief Evaluate target function || P^{\dagger} W P - H ||_F^2 / 2, its gate gradient as real vector and Hessian matrix
 /// to approximate the matrix H based on block-encoding with projector P,
-/// where W is the brickwall circuit constructed from the gates in Vlist,
+/// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of H to a state.
 ///
-int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata, const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
+int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[], double* fval, double* grad_vec, double* H)
 {
-	struct mat4x4* dVlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (dVlist == NULL)
+	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL)
 	{
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
@@ -1332,7 +1241,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 	numeric* hess1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 	numeric* hess2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 
-	int ret = brickwall_blockenc_target_gradient_hessian(hfunc, hdata, Vlist, nlayers, L, perms, fval, dVlist, hess1, hess2);
+	int ret = brickwall_blockenc_target_gradient_hessian(hfunc, hdata, vlist, nlayers, L, perms, fval, dvlist, hess1, hess2);
 	if (ret < 0) {
 		return ret;
 	}
@@ -1341,8 +1250,8 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 	for (int i = 0; i < nlayers; i++)
 	{
 		// conjugate gate gradient entries (by derivative convention)
-		conjugate_matrix(&dVlist[i]);
-		tangent_to_real(&Vlist[i], &dVlist[i], &grad_vec[i * 16]);
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
 	}
 
 	// project blocks of Hessian matrix
@@ -1356,7 +1265,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 				double r[16] = { 0 };
 				r[k] = 1;
 				struct mat4x4 Z;
-				real_to_tangent(r, &Vlist[j], &Z);
+				real_to_tangent(r, &vlist[j], &Z);
 
 				// could use zgemv for matrix vector multiplication, but not performance critical
 				struct mat4x4 G1 = { 0 };
@@ -1375,20 +1284,20 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 				if (i == j)
 				{
 					struct mat4x4 Gproj;
-					project_tangent(&Vlist[i], &G, &Gproj);
+					project_tangent(&vlist[i], &G, &Gproj);
 					memcpy(G.data, Gproj.data, sizeof(G.data));
 					// additional terms resulting from the projection of the gradient
 					// onto the Stiefel manifold (unitary matrices)
 					struct mat4x4 gradh;
-					adjoint(&dVlist[i], &gradh);
+					adjoint(&dvlist[i], &gradh);
 					// G -= 0.5 * (Z @ grad^{\dagger} @ V + V @ grad^{\dagger} @ Z)
 					struct mat4x4 T;
-					symmetric_triple_matrix_product(&Z, &gradh, &Vlist[i], &T);
+					symmetric_triple_matrix_product(&Z, &gradh, &vlist[i], &T);
 					sub_matrix(&G, &T);
 				}
 
-				// represent tangent vector of Stiefel manifold at Vlist[i] as real vector
-				tangent_to_real(&Vlist[i], &G, r);
+				// represent tangent vector of Stiefel manifold at vlist[i] as real vector
+				tangent_to_real(&vlist[i], &G, r);
 				for (int x = 0; x < 16; x++) {
 					H[((i*16 + x)*nlayers + j)*16 + k] = r[x];
 				}
@@ -1405,7 +1314,7 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 
 	aligned_free(hess2);
 	aligned_free(hess1);
-	aligned_free(dVlist);
+	aligned_free(dvlist);
 
 	return 0;
 }

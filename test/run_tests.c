@@ -37,7 +37,7 @@ char* test_circuit_unitary_target_hessian_vector_product();
 char* test_brickwall_unitary_target();
 char* test_brickwall_unitary_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
-char* test_brickwall_unitary_target_and_gradient_vector();
+char* test_brickwall_unitary_target_and_projected_gradient();
 #endif
 char* test_brickwall_unitary_target_gradient_hessian();
 #ifdef COMPLEX_CIRCUIT
@@ -88,7 +88,7 @@ int main()
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
-		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_gradient_vector),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_projected_gradient),
 		#endif
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_hessian),
 		#ifdef COMPLEX_CIRCUIT

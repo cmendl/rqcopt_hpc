@@ -513,20 +513,20 @@ char* test_brickwall_unitary_target()
 	int nlayers[] = { 4, 5 };
 	for (int i = 0; i < 2; i++)
 	{
-		double f;
+		numeric f;
 		if (brickwall_unitary_target(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f) < 0) {
 			return "'brickwall_unitary_target' failed internally";
 		}
 
 		char varname[32];
 		sprintf(varname, "f%i", i);
-		double f_ref;
+		numeric f_ref;
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 			return "reading reference target function value from disk failed";
 		}
 
 		// compare with reference
-		if (fabs(f - f_ref) > 1e-12) {
+		if (_abs(f - f_ref) > 1e-12) {
 			return "computed target function value does not match reference";
 		}
 	}
@@ -555,7 +555,7 @@ static void brickwall_unitary_target_wrapper(const numeric* restrict x, void* p,
 		memcpy(Vlist[i].data, &x[i * 16], sizeof(Vlist[i].data));
 	}
 
-	double f;
+	numeric f;
 	brickwall_unitary_target(params->ufunc, NULL, Vlist, params->nlayers, params->nqubits, params->perms, &f);
 	*y = f;
 
@@ -596,7 +596,7 @@ char* test_brickwall_unitary_target_and_gradient()
 	int nlayers[] = { 4, 5 };
 	for (int i = 0; i < 2; i++)
 	{
-		double f;
+		numeric f;
 		struct mat4x4 dVlist[5];
 		if (brickwall_unitary_target_and_gradient(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist) < 0) {
 			return "'brickwall_unitary_target_and_gradient' failed internally";
@@ -604,13 +604,13 @@ char* test_brickwall_unitary_target_and_gradient()
 
 		char varname[32];
 		sprintf(varname, "f%i", i);
-		double f_ref;
+		numeric f_ref;
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 			return "reading reference target function value from disk failed";
 		}
 
 		// compare with reference
-		if (fabs(f - f_ref) > 1e-12) {
+		if (_abs(f - f_ref) > 1e-12) {
 			return "computed target function value does not match reference";
 		}
 
@@ -626,12 +626,6 @@ char* test_brickwall_unitary_target_and_gradient()
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
 		numerical_gradient_backward_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
-		// convert from Wirtinger convention
-		for (int j = 0; j < nlayers[i]; j++) {
-			for (int k = 0; k < 16; k++) {
-				dVlist_num[j].data[k] = 2 * dVlist_num[j].data[k];
-			}
-		}
 		#else
 		numerical_gradient_backward(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
@@ -664,14 +658,14 @@ char* test_brickwall_unitary_target_and_gradient()
 
 #ifdef COMPLEX_CIRCUIT
 
-char* test_brickwall_unitary_target_and_gradient_vector()
+char* test_brickwall_unitary_target_and_projected_gradient()
 {
 	int L = 6;
 	int nlayers = 3;
 
-	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_and_gradient_vector" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_and_projected_gradient" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
-		return "'H5Fopen' in test_brickwall_unitary_target_and_gradient_vector failed";
+		return "'H5Fopen' in test_brickwall_unitary_target_and_projected_gradient failed";
 	}
 
 	struct mat4x4 Vlist[3];
@@ -697,19 +691,19 @@ char* test_brickwall_unitary_target_and_gradient_vector()
 
 	const int m = nlayers * 16;
 
-	double f;
+	numeric f;
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	if (brickwall_unitary_target_and_gradient_vector(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
+	if (brickwall_unitary_target_and_projected_gradient(ufunc, NULL, Vlist, nlayers, L, pperms, &f, grad) < 0) {
 		return "'brickwall_unitary_target_and_gradient_vector' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 
@@ -738,7 +732,7 @@ static void brickwall_unitary_target_gradient_wrapper(const numeric* restrict x,
 {
 	const struct brickwall_unitary_target_params* params = p;
 
-	double f;
+	numeric f;
 	brickwall_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, (struct mat4x4*)y);
 }
 
@@ -788,7 +782,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 	{
 		const int m = nlayers[i] * 16;
 
-		double f;
+		numeric f;
 		struct mat4x4 dVlist[5];
 		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
 		if (brickwall_unitary_target_gradient_hessian(ufunc, NULL, Vlist, nlayers[i], L, pperms, &f, dVlist, hess) < 0) {
@@ -808,12 +802,12 @@ char* test_brickwall_unitary_target_gradient_hessian()
 
 		char varname[32];
 		sprintf(varname, "f%i", i);
-		double f_ref;
+		numeric f_ref;
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 			return "reading reference target function value from disk failed";
 		}
 		// compare with reference
-		if (fabs(f - f_ref) > 1e-12) {
+		if (_abs(f - f_ref) > 1e-12) {
 			return "computed target function value does not match reference";
 		}
 
@@ -830,12 +824,6 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		numeric dy = 1;
 		#ifdef COMPLEX_CIRCUIT
 		numerical_gradient_backward_wirtinger(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
-		// convert from Wirtinger convention
-		for (int j = 0; j < nlayers[i]; j++) {
-			for (int k = 0; k < 16; k++) {
-				dVlist_num[j].data[k] = 2 * dVlist_num[j].data[k];
-			}
-		}
 		#else
 		numerical_gradient_backward(brickwall_unitary_target_wrapper, &params, nlayers[i] * 16, (numeric*)Vlist, 1, &dy, h, (numeric*)dVlist_num);
 		#endif
@@ -936,7 +924,7 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 
 	const int m = nlayers * 16;
 
-	double f;
+	numeric f;
 	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
 	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
 
@@ -944,13 +932,13 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 		return "'brickwall_unitary_target_gradient_vector_hessian_matrix' failed internally";
 	}
 
-	double f_ref;
+	numeric f_ref;
 	if (read_hdf5_dataset(file, "f", H5T_NATIVE_DOUBLE, &f_ref) < 0) {
 		return "reading reference target function value from disk failed";
 	}
 
 	// compare with reference
-	if (fabs(f - f_ref) > 1e-12) {
+	if (_abs(f - f_ref) > 1e-12) {
 		return "computed target function value does not match reference";
 	}
 

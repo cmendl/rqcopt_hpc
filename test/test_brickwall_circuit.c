@@ -104,13 +104,13 @@ static void brickwall_unitary_forward_psi(const numeric* restrict x, void* p, nu
 	struct statevector psi_out;
 	allocate_statevector(params->nqubits, &psi_out);
 
-	struct brickwall_unitary_cache cache;
-	allocate_brickwall_unitary_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
+	struct quantum_circuit_cache cache;
+	allocate_quantum_circuit_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
 
 	brickwall_unitary_forward(params->Vlist, params->nlayers, params->perms, &psi, &cache, &psi_out);
 	memcpy(y, psi_out.data, ((size_t)1 << params->nqubits) * sizeof(numeric));
 
-	free_brickwall_unitary_cache(&cache);
+	free_quantum_circuit_cache(&cache);
 	free_statevector(&psi_out);
 	free_statevector(&psi);
 }
@@ -131,13 +131,13 @@ static void brickwall_unitary_forward_gates(const numeric* restrict x, void* p, 
 	struct statevector psi_out;
 	allocate_statevector(params->nqubits, &psi_out);
 
-	struct brickwall_unitary_cache cache;
-	allocate_brickwall_unitary_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
+	struct quantum_circuit_cache cache;
+	allocate_quantum_circuit_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
 
 	brickwall_unitary_forward((struct mat4x4*)x, params->nlayers, params->perms, params->psi, &cache, &psi_out);
 	memcpy(y, psi_out.data, ((size_t)1 << params->nqubits) * sizeof(numeric));
 
-	free_brickwall_unitary_cache(&cache);
+	free_quantum_circuit_cache(&cache);
 	free_statevector(&psi_out);
 }
 
@@ -188,9 +188,9 @@ char* test_brickwall_unitary_backward()
 
 	for (int nlayers = 3; nlayers <= 4; nlayers++)
 	{
-		struct brickwall_unitary_cache cache;
-		if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-			return "'allocate_brickwall_unitary_cache' failed";
+		struct quantum_circuit_cache cache;
+		if (allocate_quantum_circuit_cache(L, nlayers * (L / 2), &cache) < 0) {
+			return "'allocate_quantum_circuit_cache' failed";
 		}
 
 		// brickwall unitary forward pass
@@ -246,7 +246,7 @@ char* test_brickwall_unitary_backward()
 		}
 
 		free_statevector(&dpsi_num);
-		free_brickwall_unitary_cache(&cache);
+		free_quantum_circuit_cache(&cache);
 	}
 
 	free_statevector(&dpsi);
@@ -274,8 +274,8 @@ static void brickwall_unitary_derivative_gates(const numeric* restrict x, void* 
 {
 	const struct brickwall_unitary_derivative_gates_params* params = p;
 
-	struct brickwall_unitary_cache cache;
-	allocate_brickwall_unitary_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
+	struct quantum_circuit_cache cache;
+	allocate_quantum_circuit_cache(params->nqubits, params->nlayers * (params->nqubits / 2), &cache);
 
 	struct statevector psi_out;
 	allocate_statevector(params->nqubits, &psi_out);
@@ -291,7 +291,7 @@ static void brickwall_unitary_derivative_gates(const numeric* restrict x, void* 
 
 	free_statevector(&dpsi);
 	free_statevector(&psi_out);
-	free_brickwall_unitary_cache(&cache);
+	free_quantum_circuit_cache(&cache);
 }
 
 char* test_brickwall_unitary_backward_hessian()
@@ -354,9 +354,9 @@ char* test_brickwall_unitary_backward_hessian()
 	{
 		const int m = nlayers * 16;
 
-		struct brickwall_unitary_cache cache;
-		if (allocate_brickwall_unitary_cache(L, nlayers * (L / 2), &cache) < 0) {
-			return "'allocate_brickwall_unitary_cache' failed";
+		struct quantum_circuit_cache cache;
+		if (allocate_quantum_circuit_cache(L, nlayers * (L / 2), &cache) < 0) {
+			return "'allocate_quantum_circuit_cache' failed";
 		}
 
 		// brickwall unitary forward pass
@@ -450,7 +450,7 @@ char* test_brickwall_unitary_backward_hessian()
 
 		free_statevector(&dpsi_num);
 		aligned_free(hess);
-		free_brickwall_unitary_cache(&cache);
+		free_quantum_circuit_cache(&cache);
 	}
 
 	free_statevector(&dpsi);
