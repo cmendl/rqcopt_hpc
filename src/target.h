@@ -35,26 +35,35 @@ int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, v
 
 
 int brickwall_unitary_target(linear_func ufunc, void* udata,
-	const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval);
 
 
 int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata,
-	const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval, struct mat4x4 dvlist[]);
 
 int brickwall_unitary_target_and_projected_gradient(linear_func ufunc, void* udata,
-	const struct mat4x4 vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval, double* grad_vec);
 
 
+int brickwall_unitary_target_hessian_vector_product(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const struct mat4x4 vdirs[], const int nlayers, const int* perms[], const int nqubits,
+	numeric* fval, struct mat4x4 dvlist[], struct mat4x4 hess_vdirs[]);
+
+int brickwall_unitary_target_projected_hessian_vector_product(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const struct mat4x4 vdirs[], const int nlayers, const int* perms[], const int nqubits,
+	numeric* fval, double* restrict grad_vec, double* restrict hvp_vec);
+
+
 int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
-	numeric* fval, struct mat4x4 dVlist[], numeric* hess);
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	numeric* fval, struct mat4x4 dvlist[], numeric* hess);
 
 #ifdef COMPLEX_CIRCUIT
 int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval, double* grad_vec, double* H);
 #endif
 
@@ -64,24 +73,24 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 
 
 int brickwall_blockenc_target(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	double* fval);
 
 
 int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
-	double* fval, struct mat4x4 dVlist[]);
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	double* fval, struct mat4x4 dvlist[]);
 
 #ifdef COMPLEX_CIRCUIT
 int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	double* fval, double* grad_vec);
 #endif
 
 
 int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
-	double* fval, struct mat4x4 dVlist[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	double* fval, struct mat4x4 dvlist[],
 	#ifdef COMPLEX_CIRCUIT
 	numeric* hess1, numeric* hess2
 	#else
@@ -91,6 +100,6 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 
 #ifdef COMPLEX_CIRCUIT
 int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata,
-	const struct mat4x4 Vlist[], const int nlayers, const int L, const int* perms[],
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	double* fval, double* grad_vec, double* H);
 #endif

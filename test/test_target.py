@@ -230,7 +230,6 @@ def brickwall_unitary_target_and_projected_gradient_data():
 
     # system size
     L = 6
-
     # number of layers
     nlayers = 3
 
@@ -258,6 +257,80 @@ def brickwall_unitary_target_and_projected_gradient_data():
     file["grad"] = grad
 
     file.close()
+
+
+def brickwall_unitary_target_hessian_vector_product_data():
+
+    # random number generator
+    rng = np.random.default_rng(201)
+
+    # system size
+    L = 6
+    # number of layers
+    nlayers = 5
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_target_hessian_vector_product_{ctype}.hdf5", "w")
+
+        # general random 4x4 matrices (do not need to be unitary for this test)
+        Vlist = np.stack([0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)])
+        for i in range(nlayers):
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+        # gate gradient directions
+        Vdirs = [0.5 * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"Z{i}"] = interleave_complex(Vdirs[i], ctype)
+
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"perm{i}"] = perms[i]
+
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist, L, ufunc, perms)
+        file["f"] = interleave_complex(f, ctype)
+
+        file.close()
+
+
+def brickwall_unitary_target_projected_hessian_vector_product_data():
+
+    # random number generator
+    rng = np.random.default_rng(471)
+
+    # system size
+    L = 6
+    # number of layers
+    nlayers = 4
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_target_projected_hessian_vector_product_{ctype}.hdf5", "w")
+
+        # random unitaries (unitary property required for tangent space projection)
+        Vlist = [ortho_group.rvs(4, random_state=rng) if ctype == "real" else unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+        # gate gradient directions
+        Vdirs = [oc.project_tangent(Vlist[i], 1/np.sqrt(2) * rng.standard_normal((4, 4)) if ctype == "real" else 0.5 * oc.crandn((4, 4), rng)) for i in range(nlayers)]
+        for i in range(nlayers):
+            file[f"Z{i}"] = interleave_complex(Vdirs[i], ctype)
+
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"perm{i}"] = perms[i]
+
+        ufunc = _ufunc_real if ctype == "real" else _ufunc_cplx
+
+        # target function value
+        f = oc.brickwall_opt_matfree._f_brickwall_unitary_target_matfree(Vlist, L, ufunc, perms)
+        file["f"] = interleave_complex(f, ctype)
+
+        file.close()
 
 
 def _brickwall_unitary_plain_hessian_matrix_matfree(Vlist, L, Ufunc, perms):
@@ -642,6 +715,8 @@ def main():
     brickwall_unitary_target_data()
     brickwall_unitary_target_and_gradient_data()
     brickwall_unitary_target_and_projected_gradient_data()
+    brickwall_unitary_target_hessian_vector_product_data()
+    brickwall_unitary_target_projected_hessian_vector_product_data()
     brickwall_unitary_target_gradient_hessian_data()
     brickwall_unitary_target_gradient_vector_hessian_matrix_data()
     brickwall_blockenc_target_data()
