@@ -24,10 +24,10 @@ static int ufunc(const struct statevector* restrict psi, void* fdata, struct sta
 
 int main()
 {
-	const int L = 6;
+	const int nqubits = 6;
 	const int nlayers = 3;
 
-	const intqs n = (intqs)1 << L;
+	const intqs n = (intqs)1 << nqubits;
 
 	// read initial data from disk
 	char filename[1024];
@@ -48,8 +48,8 @@ int main()
 		return -1;
 	}
 	// initial to-be optimized quantum gates
-	struct mat4x4* Vlist_start = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	if (read_hdf5_dataset(file, "Vlist_start", H5T_NATIVE_DOUBLE, Vlist_start) < 0) {
+	struct mat4x4* vlist_start = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	if (read_hdf5_dataset(file, "Vlist_start", H5T_NATIVE_DOUBLE, vlist_start) < 0) {
 		fprintf(stderr, "reading initial two-qubit quantum gates from disk failed\n");
 		return -1;
 	}
@@ -74,21 +74,21 @@ int main()
 	// number of iterations
 	const int niter = 10;
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, niter * sizeof(double));
+	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
 
-	struct mat4x4* Vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 
 	uint64_t start_tick = get_ticks();
 
 	// perform optimization
-	optimize_brickwall_circuit(ufunc, expiH, Vlist_start, nlayers, L, pperms, &params, niter, f_iter, Vlist_opt);
+	optimize_brickwall_circuit_hmat(ufunc, expiH, vlist_start, nlayers, nqubits, pperms, &params, niter, f_iter, vlist_opt);
 
 	uint64_t total_ticks = get_ticks() - start_tick;
 	// get the tick resolution
 	const double ticks_per_sec = (double)get_tick_resolution();
 	printf("wall time: %g\n", total_ticks / ticks_per_sec);
 
-	for (int i = 0; i < niter; i++)
+	for (int i = 0; i < niter + 1; i++)
 	{
 		printf("f_iter[%i] = %.12f\n", i, f_iter[i]);
 	}
@@ -101,25 +101,25 @@ int main()
 		return -1;
 	}
 	hsize_t vdims[4] = { nlayers, 4, 4, 2 };
-	if (write_hdf5_dataset(file, "Vlist", 4, vdims, H5T_IEEE_F64LE, H5T_NATIVE_DOUBLE, Vlist_opt) < 0) {
-		fprintf(stderr, "writing 'Vlist_opt' to disk failed\n");
+	if (write_hdf5_dataset(file, "Vlist", 4, vdims, H5T_IEEE_F64LE, H5T_NATIVE_DOUBLE, vlist_opt) < 0) {
+		fprintf(stderr, "writing 'vlist_opt' to disk failed\n");
 		return -1;
 	}
-	hsize_t fdims[1] = { niter };
+	hsize_t fdims[1] = { niter + 1 };
 	if (write_hdf5_dataset(file, "f_iter", 1, fdims, H5T_IEEE_F64LE, H5T_NATIVE_DOUBLE, f_iter) < 0) {
 		fprintf(stderr, "writing 'f_iter' to disk failed\n");
 		return -1;
 	}
 	// store parameters
-	if (write_hdf5_scalar_attribute(file, "L", H5T_STD_I32LE, H5T_NATIVE_INT, &L)) {
-		fprintf(stderr, "writing 'L' to disk failed\n");
+	if (write_hdf5_scalar_attribute(file, "nqubits", H5T_STD_I32LE, H5T_NATIVE_INT, &nqubits)) {
+		fprintf(stderr, "writing 'nqubits' to disk failed\n");
 		return -1;
 	}
 	H5Fclose(file);
 
-	aligned_free(Vlist_opt);
+	aligned_free(vlist_opt);
 	aligned_free(f_iter);
-	aligned_free(Vlist_start);
+	aligned_free(vlist_start);
 	aligned_free(expiH);
 
 	return 0;

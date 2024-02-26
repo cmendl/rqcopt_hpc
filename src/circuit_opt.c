@@ -80,7 +80,7 @@ static void f_hvp(const double* restrict x, void* fdata, double* restrict vec, d
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Retraction, with tangent direction represented as anti-symmetric matrices.
+/// \brief Retraction, with tangent direction represented as vector with 6 entries (orthogonal case) or anti-symmetric matrices (unitary case).
 ///
 static void retract_unitary_list(const double* restrict x, const double* restrict eta, void* rdata, double* restrict xs)
 {
@@ -92,20 +92,8 @@ static void retract_unitary_list(const double* restrict x, const double* restric
 
 	for (int i = 0; i < ngates; i++)
 	{
-		struct mat4x4 z;
-		real_to_antisymm(&eta[i * 16], &z);
-		// add identity matrix
-		z.data[ 0]++;
-		z.data[ 5]++;
-		z.data[10]++;
-		z.data[15]++;
-
-		struct mat4x4 w;
-		multiply_matrices(&gates[i], &z, &w);
-
-		polar_factor(&w, &retractgates[i]);
+		retract(&gates[i], &eta[i * num_tangent_params], &retractgates[i]);
 	}
-
 }
 
 
@@ -131,6 +119,6 @@ void optimize_quantum_circuit(linear_func ufunc, void* udata, const struct mat4x
 
 	// perform optimization
 	int rdata = ngates;
-	riemannian_trust_region_optimize(f, f_deriv, f_hvp, &fdata, retract_unitary_list, &rdata,
+	riemannian_trust_region_optimize_hvp(f, f_deriv, f_hvp, &fdata, retract_unitary_list, &rdata,
 		ngates * num_tangent_params, (const double*)gates_start, ngates * 16 * (sizeof(numeric)/sizeof(double)), params, niter, f_iter, (double*)gates_opt);
 }

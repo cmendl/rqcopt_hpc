@@ -11,7 +11,7 @@
 /// \brief Apply the unitary matrix representation of a brickwall-type
 /// quantum circuit with periodic boundary conditions to state psi.
 ///
-int apply_brickwall_unitary(const struct mat4x4 Vlist[], const int nlayers, const int* perms[], const struct statevector* restrict psi, struct statevector* restrict psi_out)
+int apply_brickwall_unitary(const struct mat4x4 vlist[], const int nlayers, const int* perms[], const struct statevector* restrict psi, struct statevector* restrict psi_out)
 {
 	assert(nlayers >= 1);
 	assert(psi->nqubits == psi_out->nqubits);
@@ -32,7 +32,7 @@ int apply_brickwall_unitary(const struct mat4x4 Vlist[], const int nlayers, cons
 		{
 			const struct statevector* psi0 = (k == 0 ? psi : ((nstates - k) % 2 == 0 ? psi_out : &tmp));
 			struct statevector* psi1 = ((nstates - k) % 2 == 0 ? &tmp : psi_out);
-			apply_gate(&Vlist[i], perms[i][j], perms[i][j + 1], psi0, psi1);
+			apply_gate(&vlist[i], perms[i][j], perms[i][j + 1], psi0, psi1);
 			k++;
 		}
 	}
@@ -48,7 +48,7 @@ int apply_brickwall_unitary(const struct mat4x4 Vlist[], const int nlayers, cons
 /// \brief Apply the unitary matrix representation of a brick wall
 /// quantum circuit with periodic boundary conditions to state psi.
 ///
-int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const int* perms[],
+int brickwall_unitary_forward(const struct mat4x4 vlist[], int nlayers, const int* perms[],
 	const struct statevector* restrict psi, struct quantum_circuit_cache* cache, struct statevector* restrict psi_out)
 {
 	const int nstates = nlayers * (psi->nqubits / 2);
@@ -67,7 +67,7 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 	{
 		for (int j = 0; j < psi->nqubits; j += 2)
 		{
-			apply_gate(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k],
+			apply_gate(&vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k],
 				(k + 1 < nstates ? &cache->psi_list[k + 1] : psi_out));
 			k++;
 		}
@@ -82,8 +82,8 @@ int brickwall_unitary_forward(const struct mat4x4 Vlist[], int nlayers, const in
 /// \brief Backward pass for applying the unitary matrix representation of a brick wall
 /// quantum circuit with periodic boundary conditions to state psi.
 ///
-int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct quantum_circuit_cache* cache,
-	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[])
+int brickwall_unitary_backward(const struct mat4x4 vlist[], int nlayers, const int* perms[], const struct quantum_circuit_cache* cache,
+	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dvlist[])
 {
 	const int nstates = nlayers * (dpsi->nqubits / 2);
 
@@ -102,7 +102,7 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 	int k = nstates - 1;
 	for (int i = nlayers - 1; i >= 0; i--)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
 
 		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
 		{
@@ -110,9 +110,9 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 			struct statevector* dpsi0 = (k % 2 == 1 ? &tmp : dpsi);
 
 			struct mat4x4 dV;
-			apply_gate_backward(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], dpsi1, dpsi0, &dV);
+			apply_gate_backward(&vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], dpsi1, dpsi0, &dV);
 			// accumulate gradient
-			add_matrix(&dVlist[i], &dV);
+			add_matrix(&dvlist[i], &dV);
 
 			k--;
 		}
@@ -131,8 +131,8 @@ int brickwall_unitary_backward(const struct mat4x4 Vlist[], int nlayers, const i
 ///
 /// On input, 'hess' must point to a memory block of size (nlayers * 16)^2.
 ///
-int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers, const int* perms[], const struct quantum_circuit_cache* cache,
-	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dVlist[], numeric* hess)
+int brickwall_unitary_backward_hessian(const struct mat4x4 vlist[], int nlayers, const int* perms[], const struct quantum_circuit_cache* cache,
+	const struct statevector* restrict dpsi_out, struct statevector* restrict dpsi, struct mat4x4 dvlist[], numeric* hess)
 {
 	const int nstates = nlayers * (dpsi->nqubits / 2);
 
@@ -156,16 +156,16 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 	int k = nstates - 1;
 	for (int i = nlayers - 1; i >= 0; i--)
 	{
-		memset(dVlist[i].data, 0, sizeof(dVlist[i].data));
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
 
 		for (int j = dpsi->nqubits - 2; j >= 0; j -= 2)
 		{
 			struct statevector* dpsi0 = (k > 0 ? &grad_cache.psi_list[k - 1] : dpsi);
 
 			struct mat4x4 dV;
-			apply_gate_backward(&Vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], &grad_cache.psi_list[k], dpsi0, &dV);
+			apply_gate_backward(&vlist[i], perms[i][j], perms[i][j + 1], &cache->psi_list[k], &grad_cache.psi_list[k], dpsi0, &dV);
 			// accumulate gradient
-			add_matrix(&dVlist[i], &dV);
+			add_matrix(&dvlist[i], &dV);
 
 			k--;
 		}
@@ -206,7 +206,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 						continue;
 					}
 
-					apply_gate_backward_array(&Vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &grad_cache.psi_list[l], h);
+					apply_gate_backward_array(&vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &grad_cache.psi_list[l], h);
 					// accumulate Hessian entries
 					for (int x = 0; x < 16; x++) {
 						for (int y = 0; y < 16; y++) {
@@ -215,7 +215,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 					}
 
 					if (j < nlayers - 1 || s < dpsi->nqubits - 2) {  // skip (expensive) gate application at final iteration
-						apply_gate_to_array(&Vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &tmp[1 - p]);
+						apply_gate_to_array(&vlist[j], perms[j][s], perms[j][s + 1], &tmp[p], &tmp[1 - p]);
 						p = 1 - p;
 					}
 
@@ -261,7 +261,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 Vlist[], int nlayers,
 /// quantum circuit with periodic boundary conditions to state psi,
 /// with a gate hole in layer 'l'.
 ///
-int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nlayers, const int* perms[], int l, const struct quantum_circuit_cache* cache, struct statevector_array* restrict psi_out)
+int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 vlist[], int nlayers, const int* perms[], int l, const struct quantum_circuit_cache* cache, struct statevector_array* restrict psi_out)
 {
 	assert(nlayers >= 1);
 	assert(cache->nqubits == psi_out->nqubits);
@@ -295,7 +295,7 @@ int apply_brickwall_unitary_gate_placeholder(const struct mat4x4 Vlist[], int nl
 				if (i == l && j <= s) {
 					continue;
 				}
-				apply_gate_to_array(&Vlist[i], perms[i][j], perms[i][j + 1], &tmp[k], &tmp[1 - k]);
+				apply_gate_to_array(&vlist[i], perms[i][j], perms[i][j + 1], &tmp[k], &tmp[1 - k]);
 				k = 1 - k;
 			}
 		}

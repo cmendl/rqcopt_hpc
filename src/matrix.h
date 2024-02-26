@@ -65,3 +65,6 @@ int inverse_matrix(const struct mat4x4* restrict a, struct mat4x4* restrict ainv
 
 
 void polar_factor(const struct mat4x4* restrict a, struct mat4x4* restrict u);
+
+
+void retract(const struct mat4x4* restrict u, const double* restrict eta, struct mat4x4* restrict v);

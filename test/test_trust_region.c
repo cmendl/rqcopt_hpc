@@ -17,7 +17,7 @@ static void f_hvp(const double* restrict x, void* fdata, double* restrict vec, d
 	cblas_dgemv(CblasRowMajor, CblasNoTrans, data->n, data->n, 1.0, data->hess, data->n, vec, 1, 0, hvp, 1);
 }
 
-char* test_truncated_cg()
+char* test_truncated_cg_hvp()
 {
 	hid_t file = H5Fopen("../test/data/test_truncated_cg.hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
@@ -56,7 +56,7 @@ char* test_truncated_cg()
 	set_truncated_cg_default_params(n, &params);
 
 	double* z = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	bool on_boundary = truncated_cg(NULL, grad, f_hvp, &fdata, n, radius, &params, z);
+	bool on_boundary = truncated_cg_hvp(NULL, grad, f_hvp, &fdata, n, radius, &params, z);
 
 	// compare with reference
 	double d = 0;
@@ -82,7 +82,7 @@ char* test_truncated_cg()
 }
 
 
-char* test_truncated_cg_old()
+char* test_truncated_cg_hmat()
 {
 	hid_t file = H5Fopen("../test/data/test_truncated_cg.hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	if (file < 0) {
@@ -116,7 +116,7 @@ char* test_truncated_cg_old()
 	set_truncated_cg_default_params(n, &params);
 
 	double* z = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	bool on_boundary = truncated_cg_old(grad, hess, n, radius, &params, z);
+	bool on_boundary = truncated_cg_hmat(grad, hess, n, radius, &params, z);
 
 	// compare with reference
 	double d = 0;

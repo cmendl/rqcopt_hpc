@@ -48,6 +48,8 @@ def riemannian_trust_region_optimize(f, retract, gradfunc, hessfunc, x_init, **k
             x = x_next
         if gfunc is not None:
             g_iter.append(gfunc(x))
+    # target function value at final iteration
+    f_iter.append(f(x))
     return x, f_iter, g_iter
 
 

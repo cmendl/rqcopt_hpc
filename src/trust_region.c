@@ -80,7 +80,7 @@ static double move_to_boundary(const double* b, const double* d, int n, double r
 ///     The conjugate gradient method and trust regions in large scale optimization
 ///     SIAM Journal on Numerical Analysis 20, 626-637 (1983)
 ///
-bool truncated_cg_old(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z)
+bool truncated_cg_hmat(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z)
 {
 	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
 	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
@@ -156,7 +156,7 @@ bool truncated_cg_old(const double* grad, const double* hess, int n, double radi
 ///     The conjugate gradient method and trust regions in large scale optimization
 ///     SIAM Journal on Numerical Analysis 20, 626-637 (1983)
 ///
-bool truncated_cg(const double* restrict x, const double* restrict grad, const hessian_vector_product_func f_hvp, void* fdata, const int n, const double radius, const struct truncated_cg_params* params, double* restrict z)
+bool truncated_cg_hvp(const double* restrict x, const double* restrict grad, const hessian_vector_product_func f_hvp, void* fdata, const int n, const double radius, const struct truncated_cg_params* params, double* restrict z)
 {
 	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
 	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
@@ -227,7 +227,7 @@ bool truncated_cg(const double* restrict x, const double* restrict grad, const h
 ///     Optimization Algorithms on Matrix Manifolds
 ///     Princeton University Press (2008)
 ///
-void riemannian_trust_region_optimize_old(target_func f, target_gradient_hessian_func f_deriv, void* fdata, retract_func retract, void* rdata,
+void riemannian_trust_region_optimize_hmat(target_func f, target_gradient_hessian_func f_deriv_hess, void* fdata, retract_func retract, void* rdata,
 	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
@@ -249,8 +249,8 @@ void riemannian_trust_region_optimize_old(target_func f, target_gradient_hessian
 
 	for (int k = 0; k < niter; k++)
 	{
-		double fx = f_deriv(x, fdata, grad, hess);
-		bool on_boundary = truncated_cg_old(grad, hess, n, radius, &params->tcg_params, eta);
+		double fx = f_deriv_hess(x, fdata, grad, hess);
+		bool on_boundary = truncated_cg_hmat(grad, hess, n, radius, &params->tcg_params, eta);
 		retract(x, eta, rdata, x_next);
 
 		f_iter[k] = fx;
@@ -281,6 +281,8 @@ void riemannian_trust_region_optimize_old(target_func f, target_gradient_hessian
 	}
 
 	memcpy(x_final, x, m * sizeof(double));
+	// target function value at final iteration
+	f_iter[niter] = f(x_final, fdata);
 
 	aligned_free(Heta);
 	aligned_free(eta);
@@ -301,7 +303,7 @@ void riemannian_trust_region_optimize_old(target_func f, target_gradient_hessian
 ///     Optimization Algorithms on Matrix Manifolds
 ///     Princeton University Press (2008)
 ///
-void riemannian_trust_region_optimize(const target_func f, const target_gradient_func f_deriv, const hessian_vector_product_func f_hvp, void* fdata,
+void riemannian_trust_region_optimize_hvp(const target_func f, const target_gradient_func f_deriv, const hessian_vector_product_func f_hvp, void* fdata,
 	retract_func retract, void* rdata,
 	const int n, const double* x_init, const int m, const struct rtr_params* params, const int niter, double* f_iter, double* x_final)
 {
@@ -324,7 +326,7 @@ void riemannian_trust_region_optimize(const target_func f, const target_gradient
 	for (int k = 0; k < niter; k++)
 	{
 		double fx = f_deriv(x, fdata, grad);
-		bool on_boundary = truncated_cg(x, grad, f_hvp, fdata, n, radius, &params->tcg_params, eta);
+		bool on_boundary = truncated_cg_hvp(x, grad, f_hvp, fdata, n, radius, &params->tcg_params, eta);
 		retract(x, eta, rdata, x_next);
 
 		f_iter[k] = fx;
@@ -356,7 +358,7 @@ void riemannian_trust_region_optimize(const target_func f, const target_gradient
 
 	memcpy(x_final, x, m * sizeof(double));
 	// target function value at final iteration
-	f_iter[niter] = f_deriv(x, fdata, grad);
+	f_iter[niter] = f(x_final, fdata);
 
 	aligned_free(Heta);
 	aligned_free(eta);

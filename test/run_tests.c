@@ -54,8 +54,8 @@ char* test_brickwall_blockenc_target_gradient_hessian();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix();
 #endif
-char* test_truncated_cg();
-char* test_truncated_cg_old();
+char* test_truncated_cg_hvp();
+char* test_truncated_cg_hmat();
 
 
 #define TEST_FUNCTION_ENTRY(fname) { .func = fname, .name = #fname }
@@ -107,8 +107,8 @@ int main()
 		#ifdef COMPLEX_CIRCUIT
 		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_gradient_vector_hessian_matrix),
 		#endif
-		TEST_FUNCTION_ENTRY(test_truncated_cg),
-		TEST_FUNCTION_ENTRY(test_truncated_cg_old),
+		TEST_FUNCTION_ENTRY(test_truncated_cg_hvp),
+		TEST_FUNCTION_ENTRY(test_truncated_cg_hmat),
 	};
 	int num_tests = sizeof(tests) / sizeof(struct test);
 

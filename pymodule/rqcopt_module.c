@@ -480,7 +480,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	struct mat4x4* Vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 
 	// perform optimization
-	optimize_brickwall_circuit(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, &params, niter, f_iter, Vlist_opt);
+	optimize_brickwall_circuit_hmat(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, &params, niter, f_iter, Vlist_opt);
 
 	// construct return value
 	// f_iter

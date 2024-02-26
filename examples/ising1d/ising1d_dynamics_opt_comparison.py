@@ -19,7 +19,7 @@ def main():
     with h5py.File(f"ising1d_dynamics_opt_n{nlayers}.hdf5", "r") as file:
         f_iter = file["f_iter"][:]
         Vlist  = decode_complex(file["Vlist"][:], "cplx")
-        assert file.attrs["L"] == L
+        assert file.attrs["nqubits"] == L
 
     # check unitary property
     print("all unitary:", all(np.allclose(V.conj().T @ V, np.identity(4), atol=1e-14, rtol=1e-14) for V in Vlist))

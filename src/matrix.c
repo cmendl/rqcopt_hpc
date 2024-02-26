@@ -505,3 +505,24 @@ void polar_factor(const struct mat4x4* restrict a, struct mat4x4* restrict u)
 		}
 	}
 }
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Retract the tangent space vector 'eta' onto the orthogonal or unitary matrix manifold at 'u'.
+///
+void retract(const struct mat4x4* restrict u, const double* restrict eta, struct mat4x4* restrict v)
+{
+	struct mat4x4 z;
+	real_to_antisymm(eta, &z);
+	// add identity matrix
+	z.data[ 0]++;
+	z.data[ 5]++;
+	z.data[10]++;
+	z.data[15]++;
+
+	struct mat4x4 w;
+	multiply_matrices(u, &z, &w);
+
+	polar_factor(&w, v);
+}
