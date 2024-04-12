@@ -7,7 +7,7 @@ find_package(BLAS REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C)
 find_package(Python3 REQUIRED COMPONENTS Development NumPy)
 
-set(CMAKE_C_FLAGS "-Wall -Wextra -O3")
+set(CMAKE_C_FLAGS "-Wall -Wextra -O3 -lm")
 
 add_compile_definitions(COMPLEX_CIRCUIT)
 
