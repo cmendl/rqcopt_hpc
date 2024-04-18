@@ -557,7 +557,10 @@ static struct PyModuleDef module = {
 	NULL,           // module documentation, may be NULL
 	-1,             // size of per-interpreter state of the module, or -1 if the module keeps state in global variables
 	methods,        // module methods
-	NULL            // slot definitions for multi-phase initialization
+	NULL,           // slot definitions for multi-phase initialization
+	NULL,           // traversal function to call during GC traversal of the module object, or NULL if not needed
+	NULL,           // a clear function to call during GC clearing of the module object, or NULL if not needed
+	NULL,           // a function to call during deallocation of the module object, or NULL if not needed
 };
 
 
