@@ -21,6 +21,14 @@ add_executable(            rqcopt_molecular ${RQCOPT_SOURCES} "examples/molecula
 target_include_directories(rqcopt_molecular PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
 target_link_libraries(     rqcopt_molecular PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
 
+add_executable(            rqcopt_benchmark_12_qubits ${RQCOPT_SOURCES} "examples/benchmark/benchmark_12_qubits.c" "examples/timing/timing.c")
+target_include_directories(rqcopt_benchmark_12_qubits PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
+target_link_libraries(     rqcopt_benchmark_12_qubits PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
+
+add_executable(            rqcopt_benchmark_16_qubits ${RQCOPT_SOURCES} "examples/benchmark/benchmark_16_qubits.c" "examples/timing/timing.c")
+target_include_directories(rqcopt_benchmark_16_qubits PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
+target_link_libraries(     rqcopt_benchmark_16_qubits PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
+
 add_library(               rqcopt_pymodule SHARED ${RQCOPT_SOURCES} "pymodule/rqcopt_module.c")
 target_include_directories(rqcopt_pymodule PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS} "src")
 target_link_libraries(     rqcopt_pymodule PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES} ${Python3_LIBRARIES})
