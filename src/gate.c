@@ -414,10 +414,11 @@ void apply_gate_placeholder(const int i, const int j, const struct statevector* 
 					{
 						for (int l = 0; l < 2; l++)
 						{
-							psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 0] = x;
-							psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 1] = y;
-							psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 2] = z;
-							psi_out->data[((((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l)*4 + 3] = w;
+							const intqs idx = (((((a*2 + k)*n + b)*2 + l)*o + c)*2 + k)*2 + l;
+							psi_out->data[idx*4 + 0] = x;
+							psi_out->data[idx*4 + 1] = y;
+							psi_out->data[idx*4 + 2] = z;
+							psi_out->data[idx*4 + 3] = w;
 						}
 					}
 				}
@@ -445,10 +446,11 @@ void apply_gate_placeholder(const int i, const int j, const struct statevector* 
 					{
 						for (int l = 0; l < 2; l++)
 						{
-							psi_out->data[((((((a*2 + l)*n + b)*2 + k)*o + c)*2 + k)*2 + l)*4 + 0] = x;
-							psi_out->data[((((((a*2 + l)*n + b)*2 + k)*o + c)*2 + k)*2 + l)*4 + 1] = z;
-							psi_out->data[((((((a*2 + l)*n + b)*2 + k)*o + c)*2 + k)*2 + l)*4 + 2] = y;  // note: flipping y <-> z
-							psi_out->data[((((((a*2 + l)*n + b)*2 + k)*o + c)*2 + k)*2 + l)*4 + 3] = w;
+							const intqs idx = (((((a*2 + l)*n + b)*2 + k)*o + c)*2 + k)*2 + l;
+							psi_out->data[idx*4 + 0] = x;
+							psi_out->data[idx*4 + 1] = z;
+							psi_out->data[idx*4 + 2] = y;  // note: flipping y <-> z
+							psi_out->data[idx*4 + 3] = w;
 						}
 					}
 				}

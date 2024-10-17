@@ -15,6 +15,9 @@
 
 static int ufunc(const struct statevector* restrict psi, void* udata, struct statevector* restrict psi_out)
 {
+	// suppress "unused parameter" warning
+	(void)udata;
+
 	assert(psi->nqubits == psi_out->nqubits);
 
 	const intqs n = (intqs)1 << psi->nqubits;

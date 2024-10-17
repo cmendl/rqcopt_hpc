@@ -13,6 +13,9 @@ struct f_hvp_data
 
 static void f_hvp(const double* restrict x, void* fdata, double* restrict vec, double* restrict hvp)
 {
+	// suppress "unused parameter" warning
+	(void)x;
+
 	const struct f_hvp_data* data = fdata;
 	cblas_dgemv(CblasRowMajor, CblasNoTrans, data->n, data->n, 1.0, data->hess, data->n, vec, 1, 0, hvp, 1);
 }

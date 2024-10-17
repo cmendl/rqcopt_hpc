@@ -476,7 +476,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	struct rtr_params params;
 	set_rtr_default_params(nlayers * 16, &params);
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, niter * sizeof(double));
+	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
 	struct mat4x4* Vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
 
 	// perform optimization
@@ -484,7 +484,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 
 	// construct return value
 	// f_iter
-	npy_intp dims_f_iter[1] = { niter };
+	npy_intp dims_f_iter[1] = { niter + 1 };
 	PyArrayObject* f_iter_obj = (PyArrayObject*)PyArray_SimpleNew(1, dims_f_iter, NPY_DOUBLE);
 	if (f_iter_obj == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "error creating to-be-returned 'f_iter' array");
@@ -497,7 +497,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 		aligned_free(Vlist_start);
 		return NULL;
 	}
-	memcpy(PyArray_DATA(f_iter_obj), f_iter, niter * sizeof(double));
+	memcpy(PyArray_DATA(f_iter_obj), f_iter, (niter + 1) * sizeof(double));
 	// Vlist_opt
 	npy_intp dims_Vlist[3] = { nlayers, 4, 4 };
 	PyArrayObject* Vlist_opt_obj = (PyArrayObject*)PyArray_SimpleNew(3, dims_Vlist, NPY_CDOUBLE);
@@ -545,22 +545,34 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 
 
 static PyMethodDef methods[] = {
-	{ "optimize_quantum_circuit",   optimize_quantum_circuit_py,   METH_VARARGS, "Optimize the two-qubit gates in a quantum circuit to approximate a unitary matrix using a trust-region method." },
-	{ "optimize_brickwall_circuit", optimize_brickwall_circuit_py, METH_VARARGS, "Optimize the quantum gates in a brickwall layout to approximate a unitary matrix using a trust-region method." },
-	{ NULL, NULL, 0, NULL }     // sentinel
+	{
+		.ml_name  = "optimize_quantum_circuit",
+		.ml_meth  = optimize_quantum_circuit_py,
+		.ml_flags = METH_VARARGS,
+		.ml_doc   = "Optimize the two-qubit gates in a quantum circuit to approximate a unitary matrix using a trust-region method."
+	},
+	{
+		.ml_name  = "optimize_brickwall_circuit",
+		.ml_meth  = optimize_brickwall_circuit_py,
+		.ml_flags = METH_VARARGS,
+		.ml_doc   = "Optimize the quantum gates in a brickwall layout to approximate a unitary matrix using a trust-region method."
+	},
+	{
+		0  // sentinel
+	},
 };
 
 
 static struct PyModuleDef module = {
-	PyModuleDef_HEAD_INIT,
-	"rqcopt_hpc",   // name of module
-	NULL,           // module documentation, may be NULL
-	-1,             // size of per-interpreter state of the module, or -1 if the module keeps state in global variables
-	methods,        // module methods
-	NULL,           // slot definitions for multi-phase initialization
-	NULL,           // traversal function to call during GC traversal of the module object, or NULL if not needed
-	NULL,           // a clear function to call during GC clearing of the module object, or NULL if not needed
-	NULL,           // a function to call during deallocation of the module object, or NULL if not needed
+	.m_base     = PyModuleDef_HEAD_INIT,
+	.m_name     = "rqcopt_hpc",  // name of module
+	.m_doc      = NULL,          // module documentation, may be NULL
+	.m_size     = -1,            // size of per-interpreter state of the module, or -1 if the module keeps state in global variables
+	.m_methods  = methods,       // module methods
+	.m_slots    = NULL,          // slot definitions for multi-phase initialization
+	.m_traverse = NULL,          // traversal function to call during GC traversal of the module object, or NULL if not needed
+	.m_clear    = NULL,          // a clear function to call during GC clearing of the module object, or NULL if not needed
+	.m_free     = NULL,          // a function to call during deallocation of the module object, or NULL if not needed
 };
 
 
