@@ -1,7 +1,9 @@
 ﻿
 cmake_minimum_required(VERSION 3.15)
 
-project(rqcopt_hpc)
+project(rqcopt_hpc LANGUAGES C)
+
+include(CTest)
 
 find_package(BLAS REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C)
@@ -38,3 +40,5 @@ set(TEST_SOURCES "test/numerical_gradient.c" "test/test_matrix.c" "test/test_sta
 add_executable(            rqcopt_test ${RQCOPT_SOURCES} ${TEST_SOURCES})
 target_include_directories(rqcopt_test PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src")
 target_link_libraries(     rqcopt_test PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
+
+add_test(NAME rqcopt_test COMMAND rqcopt_test)

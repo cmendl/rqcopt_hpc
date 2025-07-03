@@ -1,3 +1,6 @@
+[![CI](https://github.com/cmendl/rqcopt_hpc/actions/workflows/ci.yml/badge.svg)](https://github.com/cmendl/rqcopt_hpc/actions/workflows/ci.yml)
+
+
 Riemannian quantum circuit optimization (C implementation)
 ==========================================================
 
