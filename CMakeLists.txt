@@ -6,6 +6,9 @@ project(rqcopt_hpc LANGUAGES C)
 include(CTest)
 
 find_package(BLAS REQUIRED)
+if (NOT BLAS_INCLUDE_DIRS)
+    find_path(BLAS_INCLUDE_DIRS cblas.h "/usr/include" "/usr/include/cblas" "/usr/local/include" "/usr/local/include/cblas")
+endif()
 find_package(HDF5 REQUIRED COMPONENTS C)
 find_package(Python3 REQUIRED COMPONENTS Development NumPy)
 
