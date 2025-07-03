@@ -35,7 +35,7 @@ char* test_apply_quantum_circuit()
 		return "reading input statevector data from disk failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -45,7 +45,7 @@ char* test_apply_quantum_circuit()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
@@ -151,7 +151,7 @@ char* test_quantum_circuit_backward()
 		return "reading upstream gradient data from disk failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -161,7 +161,7 @@ char* test_quantum_circuit_backward()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
@@ -185,7 +185,7 @@ char* test_quantum_circuit_backward()
 	}
 
 	// quantum circuit backward pass
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (quantum_circuit_backward(gates, ngates, wires, &cache, &dpsi_out, &dpsi, dgates) < 0) {
 		return "'quantum_circuit_backward' failed internally";
 	}
@@ -214,7 +214,7 @@ char* test_quantum_circuit_backward()
 		.nqubits = nqubits,
 		.ngates  = ngates,
 	};
-	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 	numerical_gradient_backward(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, dpsi_out.data, h, (numeric*)dgates_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
@@ -253,7 +253,7 @@ static void quantum_circuit_directed_gradient_gates(const numeric* restrict x, v
 {
 	const struct quantum_circuit_directed_gradient_gates_params* params = p;
 
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, params->ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(params->ngates * sizeof(struct mat4x4));
 
 	struct statevector tmp;
 	allocate_statevector(params->psi->nqubits, &tmp);
@@ -305,7 +305,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		return "reading input statevector data from disk failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -315,7 +315,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		}
 	}
 
-	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -325,14 +325,14 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
 
 	// quantum circuit output state, gradient and second derivatives of gates (Hessian-vector product output vector)
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (quantum_circuit_gates_hessian_vector_product(gates, gatedirs, ngates, wires, &psi, &phi, &psi_out, dgates, hess_gatedirs) < 0) {
 		return "'quantum_circuit_gates_hessian_vector_product' failed internally";
 	}
@@ -354,7 +354,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		.nqubits = nqubits,
 		.ngates  = ngates,
 	};
-	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 	numerical_gradient_backward(apply_quantum_circuit_gates, &params_gates, ngates * 16, (numeric*)gates, 1 << nqubits, phi.data, h, (numeric*)dgates_num);
 	// compare
 	if (uniform_distance(ngates * 16, (numeric*)dgates, (numeric*)dgates_num) > 1e-8) {
@@ -369,7 +369,7 @@ char* test_quantum_circuit_gates_hessian_vector_product()
 		.gatedirs = gatedirs,
 		.ngates   = ngates,
 	};
-	struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 	numeric dy = 1;
 	numerical_gradient_backward(quantum_circuit_directed_gradient_gates, &params, ngates * 16, (numeric*)gates, 1, &dy, h, (numeric*)hess_gatedirs_num);
 	// compare

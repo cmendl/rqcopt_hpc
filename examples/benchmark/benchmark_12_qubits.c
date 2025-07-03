@@ -45,17 +45,17 @@ int main()
 	}
 
 	// quantum gates
-	struct mat4x4* vlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (read_hdf5_dataset(file, "vlist", H5T_NATIVE_DOUBLE, vlist) < 0) {
 		fprintf(stderr, "reading two-qubit quantum gates from disk failed\n");
 		return -1;
 	}
 
 	// permutations
-	int** perms = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(int*));
+	int** perms = aligned_malloc(nlayers * sizeof(int*));
 	for (int i = 0; i < nlayers; i++)
 	{
-		perms[i] = aligned_alloc(MEM_DATA_ALIGN, nqubits * sizeof(int));
+		perms[i] = aligned_malloc(nqubits * sizeof(int));
 
 		char varname[32];
 		sprintf(varname, "perm%i", i);
@@ -70,7 +70,7 @@ int main()
 	const int m = nlayers * num_tangent_params;
 
 	numeric f;
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad = aligned_malloc(m * sizeof(double));
 
 	uint64_t start_tick = get_ticks();
 

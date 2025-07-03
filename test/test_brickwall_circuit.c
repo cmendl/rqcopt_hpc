@@ -376,7 +376,7 @@ char* test_brickwall_unitary_backward_hessian()
 
 		// brickwall unitary backward pass and Hessian computation
 		struct mat4x4 dVlist[4];
-		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess = aligned_malloc(m * m * sizeof(numeric));
 		if (brickwall_unitary_backward_hessian(Vlist, nlayers, pperms, &cache, &dpsi_out, &dpsi, dVlist, hess) < 0) {
 			return "'brickwall_unitary_backward_hessian' failed internally";
 		}

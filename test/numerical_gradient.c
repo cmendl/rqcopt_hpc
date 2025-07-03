@@ -8,11 +8,11 @@
 ///
 void numerical_gradient_backward(generic_func f, void* params, const int n, const numeric* restrict x, const int m, const numeric* restrict dy, const numeric h, numeric* restrict grad)
 {
-	numeric *xmod = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
+	numeric *xmod = aligned_malloc(n * sizeof(numeric));
 	memcpy(xmod, x, n * sizeof(numeric));
 
 	// y = f(x)
-	numeric *y = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(numeric));
+	numeric *y = aligned_malloc(m * sizeof(numeric));
 
 	for (int i = 0; i < n; i++)
 	{
@@ -53,9 +53,9 @@ void numerical_gradient_backward(generic_func f, void* params, const int n, cons
 ///
 void numerical_gradient_forward(generic_func f, void* params, const int n, const numeric* restrict x, const numeric* restrict dir, const int m, const numeric h, numeric* restrict grad)
 {
-	numeric *xd = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
-	numeric *yp = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(numeric));
-	numeric *yn = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(numeric));
+	numeric *xd = aligned_malloc(n * sizeof(numeric));
+	numeric *yp = aligned_malloc(m * sizeof(numeric));
+	numeric *yn = aligned_malloc(m * sizeof(numeric));
 
 	// yp = f(x + h*dir)
 	for (int i = 0; i < n; i++)
@@ -93,7 +93,7 @@ void numerical_gradient_backward_wirtinger(generic_func f, void* params, const i
 	numerical_gradient_backward(f, params, n, x, m, dy, h, grad);
 
 	// h -> i*h
-	numeric *grad_c = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
+	numeric *grad_c = aligned_malloc(n * sizeof(numeric));
 	numerical_gradient_backward(f, params, n, x, m, dy, h * I, grad_c);
 	for (int i = 0; i < n; i++)
 	{
@@ -111,7 +111,7 @@ void numerical_gradient_backward_conjugated_wirtinger(generic_func f, void* para
 	numerical_gradient_backward(f, params, n, x, m, dy, h, grad);
 
 	// h -> i*h
-	numeric *grad_c = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(numeric));
+	numeric *grad_c = aligned_malloc(n * sizeof(numeric));
 	numerical_gradient_backward(f, params, n, x, m, dy, h * I, grad_c);
 	for (int i = 0; i < n; i++)
 	{

@@ -38,7 +38,7 @@ int main()
 		return -1;
 	}
 	// target unitary
-	numeric* expiH = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(numeric));
+	numeric* expiH = aligned_malloc(n * n * sizeof(numeric));
 	if (expiH == NULL) {
 		fprintf(stderr, "memory allocation for target unitary failed\n");
 		return -1;
@@ -48,7 +48,7 @@ int main()
 		return -1;
 	}
 	// initial to-be optimized quantum gates
-	struct mat4x4* vlist_start = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist_start = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (read_hdf5_dataset(file, "Vlist_start", H5T_NATIVE_DOUBLE, vlist_start) < 0) {
 		fprintf(stderr, "reading initial two-qubit quantum gates from disk failed\n");
 		return -1;
@@ -74,9 +74,9 @@ int main()
 	// number of iterations
 	const int niter = 10;
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
+	double* f_iter = aligned_malloc((niter + 1) * sizeof(double));
 
-	struct mat4x4* vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist_opt = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 	uint64_t start_tick = get_ticks();
 

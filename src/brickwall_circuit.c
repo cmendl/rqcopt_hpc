@@ -182,7 +182,7 @@ int brickwall_unitary_backward_hessian(const struct mat4x4 vlist[], int nlayers,
 		}
 	}
 	// temporary derivative with respect to two gates
-	struct mat4x4* h = aligned_alloc(MEM_DATA_ALIGN, 16 * sizeof(struct mat4x4));
+	struct mat4x4* h = aligned_malloc(16 * sizeof(struct mat4x4));
 	if (h == NULL) {
 		fprintf(stderr, "allocating temporary gates failed\n");
 		return -1;

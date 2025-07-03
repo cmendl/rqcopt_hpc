@@ -74,7 +74,7 @@ char* test_antisymm()
 
 char* test_real_to_antisymm()
 {
-	double* r = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	double* r = aligned_malloc(num_tangent_params * sizeof(double));
 	for (int i = 0; i < num_tangent_params; i++)
 	{
 		r[i] = (((5 + i) * 7919) % 229) / 107.0 - 1;
@@ -90,7 +90,7 @@ char* test_real_to_antisymm()
 		return "matrix returned by 'real_to_antisymm' is not anti-symmetric";
 	}
 
-	double* s = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	double* s = aligned_malloc(num_tangent_params * sizeof(double));
 	antisymm_to_real(&w, s);
 	// 's' must match 'r'
 	double d = 0;
@@ -116,7 +116,7 @@ char* test_real_to_tangent()
 		return "'H5Fopen' in test_real_to_tangent failed";
 	}
 
-	double* r = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	double* r = aligned_malloc(num_tangent_params * sizeof(double));
 	if (read_hdf5_dataset(file, "r", H5T_NATIVE_DOUBLE, r) < 0) {
 		return "reading vector entries from disk failed";
 	}
@@ -129,7 +129,7 @@ char* test_real_to_tangent()
 	struct mat4x4 z;
 	real_to_tangent(r, &v, &z);
 
-	double* s = aligned_alloc(MEM_DATA_ALIGN, num_tangent_params * sizeof(double));
+	double* s = aligned_malloc(num_tangent_params * sizeof(double));
 	tangent_to_real(&v, &z, s);
 	// 's' must match 'r'
 	double d = 0;

@@ -106,7 +106,7 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 		return -1;
 	}
 
-	struct mat4x4* dgates_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates_unit = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (dgates_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
 		return -1;
@@ -181,7 +181,7 @@ int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata, const st
 ///
 int circuit_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, numeric* fval, double* grad_vec)
 {
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (dgates == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
@@ -233,7 +233,7 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 		return -1;
 	}
 
-	struct mat4x4* dgates_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates_unit = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (dgates_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
 		return -1;
@@ -244,7 +244,7 @@ int circuit_unitary_target_hessian_vector_product(linear_func ufunc, void* udata
 		memset(dgates[i].data, 0, sizeof(dgates[i].data));
 	}
 
-	struct mat4x4* hess_gatedirs_unit = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs_unit = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (hess_gatedirs_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", ngates);
 		return -1;
@@ -316,13 +316,13 @@ int circuit_unitary_target_projected_hessian_vector_product(linear_func ufunc, v
 	const struct mat4x4 gates[], const struct mat4x4 gatedirs[], const int ngates, const int wires[], const int nqubits,
 	numeric* fval, double* restrict grad_vec, double* restrict hvp_vec)
 {
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (dgates == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
 	}
 
-	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (hess_gatedirs == NULL) {
 		fprintf(stderr, "allocating temporary memory for Hessian-vector product matrices failed\n");
 		return -1;
@@ -394,8 +394,8 @@ int brickwall_unitary_target(linear_func ufunc, void* udata, const struct mat4x4
 {
 	const int ngates = nlayers * (nqubits / 2);
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	brickwall_to_sequential(nqubits, nlayers, vlist, perms, gates, wires);
 
 	int ret = circuit_unitary_target(ufunc, udata, gates, ngates, wires, nqubits, fval);
@@ -417,11 +417,11 @@ int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata, const 
 {
 	const int ngates = nlayers * (nqubits / 2);
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	brickwall_to_sequential(nqubits, nlayers, vlist, perms, gates, wires);
 
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	int ret = circuit_unitary_target_and_gradient(ufunc, udata, gates, ngates, wires, nqubits, fval, dgates);
 
 	// accumulate gradients
@@ -452,7 +452,7 @@ int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata, const 
 ///
 int brickwall_unitary_target_and_projected_gradient(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, double* grad_vec)
 {
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
@@ -489,14 +489,14 @@ int brickwall_unitary_target_hessian_vector_product(linear_func ufunc, void* uda
 {
 	const int ngates = nlayers * (nqubits / 2);
 
-	struct mat4x4* gates    = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	struct mat4x4* gates    = aligned_malloc(ngates * sizeof(struct mat4x4));
+	struct mat4x4* gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	brickwall_to_sequential(nqubits, nlayers, vlist, perms, gates,    wires);
 	brickwall_to_sequential(nqubits, nlayers, vdirs, perms, gatedirs, wires);
 
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 	int ret = circuit_unitary_target_hessian_vector_product(ufunc, udata, gates, gatedirs, ngates, wires, nqubits, fval, dgates, hess_gatedirs);
 
@@ -534,13 +534,13 @@ int brickwall_unitary_target_projected_hessian_vector_product(linear_func ufunc,
 	const struct mat4x4 vlist[], const struct mat4x4 vdirs[], const int nlayers, const int* perms[], const int nqubits,
 	numeric* fval, double* restrict grad_vec, double* restrict hvp_vec)
 {
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
 	}
 
-	struct mat4x4* hess_vdirs = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* hess_vdirs = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (hess_vdirs == NULL) {
 		fprintf(stderr, "allocating temporary memory for Hessian-vector product matrices failed\n");
 		return -1;
@@ -611,7 +611,7 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 		return -1;
 	}
 
-	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist_unit = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
@@ -625,7 +625,125 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 	const int m = nlayers * 16;
 	memset(hess, 0, m * m * sizeof(numeric));
 
-	numeric* hess_unit = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+	numeric* hess_unit = aligned_malloc(m * m * sizeof(numeric));
+	if (hess_unit == NULL) {
+		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
+		return -1;
+	}
+
+	numeric f = 0;
+	// implement trace via summation over unit vectors
+	const intqs n = (intqs)1 << nqubits;
+	for (intqs b = 0; b < n; b++)
+	{
+		int ret;
+
+		memset(psi.data, 0, n * sizeof(numeric));
+		psi.data[b] = 1;
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		// brickwall unitary forward pass
+		if (brickwall_unitary_forward(vlist, nlayers, perms, &psi, &cache, &Wpsi) < 0) {
+			fprintf(stderr, "'brickwall_unitary_forward' failed internally");
+			return -3;
+		}
+
+		// f += <Upsi | Wpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += Upsi.data[a] * Wpsi.data[a];
+		}
+
+		// brickwall unitary backward pass and Hessian computation
+		// note: overwriting 'psi' with gradient
+		if (brickwall_unitary_backward_hessian(vlist, nlayers, perms, &cache, &Upsi, &psi, dvlist_unit, hess_unit) < 0) {
+			fprintf(stderr, "'brickwall_unitary_backward_hessian' failed internally");
+			return -4;
+		}
+
+		// accumulate gate gradients for current unit vector
+		for (int i = 0; i < nlayers; i++)
+		{
+			add_matrix(&dvlist[i], &dvlist_unit[i]);
+		}
+
+		// accumulate Hessian matrix for current unit vector
+		for (int i = 0; i < m*m; i++)
+		{
+			hess[i] += hess_unit[i];
+		}
+	}
+
+	aligned_free(hess_unit);
+	aligned_free(dvlist_unit);
+	free_quantum_circuit_cache(&cache);
+	free_statevector(&Wpsi);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Approximately evaluate target function -tr[U^{\dagger} W], its gate gradients and Hessian,
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state
+/// via random state vector sampling.
+///
+int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, struct mat4x4 dvlist[], numeric* hess)
+{
+	// temporary statevectors
+	struct statevector psi = { 0 };
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Upsi = { 0 };
+	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Wpsi = { 0 };
+	if (allocate_statevector(nqubits, &Wpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+
+	struct quantum_circuit_cache cache = { 0 };
+	if (allocate_quantum_circuit_cache(nqubits, nlayers * (nqubits / 2), &cache) < 0) {
+		fprintf(stderr, "'allocate_quantum_circuit_cache' failed");
+		return -1;
+	}
+
+	struct mat4x4* dvlist_unit = aligned_malloc(nlayers * sizeof(struct mat4x4));
+	if (dvlist_unit == NULL) {
+		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
+		return -1;
+	}
+
+	for (int i = 0; i < nlayers; i++)
+	{
+		memset(dvlist[i].data, 0, sizeof(dvlist[i].data));
+	}
+
+	const int m = nlayers * 16;
+	memset(hess, 0, m * m * sizeof(numeric));
+
+	numeric* hess_unit = aligned_malloc(m * m * sizeof(numeric));
 	if (hess_unit == NULL) {
 		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
 		return -1;
@@ -707,7 +825,7 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 ///
 int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, double* grad_vec, double* H)
 {
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist == NULL)
 	{
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
@@ -715,7 +833,7 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 	}
 
 	const int m = nlayers * 16;
-	numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+	numeric* hess = aligned_malloc(m * m * sizeof(numeric));
 
 	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, vlist, nlayers, nqubits, perms, fval, dvlist, hess);
 	if (ret < 0) {
@@ -936,7 +1054,7 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 		return -1;
 	}
 
-	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist_unit = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
@@ -1043,7 +1161,7 @@ int brickwall_blockenc_target_and_gradient(linear_func hfunc, void* hdata, const
 ///
 int brickwall_blockenc_target_and_gradient_vector(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], double* fval, double* grad_vec)
 {
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist == NULL) {
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
 		return -1;
@@ -1120,7 +1238,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		return -1;
 	}
 
-	struct statevector_array* phi = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct statevector_array));
+	struct statevector_array* phi = aligned_malloc(nlayers * sizeof(struct statevector_array));
 	if (phi == NULL) {
 		fprintf(stderr, "memory allocation for %i statevector_array structs failed\n", nlayers);
 		return -1;
@@ -1137,7 +1255,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 		return -1;
 	}
 
-	struct mat4x4* dvlist_unit = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist_unit = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist_unit == NULL) {
 		fprintf(stderr, "memory allocation for %i temporary quantum gates failed\n", nlayers);
 		return -1;
@@ -1156,12 +1274,12 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 	memset(hess, 0, m * m * sizeof(numeric));
 	#endif
 
-	numeric* hess_unit1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+	numeric* hess_unit1 = aligned_malloc(m * m * sizeof(numeric));
 	if (hess_unit1 == NULL) {
 		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
 		return -1;
 	}
-	numeric* hess_unit2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+	numeric* hess_unit2 = aligned_malloc(m * m * sizeof(numeric));
 	if (hess_unit2 == NULL) {
 		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
 		return -1;
@@ -1333,7 +1451,7 @@ int brickwall_blockenc_target_gradient_hessian(linear_func hfunc, void* hdata,
 ///
 int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, void* hdata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], double* fval, double* grad_vec, double* H)
 {
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (dvlist == NULL)
 	{
 		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
@@ -1341,8 +1459,8 @@ int brickwall_blockenc_target_gradient_vector_hessian_matrix(linear_func hfunc, 
 	}
 
 	const int m = nlayers * 16;
-	numeric* hess1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-	numeric* hess2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+	numeric* hess1 = aligned_malloc(m * m * sizeof(numeric));
+	numeric* hess2 = aligned_malloc(m * m * sizeof(numeric));
 
 	int ret = brickwall_blockenc_target_gradient_hessian(hfunc, hdata, vlist, nlayers, nqubits, perms, fval, dvlist, hess1, hess2);
 	if (ret < 0) {

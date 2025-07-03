@@ -44,7 +44,7 @@ char* test_circuit_unitary_target()
 		return "'H5Fopen' in test_circuit_unitary_target failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -54,7 +54,7 @@ char* test_circuit_unitary_target()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
@@ -113,7 +113,7 @@ char* test_circuit_unitary_target_and_gradient()
 		return "'H5Fopen' in test_circuit_unitary_target_and_gradient failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -123,13 +123,13 @@ char* test_circuit_unitary_target_and_gradient()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
 
 	numeric f;
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (circuit_unitary_target_and_gradient(ufunc, NULL, gates, ngates, wires, nqubits, &f, dgates) < 0) {
 		return "'circuit_unitary_target_and_gradient' failed internally";
 	}
@@ -155,7 +155,7 @@ char* test_circuit_unitary_target_and_gradient()
 		.ngates  = ngates,
 	};
 
-	struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 	numeric dy = 1;
 	#ifdef COMPLEX_CIRCUIT
@@ -197,7 +197,7 @@ static void circuit_unitary_target_directed_gradient(const numeric* restrict x, 
 	const struct circuit_unitary_target_directed_gradient_params* params = p;
 
 	numeric f;
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, params->ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(params->ngates * sizeof(struct mat4x4));
 
 	circuit_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->ngates, params->wires, params->nqubits, &f, dgates);
 
@@ -234,7 +234,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 		return "'H5Fopen' in test_circuit_unitary_target_hessian_vector_product failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -244,7 +244,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 		}
 	}
 
-	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -254,15 +254,15 @@ char* test_circuit_unitary_target_hessian_vector_product()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
 
 	// quantum circuit unitary target function, its gate gradients and second derivatives of gates (Hessian-vector product output vector)
 	numeric f;
-	struct mat4x4* dgates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
-	struct mat4x4* hess_gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* dgates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (circuit_unitary_target_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, dgates, hess_gatedirs) < 0) {
 		return "'circuit_unitary_target_hessian_vector_product' failed internally";
 	}
@@ -288,7 +288,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 			.ngates  = ngates,
 		};
 
-		struct mat4x4* dgates_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+		struct mat4x4* dgates_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 		numeric dy = 1;
 
@@ -318,7 +318,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 			.nqubits  = nqubits,
 		};
 
-		struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+		struct mat4x4* hess_gatedirs_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 		numeric dy = 1;
 
@@ -341,7 +341,7 @@ char* test_circuit_unitary_target_hessian_vector_product()
 			.nqubits = nqubits,
 		};
 
-		struct mat4x4* hess_gatedirs_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+		struct mat4x4* hess_gatedirs_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 		numerical_gradient_forward(circuit_unitary_target_and_gradient_wapper, &params, ngates * 16, (numeric*)gates, (numeric*)gatedirs, ngates * 16, h, (numeric*)hess_gatedirs_num);
 
@@ -373,7 +373,7 @@ static void circuit_unitary_target_and_projected_gradient_wrapper(const numeric*
 	const struct mat4x4* gates = (const struct mat4x4*)x;
 	struct mat4x4* dgates_proj = (struct mat4x4*)y;
 
-	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, params->ngates * num_tangent_params * sizeof(double));
+	double* grad_vec = aligned_malloc(params->ngates * num_tangent_params * sizeof(double));
 
 	numeric f;
 	circuit_unitary_target_and_projected_gradient(ufunc, NULL, gates, params->ngates, params->wires, params->nqubits, &f, grad_vec);
@@ -397,7 +397,7 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 		return "'H5Fopen' in test_circuit_unitary_target_projected_hessian_vector_product failed";
 	}
 
-	struct mat4x4* gates = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -407,7 +407,7 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 		}
 	}
 
-	struct mat4x4* gatedirs = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gatedirs = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		char varname[32];
@@ -417,15 +417,15 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 		}
 	}
 
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		return "reading wire indices from disk failed";
 	}
 
 	// quantum circuit unitary target function, its projected gate gradients and second derivatives of gates (Hessian-vector product output vector)
 	numeric f;
-	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
-	double* hvp_vec  = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
+	double* grad_vec = aligned_malloc(ngates * num_tangent_params * sizeof(double));
+	double* hvp_vec  = aligned_malloc(ngates * num_tangent_params * sizeof(double));
 	if (circuit_unitary_target_projected_hessian_vector_product(ufunc, NULL, gates, gatedirs, ngates, wires, nqubits, &f, grad_vec, hvp_vec) < 0) {
 		return "'circuit_unitary_target_projected_hessian_vector_product' failed internally";
 	}
@@ -449,11 +449,11 @@ char* test_circuit_unitary_target_projected_hessian_vector_product()
 		.ngates  = ngates,
 		.nqubits = nqubits,
 	};
-	struct mat4x4* hess_gatedirs_proj_num = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* hess_gatedirs_proj_num = aligned_malloc(ngates * sizeof(struct mat4x4));
 	numerical_gradient_forward(circuit_unitary_target_and_projected_gradient_wrapper, &params, ngates * 16, (numeric*)gates, (numeric*)gatedirs, ngates * 16/*ngates * num_tangent_params * sizeof(double) / sizeof(numeric)*/, h, (numeric*)hess_gatedirs_proj_num);
 
 	// numerical gradient will (in general) not be within tangent plane, so need to project again
-	double* hvp_vec_num = aligned_alloc(MEM_DATA_ALIGN, ngates * num_tangent_params * sizeof(double));
+	double* hvp_vec_num = aligned_malloc(ngates * num_tangent_params * sizeof(double));
 	for (int i = 0; i < ngates; i++)
 	{
 		// tangent_to_real implicitly also projects into tangent plane
@@ -553,7 +553,7 @@ static void brickwall_unitary_target_wrapper(const numeric* restrict x, void* p,
 {
 	const struct brickwall_unitary_target_params* params = p;
 
-	struct mat4x4* vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist = aligned_malloc(params->nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < params->nlayers; i++) {
 		memcpy(vlist[i].data, &x[i * 16], sizeof(vlist[i].data));
 	}
@@ -695,7 +695,7 @@ char* test_brickwall_unitary_target_and_projected_gradient()
 	const int m = nlayers * 16;
 
 	numeric f;
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad = aligned_malloc(m * sizeof(double));
 	if (brickwall_unitary_target_and_projected_gradient(ufunc, NULL, vlist, nlayers, nqubits, pperms, &f, grad) < 0) {
 		return "'brickwall_unitary_target_and_gradient_vector' failed internally";
 	}
@@ -710,7 +710,7 @@ char* test_brickwall_unitary_target_and_projected_gradient()
 		return "computed target function value does not match reference";
 	}
 
-	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad_ref = aligned_malloc(m * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
 		return "reading reference gradient vector from disk failed";
 	}
@@ -745,7 +745,7 @@ static void brickwall_unitary_target_directed_gradient(const numeric* restrict x
 	const struct brickwall_unitary_target_directed_gradient_params* params = p;
 
 	numeric f;
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(params->nlayers * sizeof(struct mat4x4));
 
 	brickwall_unitary_target_and_gradient(params->ufunc, NULL, (struct mat4x4*)x, params->nlayers, params->nqubits, params->perms, &f, dvlist);
 
@@ -782,7 +782,7 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 		return "'H5Fopen' in test_brickwall_unitary_target_hessian_vector_product failed";
 	}
 
-	struct mat4x4* vlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < nlayers; i++)
 	{
 		char varname[32];
@@ -792,7 +792,7 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 		}
 	}
 
-	struct mat4x4* vdirs = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vdirs = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < nlayers; i++)
 	{
 		char varname[32];
@@ -815,8 +815,8 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 
 	// brickwall circuit unitary target function, its gate gradients and second derivatives of gates (Hessian-vector product output vector)
 	numeric f;
-	struct mat4x4* dvlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
-	struct mat4x4* hess_vdirs = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
+	struct mat4x4* hess_vdirs = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	if (brickwall_unitary_target_hessian_vector_product(ufunc, NULL, vlist, vdirs, nlayers, pperms, nqubits, &f, dvlist, hess_vdirs) < 0) {
 		return "'brickwall_unitary_target_hessian_vector_product' failed internally";
 	}
@@ -842,7 +842,7 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 			.nlayers = nlayers,
 		};
 
-		struct mat4x4* dvlist_num = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+		struct mat4x4* dvlist_num = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 		numeric dy = 1;
 
@@ -872,7 +872,7 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 			.nqubits = nqubits,
 		};
 
-		struct mat4x4* hess_vdirs_num = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+		struct mat4x4* hess_vdirs_num = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 		numeric dy = 1;
 
@@ -895,7 +895,7 @@ char* test_brickwall_unitary_target_hessian_vector_product()
 			.nqubits = nqubits,
 		};
 
-		struct mat4x4* hess_vdirs_num = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+		struct mat4x4* hess_vdirs_num = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 		numerical_gradient_forward(brickwall_unitary_target_and_gradient_wapper, &params, nlayers * 16, (numeric*)vlist, (numeric*)vdirs, nlayers * 16, h, (numeric*)hess_vdirs_num);
 
@@ -926,7 +926,7 @@ static void brickwall_unitary_target_and_projected_gradient_wrapper(const numeri
 	const struct mat4x4* vlist = (const struct mat4x4*)x;
 	struct mat4x4* dvlist_proj = (struct mat4x4*)y;
 
-	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * num_tangent_params * sizeof(double));
+	double* grad_vec = aligned_malloc(params->nlayers * num_tangent_params * sizeof(double));
 
 	numeric f;
 	brickwall_unitary_target_and_projected_gradient(ufunc, NULL, vlist, params->nlayers, params->nqubits, params->perms, &f, grad_vec);
@@ -950,7 +950,7 @@ char* test_brickwall_unitary_target_projected_hessian_vector_product()
 		return "'H5Fopen' in test_brickwall_unitary_target_projected_hessian_vector_product failed";
 	}
 
-	struct mat4x4* vlist = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < nlayers; i++)
 	{
 		char varname[32];
@@ -960,7 +960,7 @@ char* test_brickwall_unitary_target_projected_hessian_vector_product()
 		}
 	}
 
-	struct mat4x4* vdirs = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vdirs = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < nlayers; i++)
 	{
 		char varname[32];
@@ -983,8 +983,8 @@ char* test_brickwall_unitary_target_projected_hessian_vector_product()
 
 	// brickwall circuit unitary target function, its projected gate gradients and second derivatives of gates (Hessian-vector product output vector)
 	numeric f;
-	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, nlayers * num_tangent_params * sizeof(double));
-	double* hvp_vec  = aligned_alloc(MEM_DATA_ALIGN, nlayers * num_tangent_params * sizeof(double));
+	double* grad_vec = aligned_malloc(nlayers * num_tangent_params * sizeof(double));
+	double* hvp_vec  = aligned_malloc(nlayers * num_tangent_params * sizeof(double));
 	if (brickwall_unitary_target_projected_hessian_vector_product(ufunc, NULL, vlist, vdirs, nlayers, pperms, nqubits, &f, grad_vec, hvp_vec) < 0) {
 		return "'brickwall_unitary_target_projected_hessian_vector_product' failed internally";
 	}
@@ -1008,11 +1008,11 @@ char* test_brickwall_unitary_target_projected_hessian_vector_product()
 		.nlayers = nlayers,
 		.nqubits = nqubits,
 	};
-	struct mat4x4* hess_vdirs_proj_num = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* hess_vdirs_proj_num = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	numerical_gradient_forward(brickwall_unitary_target_and_projected_gradient_wrapper, &params, nlayers * 16, (numeric*)vlist, (numeric*)vdirs, nlayers * 16/*nlayers * num_tangent_params * sizeof(double) / sizeof(numeric)*/, h, (numeric*)hess_vdirs_proj_num);
 
 	// numerical gradient will (in general) not be within tangent plane, so need to project again
-	double* hvp_vec_num = aligned_alloc(MEM_DATA_ALIGN, nlayers * num_tangent_params * sizeof(double));
+	double* hvp_vec_num = aligned_malloc(nlayers * num_tangent_params * sizeof(double));
 	for (int i = 0; i < nlayers; i++)
 	{
 		// tangent_to_real implicitly also projects into tangent plane
@@ -1094,7 +1094,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 
 		numeric f;
 		struct mat4x4 dvlist[5];
-		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess = aligned_malloc(m * m * sizeof(numeric));
 		if (brickwall_unitary_target_gradient_hessian(ufunc, NULL, vlist, nlayers[i], nqubits, pperms, &f, dvlist, hess) < 0) {
 			return "'brickwall_unitary_target_gradient_hessian' failed internally";
 		}
@@ -1179,7 +1179,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		}
 
 		sprintf(varname, "hess%i", i);
-		numeric* hess_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess_ref = aligned_malloc(m * m * sizeof(numeric));
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, hess_ref) < 0) {
 			return "reading reference Hessian matrix from disk failed";
 		}
@@ -1235,8 +1235,8 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 	const int m = nlayers * 16;
 
 	numeric f;
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	double* grad = aligned_malloc(m * sizeof(double));
+	double* H = aligned_malloc(m * m * sizeof(double));
 
 	if (brickwall_unitary_target_gradient_vector_hessian_matrix(ufunc, NULL, vlist, nlayers, nqubits, pperms, &f, grad, H) < 0) {
 		return "'brickwall_unitary_target_gradient_vector_hessian_matrix' failed internally";
@@ -1252,7 +1252,7 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 		return "computed target function value does not match reference";
 	}
 
-	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad_ref = aligned_malloc(m * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
 		return "reading reference gradient vector from disk failed";
 	}
@@ -1273,7 +1273,7 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 		return "computed gate Hessian matrix is not symmetric";
 	}
 
-	double* H_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	double* H_ref = aligned_malloc(m * m * sizeof(double));
 	if (H_ref == NULL) {
 		return "memory allocation for reference Hessian matrix failed";
 	}
@@ -1373,7 +1373,7 @@ static void blockenc_target_wrapper(const numeric* restrict x, void* p, numeric*
 {
 	const struct brickwall_blockenc_target_params* params = p;
 
-	struct mat4x4* vlist = aligned_alloc(MEM_DATA_ALIGN, params->nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vlist = aligned_malloc(params->nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < params->nlayers; i++) {
 		memcpy(vlist[i].data, &x[i * 16], sizeof(vlist[i].data));
 	}
@@ -1521,7 +1521,7 @@ char* test_brickwall_blockenc_target_and_gradient_vector()
 	const int m = nlayers * 16;
 
 	double f;
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad = aligned_malloc(m * sizeof(double));
 	if (brickwall_blockenc_target_and_gradient_vector(ufunc, NULL, vlist, nlayers, nqubits, pperms, &f, grad) < 0) {
 		return "'brickwall_blockenc_target_and_gradient_vector' failed internally";
 	}
@@ -1536,7 +1536,7 @@ char* test_brickwall_blockenc_target_and_gradient_vector()
 		return "computed target function value does not match reference";
 	}
 
-	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad_ref = aligned_malloc(m * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
 		return "reading reference gradient vector from disk failed";
 	}
@@ -1614,13 +1614,13 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		double f;
 		struct mat4x4 dvlist[5];
 		#ifdef COMPLEX_CIRCUIT
-		numeric* hess1 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
-		numeric* hess2 = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess1 = aligned_malloc(m * m * sizeof(numeric));
+		numeric* hess2 = aligned_malloc(m * m * sizeof(numeric));
 		if (brickwall_blockenc_target_gradient_hessian(ufunc, NULL, vlist, nlayers[i], nqubits, pperms, &f, dvlist, hess1, hess2) < 0) {
 			return "'brickwall_blockenc_target_gradient_hessian' failed internally";
 		}
 		#else
-		numeric* hess = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess = aligned_malloc(m * m * sizeof(numeric));
 		if (brickwall_blockenc_target_gradient_hessian(ufunc, NULL, vlist, nlayers[i], nqubits, pperms, &f, dvlist, hess) < 0) {
 			return "'brickwall_blockenc_target_gradient_hessian' failed internally";
 		}
@@ -1745,12 +1745,12 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 
 		#ifdef COMPLEX_CIRCUIT
 		sprintf(varname, "hess1_%i", i);
-		numeric* hess1_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess1_ref = aligned_malloc(m * m * sizeof(numeric));
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, hess1_ref) < 0) {
 			return "reading reference Hessian matrix from disk failed";
 		}
 		sprintf(varname, "hess2_%i", i);
-		numeric* hess2_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess2_ref = aligned_malloc(m * m * sizeof(numeric));
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, hess2_ref) < 0) {
 			return "reading reference Hessian matrix from disk failed";
 		}
@@ -1767,7 +1767,7 @@ char* test_brickwall_blockenc_target_gradient_hessian()
 		aligned_free(hess1_ref);
 		#else
 		sprintf(varname, "hess%i", i);
-		numeric* hess_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(numeric));
+		numeric* hess_ref = aligned_malloc(m * m * sizeof(numeric));
 		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, hess_ref) < 0) {
 			return "reading reference Hessian matrix from disk failed";
 		}
@@ -1828,14 +1828,14 @@ char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix()
 
 	const int m = nlayers * 16;
 
-	double* zvec = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* zvec = aligned_malloc(m * sizeof(double));
 	if (read_hdf5_dataset(file, "zvec", H5T_NATIVE_DOUBLE, zvec) < 0) {
 		return "reading gradient direction of gradient vector from disk failed";
 	}
 
 	double f;
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
-	double* H = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	double* grad = aligned_malloc(m * sizeof(double));
+	double* H = aligned_malloc(m * m * sizeof(double));
 
 	if (brickwall_blockenc_target_gradient_vector_hessian_matrix(ufunc, NULL, vlist, nlayers, nqubits, pperms, &f, grad, H) < 0) {
 		return "'brickwall_blockenc_target_gradient_vector_hessian_matrix' failed internally";
@@ -1851,7 +1851,7 @@ char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix()
 		return "computed target function value does not match reference";
 	}
 
-	double* grad_ref = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* grad_ref = aligned_malloc(m * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad_ref) < 0) {
 		return "reading reference gradient vector from disk failed";
 	}
@@ -1872,7 +1872,7 @@ char* test_brickwall_blockenc_target_gradient_vector_hessian_matrix()
 		return "computed gate Hessian matrix is not symmetric";
 	}
 
-	double* H_ref = aligned_alloc(MEM_DATA_ALIGN, m * m * sizeof(double));
+	double* H_ref = aligned_malloc(m * m * sizeof(double));
 	if (H_ref == NULL) {
 		return "memory allocation for reference Hessian matrix failed";
 	}

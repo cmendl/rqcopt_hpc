@@ -29,26 +29,33 @@ typedef double numeric;
 #define MEM_DATA_ALIGN 64
 
 
-#ifdef _WIN32
-
-inline void* aligned_alloc(size_t alignment, size_t size)
+//________________________________________________________________________________________________________________________
+///
+/// \brief Allocate 'size' bytes of uninitialized storage, and return a pointer to the allocated memory block.
+///
+static inline void* aligned_malloc(size_t size)
 {
-	return _aligned_malloc(size, alignment);
+	#ifdef _WIN32
+	return _aligned_malloc(size, MEM_DATA_ALIGN);
+	#else
+	// round 'size' up to the next multiple of 'MEM_DATA_ALIGN', which must be a power of 2
+	return aligned_alloc(MEM_DATA_ALIGN, (size + MEM_DATA_ALIGN - 1) & (-MEM_DATA_ALIGN));
+	#endif
 }
 
-inline void aligned_free(void* memblock)
-{
-	_aligned_free(memblock);
-}
 
-#else
-
+//________________________________________________________________________________________________________________________
+///
+/// \brief Deallocate a previously allocated memory block.
+///
 static inline void aligned_free(void* memblock)
 {
+	#ifdef _WIN32
+	_aligned_free(memblock);
+	#else
 	free(memblock);
+	#endif
 }
-
-#endif
 
 
 /// \brief integer type for addressing entries of a quantum statevector 

@@ -82,9 +82,9 @@ static double move_to_boundary(const double* b, const double* d, int n, double r
 ///
 bool truncated_cg_hmat(const double* grad, const double* hess, int n, double radius, const struct truncated_cg_params* params, double* z)
 {
-	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* Hd = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* r  = aligned_malloc(n * sizeof(double));
+	double* d  = aligned_malloc(n * sizeof(double));
+	double* Hd = aligned_malloc(n * sizeof(double));
 
 	// r = grad
 	memcpy(r, grad, n * sizeof(double));
@@ -158,9 +158,9 @@ bool truncated_cg_hmat(const double* grad, const double* hess, int n, double rad
 ///
 bool truncated_cg_hvp(const double* restrict x, const double* restrict grad, const hessian_vector_product_func f_hvp, void* fdata, const int n, const double radius, const struct truncated_cg_params* params, double* restrict z)
 {
-	double* r  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* d  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* Hd = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* r  = aligned_malloc(n * sizeof(double));
+	double* d  = aligned_malloc(n * sizeof(double));
+	double* Hd = aligned_malloc(n * sizeof(double));
 
 	// r = grad
 	memcpy(r, grad, n * sizeof(double));
@@ -232,20 +232,20 @@ void riemannian_trust_region_optimize_hmat(target_func f, target_gradient_hessia
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
 
-	double* x = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* x = aligned_malloc(m * sizeof(double));
 	memcpy(x, x_init, m * sizeof(double));
 
-	double* x_next = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* x_next = aligned_malloc(m * sizeof(double));
 
 	double radius = params->radius_init;
 	if (params->g_func != NULL) {
 		params->g_iter[0] = params->g_func(x, params->g_data);
 	}
 
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* hess = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(double));
-	double* eta  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* Heta = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* grad = aligned_malloc(n * sizeof(double));
+	double* hess = aligned_malloc(n * n * sizeof(double));
+	double* eta  = aligned_malloc(n * sizeof(double));
+	double* Heta = aligned_malloc(n * sizeof(double));
 
 	for (int k = 0; k < niter; k++)
 	{
@@ -309,19 +309,19 @@ void riemannian_trust_region_optimize_hvp(const target_func f, const target_grad
 {
 	assert(0 <= params->rho_trust && params->rho_trust < 0.25);
 
-	double* x = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* x = aligned_malloc(m * sizeof(double));
 	memcpy(x, x_init, m * sizeof(double));
 
-	double* x_next = aligned_alloc(MEM_DATA_ALIGN, m * sizeof(double));
+	double* x_next = aligned_malloc(m * sizeof(double));
 
 	double radius = params->radius_init;
 	if (params->g_func != NULL) {
 		params->g_iter[0] = params->g_func(x, params->g_data);
 	}
 
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* eta  = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
-	double* Heta = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* grad = aligned_malloc(n * sizeof(double));
+	double* eta  = aligned_malloc(n * sizeof(double));
+	double* Heta = aligned_malloc(n * sizeof(double));
 
 	for (int k = 0; k < niter; k++)
 	{

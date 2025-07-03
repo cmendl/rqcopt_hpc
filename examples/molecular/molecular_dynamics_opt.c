@@ -36,7 +36,7 @@ int main()
 		return -1;
 	}
 	// coefficients, as reference
-	double* tkin = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(double));
+	double* tkin = aligned_malloc(n * n * sizeof(double));
 	if (tkin == NULL) {
 		fprintf(stderr, "memory allocation for kinetic coefficients failed\n");
 		return -1;
@@ -45,7 +45,7 @@ int main()
 		fprintf(stderr, "reading 'tkin' from disk failed\n");
 		return -1;
 	}
-	double* vint = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(double));
+	double* vint = aligned_malloc(n * n * sizeof(double));
 	if (vint == NULL) {
 		fprintf(stderr, "memory allocation for interaction coefficients failed\n");
 		return -1;
@@ -55,7 +55,7 @@ int main()
 		return -1;
 	}
 	// target unitary
-	numeric* expiH = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(numeric));
+	numeric* expiH = aligned_malloc(n * n * sizeof(numeric));
 	if (expiH == NULL) {
 		fprintf(stderr, "memory allocation for target unitary failed\n");
 		return -1;
@@ -72,13 +72,13 @@ int main()
 	}
 	int ngates = gates_start_dims[0];
 	printf("number of quantum gates: %i\n", ngates);
-	struct mat4x4* gates_start = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates_start = aligned_malloc(ngates * sizeof(struct mat4x4));
 	if (read_hdf5_dataset(file, "gates_start", H5T_NATIVE_DOUBLE, gates_start) < 0) {
 		fprintf(stderr, "reading initial two-qubit quantum gates from disk failed\n");
 		return -1;
 	}
 	// corresponding quantum wires
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	if (read_hdf5_dataset(file, "wires", H5T_NATIVE_INT, wires) < 0) {
 		fprintf(stderr, "reading wire indices from disk failed\n");
 		return -1;
@@ -100,9 +100,9 @@ int main()
 	// number of iterations
 	const int niter = 10;
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
+	double* f_iter = aligned_malloc((niter + 1) * sizeof(double));
 
-	struct mat4x4* gates_opt = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates_opt = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 	uint64_t start_tick = get_ticks();
 

@@ -10,13 +10,10 @@
 ///
 int allocate_statevector(int nqubits, struct statevector* psi)
 {
-	size_t size = ((size_t)1 << nqubits) * sizeof(numeric);
-	if (size < MEM_DATA_ALIGN) {
-		size = MEM_DATA_ALIGN;
-	}
-
 	psi->nqubits = nqubits;
-	psi->data = aligned_alloc(MEM_DATA_ALIGN, size);
+
+	const size_t size = ((size_t)1 << nqubits) * sizeof(numeric);
+	psi->data = aligned_malloc(size);
 	if (psi->data == NULL)
 	{
 		fprintf(stderr, "allocating statevector memory (%zu bytes) failed\n", size);
@@ -50,14 +47,14 @@ void transpose_statevector(const struct statevector* restrict psi, const int* pe
 {
 	assert(psi->nqubits == psi_trans->nqubits);
 
-	intqs* strides = aligned_alloc(MEM_DATA_ALIGN, psi->nqubits * sizeof(intqs));
+	intqs* strides = aligned_malloc(psi->nqubits * sizeof(intqs));
 	for (int i = 0; i < psi->nqubits; i++)
 	{
 		assert(0 <= perm[i] && perm[i] < psi->nqubits);
 		strides[psi->nqubits - 1 - i] = (intqs)1 << (psi->nqubits - 1 - perm[i]);
 	}
 
-	const int n = (intqs)1 << psi->nqubits;
+	const intqs n = (intqs)1 << psi->nqubits;
 	for (intqs j = 0; j < n; j++)
 	{
 		intqs k = 0;
@@ -80,7 +77,7 @@ void add_statevectors(const struct statevector* restrict psi1, const struct stat
 	assert(psi1->nqubits == psi2->nqubits);
 	assert(psi1->nqubits == psi_sum->nqubits);
 
-	const int n = (intqs)1 << psi1->nqubits;
+	const intqs n = (intqs)1 << psi1->nqubits;
 	for (intqs j = 0; j < n; j++)
 	{
 		psi_sum->data[j] = psi1->data[j] + psi2->data[j];
@@ -94,14 +91,11 @@ void add_statevectors(const struct statevector* restrict psi1, const struct stat
 ///
 int allocate_statevector_array(int nqubits, int nstates, struct statevector_array* psi_array)
 {
-	size_t size = ((size_t)1 << nqubits) * nstates * sizeof(numeric);
-	if (size < MEM_DATA_ALIGN) {
-		size = MEM_DATA_ALIGN;
-	}
-
 	psi_array->nqubits = nqubits;
 	psi_array->nstates = nstates;
-	psi_array->data = aligned_alloc(MEM_DATA_ALIGN, size);
+
+	const size_t size = ((size_t)1 << nqubits) * nstates * sizeof(numeric);
+	psi_array->data = aligned_malloc(size);
 	if (psi_array->data == NULL)
 	{
 		fprintf(stderr, "allocating statevector array memory (%zu bytes) failed\n", size);

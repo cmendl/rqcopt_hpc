@@ -46,7 +46,7 @@ int allocate_quantum_circuit_cache(const int nqubits, const int ngates, struct q
 	cache->nqubits = nqubits;
 	cache->ngates  = ngates;
 
-	cache->psi_list = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct statevector));
+	cache->psi_list = aligned_malloc(ngates * sizeof(struct statevector));
 	if (cache->psi_list == NULL) {
 		fprintf(stderr, "allocating memory for statevector array failed\n");
 		return -1;

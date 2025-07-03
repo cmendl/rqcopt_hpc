@@ -31,7 +31,7 @@ char* test_transpose_statevector()
 		return "reading output statevector data from disk failed";
 	}
 
-	int* perm = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
+	int* perm = aligned_malloc(L * sizeof(int));
 	if (read_hdf5_dataset(file, "perm", H5T_NATIVE_INT, perm) < 0) {
 		return "reading permutation data from disk failed";
 	}

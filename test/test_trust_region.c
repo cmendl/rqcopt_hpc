@@ -30,12 +30,12 @@ char* test_truncated_cg_hvp()
 	int n = 12;
 	double radius = 1.5;
 
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* grad = aligned_malloc(n * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad) < 0) {
 		return "reading gradient vector from disk failed";
 	}
 
-	double* hess = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(double));
+	double* hess = aligned_malloc(n * n * sizeof(double));
 	if (read_hdf5_dataset(file, "hess", H5T_NATIVE_DOUBLE, hess) < 0) {
 		return "reading Hessian matrix from disk failed";
 	}
@@ -46,7 +46,7 @@ char* test_truncated_cg_hvp()
 	};
 
 	// reference data
-	double* zref = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* zref = aligned_malloc(n * sizeof(double));
 	if (read_hdf5_dataset(file, "z", H5T_NATIVE_DOUBLE, zref) < 0) {
 		return "reading reference tCG solution vector from disk failed";
 	}
@@ -58,7 +58,7 @@ char* test_truncated_cg_hvp()
 	struct truncated_cg_params params;
 	set_truncated_cg_default_params(n, &params);
 
-	double* z = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* z = aligned_malloc(n * sizeof(double));
 	bool on_boundary = truncated_cg_hvp(NULL, grad, f_hvp, &fdata, n, radius, &params, z);
 
 	// compare with reference
@@ -95,18 +95,18 @@ char* test_truncated_cg_hmat()
 	int n = 12;
 	double radius = 1.5;
 
-	double* grad = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* grad = aligned_malloc(n * sizeof(double));
 	if (read_hdf5_dataset(file, "grad", H5T_NATIVE_DOUBLE, grad) < 0) {
 		return "reading gradient vector from disk failed";
 	}
 
-	double* hess = aligned_alloc(MEM_DATA_ALIGN, n * n * sizeof(double));
+	double* hess = aligned_malloc(n * n * sizeof(double));
 	if (read_hdf5_dataset(file, "hess", H5T_NATIVE_DOUBLE, hess) < 0) {
 		return "reading Hessian matrix from disk failed";
 	}
 
 	// reference data
-	double* zref = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* zref = aligned_malloc(n * sizeof(double));
 	if (read_hdf5_dataset(file, "z", H5T_NATIVE_DOUBLE, zref) < 0) {
 		return "reading reference tCG solution vector from disk failed";
 	}
@@ -118,7 +118,7 @@ char* test_truncated_cg_hmat()
 	struct truncated_cg_params params;
 	set_truncated_cg_default_params(n, &params);
 
-	double* z = aligned_alloc(MEM_DATA_ALIGN, n * sizeof(double));
+	double* z = aligned_malloc(n * sizeof(double));
 	bool on_boundary = truncated_cg_hmat(grad, hess, n, radius, &params, z);
 
 	// compare with reference

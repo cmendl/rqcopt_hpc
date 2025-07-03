@@ -286,7 +286,7 @@ void apply_gate_backward_array(const struct mat4x4* gate, const int i, const int
 			}
 		};
 
-		struct mat4x4* dgates_perm = aligned_alloc(MEM_DATA_ALIGN, psi->nstates * sizeof(struct mat4x4));
+		struct mat4x4* dgates_perm = aligned_malloc(psi->nstates * sizeof(struct mat4x4));
 
 		// flip i <-> j
 		apply_gate_backward_array(&gate_perm, j, i, psi, dpsi_out, dgates_perm);

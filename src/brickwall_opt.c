@@ -62,14 +62,14 @@ static void f_hvp(const double* restrict x, void* fdata, double* restrict vec, d
 	const struct f_target_data* data = fdata;
 
 	// convert input vectors to matrices in tangent space
-	struct mat4x4* vdirs = aligned_alloc(MEM_DATA_ALIGN, data->nlayers * sizeof(struct mat4x4));
+	struct mat4x4* vdirs = aligned_malloc(data->nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < data->nlayers; i++)
 	{
 		real_to_tangent(&vec[i * num_tangent_params], &vlist[i], &vdirs[i]);
 	}
 
 	numeric fval;
-	double* grad_vec = aligned_alloc(MEM_DATA_ALIGN, data->nlayers * num_tangent_params * sizeof(double));
+	double* grad_vec = aligned_malloc(data->nlayers * num_tangent_params * sizeof(double));
 
 	brickwall_unitary_target_projected_hessian_vector_product(data->ufunc, data->udata, vlist, vdirs, data->nlayers, data->perms, data->nqubits, &fval, grad_vec, hvp);
 

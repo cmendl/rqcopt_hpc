@@ -115,7 +115,7 @@ static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
 	}
 
 	// read initial to-be optimized quantum gates
-	struct mat4x4* gates_start = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	struct mat4x4* gates_start = aligned_malloc(ngates * sizeof(struct mat4x4));
 	for (int i = 0; i < ngates; i++)
 	{
 		PyObject* gate_obj = PySequence_GetItem(gates_start_obj, i);
@@ -148,7 +148,7 @@ static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
 	}
 
 	// read quantum wire permutations
-	int* wires = aligned_alloc(MEM_DATA_ALIGN, 2 * ngates * sizeof(int));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
 	for (int i = 0; i < ngates; i++)
 	{
 		PyObject* wire_obj = PySequence_GetItem(wires_obj, i);
@@ -217,8 +217,8 @@ static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
 	struct rtr_params params;
 	set_rtr_default_params(ngates * 16, &params);
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
-	struct mat4x4* gates_opt = aligned_alloc(MEM_DATA_ALIGN, ngates * sizeof(struct mat4x4));
+	double* f_iter = aligned_malloc((niter + 1) * sizeof(double));
+	struct mat4x4* gates_opt = aligned_malloc(ngates * sizeof(struct mat4x4));
 
 	// perform optimization
 	optimize_quantum_circuit(ufunc, u, gates_start, ngates, nqubits, wires, &params, niter, f_iter, gates_opt);
@@ -354,7 +354,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	}
 
 	// read initial to-be optimized quantum gates
-	struct mat4x4* Vlist_start = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	struct mat4x4* Vlist_start = aligned_malloc(nlayers * sizeof(struct mat4x4));
 	for (int i = 0; i < nlayers; i++)
 	{
 		PyObject* V_obj = PySequence_GetItem(Vlist_start_obj, i);
@@ -387,7 +387,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	}
 
 	// read quantum wire permutations
-	int** perms = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(int*));
+	int** perms = aligned_malloc(nlayers * sizeof(int*));
 	for (int i = 0; i < nlayers; i++)
 	{
 		PyObject* perm_obj = PySequence_GetItem(perms_obj, i);
@@ -417,7 +417,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 			return NULL;
 		}
 
-		perms[i] = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
+		perms[i] = aligned_malloc(L * sizeof(int));
 		for (int j = 0; j < L; j++)
 		{
 			PyObject* p_obj = PySequence_GetItem(perm_obj, j);
@@ -443,7 +443,7 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 		Py_DECREF(perm_obj);
 
 		// ensure that 'perms[i]' is a valid permutation
-		int* slots = aligned_alloc(MEM_DATA_ALIGN, L * sizeof(int));
+		int* slots = aligned_malloc(L * sizeof(int));
 		memset(slots, 0, L * sizeof(int));
 		for (int j = 0; j < L; j++)
 		{
@@ -476,8 +476,8 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	struct rtr_params params;
 	set_rtr_default_params(nlayers * 16, &params);
 
-	double* f_iter = aligned_alloc(MEM_DATA_ALIGN, (niter + 1) * sizeof(double));
-	struct mat4x4* Vlist_opt = aligned_alloc(MEM_DATA_ALIGN, nlayers * sizeof(struct mat4x4));
+	double* f_iter = aligned_malloc((niter + 1) * sizeof(double));
+	struct mat4x4* Vlist_opt = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 	// perform optimization
 	optimize_brickwall_circuit_hmat(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, &params, niter, f_iter, Vlist_opt);
