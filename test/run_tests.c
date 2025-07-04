@@ -20,6 +20,7 @@ char* test_multiply();
 char* test_inverse_matrix();
 char* test_polar_factor();
 char* test_transpose_statevector();
+char* test_haar_random_statevector();
 char* test_apply_gate();
 char* test_apply_gate_backward();
 char* test_apply_gate_to_array();
@@ -73,6 +74,7 @@ int main()
 		TEST_FUNCTION_ENTRY(test_inverse_matrix),
 		TEST_FUNCTION_ENTRY(test_polar_factor),
 		TEST_FUNCTION_ENTRY(test_transpose_statevector),
+		TEST_FUNCTION_ENTRY(test_haar_random_statevector),
 		TEST_FUNCTION_ENTRY(test_apply_gate),
 		TEST_FUNCTION_ENTRY(test_apply_gate_backward),
 		TEST_FUNCTION_ENTRY(test_apply_gate_to_array),

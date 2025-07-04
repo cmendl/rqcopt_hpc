@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <cblas.h>
 #include <assert.h>
 #include "statevector.h"
 #include "config.h"
@@ -41,6 +42,32 @@ void free_statevector(struct statevector* psi)
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Normalize a statevector. If the vector is zero, it remains unchanged.
+///
+void normalize_statevector(struct statevector* restrict psi)
+{
+	const intqs n = (intqs)1 << psi->nqubits;
+
+	#ifdef COMPLEX_CIRCUIT
+
+	double nrm = cblas_dznrm2(n, psi->data, 1);
+	if (nrm > 0) {
+		cblas_zdscal(n, 1. / nrm, psi->data, 1);
+	}
+
+	#else
+
+	double nrm = cblas_dnrm2(n, psi->data, 1);
+	if (nrm > 0) {
+		cblas_dscal(n, 1. / nrm, psi->data, 1);
+	}
+
+	#endif
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Transpose the entries of a statevector (permute qubit wires).
 ///
 void transpose_statevector(const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_trans)
@@ -65,6 +92,36 @@ void transpose_statevector(const struct statevector* restrict psi, const int* pe
 	}
 
 	aligned_free(strides);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Fill the statevector entries according to the Haar random (uniform) distribution.
+///
+void haar_random_statevector(struct statevector* psi, struct rng_state* rng)
+{
+	// initialize 'psi' with (independent and identically distributed) Gaussian entries, then normalize
+
+	const intqs n = (intqs)1 << psi->nqubits;
+
+	#ifdef COMPLEX_CIRCUIT
+
+	for (intqs j = 0; j < n; j++)
+	{
+		psi->data[j] = crandn(rng);
+	}
+
+	#else
+
+	for (intqs j = 0; j < n; j++)
+	{
+		psi->data[j] = randn(rng);
+	}
+
+	#endif
+
+	normalize_statevector(psi);
 }
 
 

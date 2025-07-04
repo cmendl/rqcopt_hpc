@@ -53,6 +53,9 @@ void conjugate_matrix(struct mat4x4* a)
 	{
 		a->data[i] = conj(a->data[i]);
 	}
+	#else
+	// suppress unused parameter warning
+	(void)a;
 	#endif
 }
 

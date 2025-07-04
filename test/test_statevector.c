@@ -10,6 +10,16 @@
 #endif
 
 
+//________________________________________________________________________________________________________________________
+///
+/// \brief Square function x -> x^2.
+///
+static inline double square(const double x)
+{
+	return x*x;
+}
+
+
 char* test_transpose_statevector()
 {
 	int L = 9;
@@ -48,6 +58,40 @@ char* test_transpose_statevector()
 	aligned_free(perm);
 	free_statevector(&chiref);
 	free_statevector(&chi);
+	free_statevector(&psi);
+
+	return 0;
+}
+
+
+char* test_haar_random_statevector()
+{
+	const int nqubits = 3;
+
+	struct statevector psi;
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		return "memory allocation failed";
+	}
+
+	struct rng_state rng;
+	seed_rng_state(42, &rng);
+
+	const long nsamples = 1731;
+	double c = 0;
+	for (long n = 0; n < nsamples; n++)
+	{
+		haar_random_statevector(&psi, &rng);
+		c += square(_abs(psi.data[0]));
+	}
+	c /= nsamples;
+
+	// theoretical expectation value
+	const double c_ref = 1. / ((intqs)1 << nqubits);
+
+	if (fabs(c - c_ref) / fabs(c_ref) > 0.05) {
+		return "empirical average deviates from the expectation value";
+	}
+
 	free_statevector(&psi);
 
 	return 0;

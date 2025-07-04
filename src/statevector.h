@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "rng.h"
 
 
 //________________________________________________________________________________________________________________________
@@ -19,7 +20,13 @@ int allocate_statevector(int nqubits, struct statevector* psi);
 void free_statevector(struct statevector* psi);
 
 
+void normalize_statevector(struct statevector* restrict psi);
+
+
 void transpose_statevector(const struct statevector* restrict psi, const int* perm, struct statevector* restrict psi_trans);
+
+
+void haar_random_statevector(struct statevector* psi, struct rng_state* rng);
 
 
 void add_statevectors(const struct statevector* restrict psi1, const struct statevector* restrict psi2, struct statevector* restrict psi_sum);
