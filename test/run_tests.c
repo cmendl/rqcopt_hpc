@@ -36,6 +36,7 @@ char* test_circuit_unitary_target();
 char* test_circuit_unitary_target_and_gradient();
 char* test_circuit_unitary_target_hessian_vector_product();
 char* test_brickwall_unitary_target();
+char* test_brickwall_unitary_target_sampling();
 char* test_brickwall_unitary_target_and_gradient();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_target_and_projected_gradient();
@@ -43,8 +44,10 @@ char* test_brickwall_unitary_target_and_projected_gradient();
 char* test_brickwall_unitary_target_hessian_vector_product();
 char* test_brickwall_unitary_target_projected_hessian_vector_product();
 char* test_brickwall_unitary_target_gradient_hessian();
+char* test_brickwall_unitary_target_gradient_hessian_sampling();
 #ifdef COMPLEX_CIRCUIT
 char* test_brickwall_unitary_target_gradient_vector_hessian_matrix();
+char* test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling();
 #endif
 char* test_brickwall_blockenc_target();
 char* test_brickwall_blockenc_target_and_gradient();
@@ -90,6 +93,7 @@ int main()
 		TEST_FUNCTION_ENTRY(test_circuit_unitary_target_hessian_vector_product),
 		TEST_FUNCTION_ENTRY(test_circuit_unitary_target_projected_hessian_vector_product),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_sampling),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_gradient),
 		#ifdef COMPLEX_CIRCUIT
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_and_projected_gradient),
@@ -97,8 +101,10 @@ int main()
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_hessian_vector_product),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_projected_hessian_vector_product),
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_hessian),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_hessian_sampling),
 		#ifdef COMPLEX_CIRCUIT
 		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_vector_hessian_matrix),
+		TEST_FUNCTION_ENTRY(test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling),
 		#endif
 		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target),
 		TEST_FUNCTION_ENTRY(test_brickwall_blockenc_target_and_gradient),

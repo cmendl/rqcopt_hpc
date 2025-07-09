@@ -187,6 +187,36 @@ def brickwall_unitary_target_data():
         file.close()
 
 
+def brickwall_unitary_target_sampling_data():
+
+    # random number generator
+    rng = np.random.default_rng(41)
+
+    # system size
+    L = 8
+
+    nlayers = 3
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_target_sampling_{ctype}.hdf5", "w")
+
+        # random unitaries (unitary property required for sampling statistics)
+        Vlist = np.stack([ortho_group.rvs(4, random_state=rng) if ctype == "real" else unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)])
+        for i in range(nlayers):
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"perm{i}"] = perms[i]
+
+        # random target unitary (unitary property required for sampling statistics)
+        U = ortho_group.rvs(2**L, random_state=rng) if ctype == "real" else unitary_group.rvs(2**L, random_state=rng)
+        file["U"] = interleave_complex(U, ctype)
+
+        file.close()
+
+
 def brickwall_unitary_target_and_gradient_data():
 
     # random number generator
@@ -398,6 +428,36 @@ def brickwall_unitary_target_gradient_hessian_data():
         file.close()
 
 
+def brickwall_unitary_target_gradient_hessian_sampling_data():
+
+    # random number generator
+    rng = np.random.default_rng(46)
+
+    # system size
+    L = 6
+
+    nlayers = 3
+
+    for ctype in ["real", "cplx"]:
+        file = h5py.File(f"data/test_brickwall_unitary_target_gradient_hessian_sampling_{ctype}.hdf5", "w")
+
+        # random unitaries (unitary property required for sampling statistics)
+        Vlist = np.stack([ortho_group.rvs(4, random_state=rng) if ctype == "real" else unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)])
+        for i in range(nlayers):
+            file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+        # random permutations
+        perms = [rng.permutation(L) for _ in range(nlayers)]
+        for i in range(nlayers):
+            file[f"perm{i}"] = perms[i]
+
+        # random target unitary (unitary property required for sampling statistics)
+        U = ortho_group.rvs(2**L, random_state=rng) if ctype == "real" else unitary_group.rvs(2**L, random_state=rng)
+        file["U"] = interleave_complex(U, ctype)
+
+        file.close()
+
+
 def brickwall_unitary_target_gradient_vector_hessian_matrix_data():
 
     # random number generator
@@ -436,6 +496,38 @@ def brickwall_unitary_target_gradient_vector_hessian_matrix_data():
     # Hessian matrix
     H = -oc.brickwall_unitary_hessian_matrix_matfree(Vlist, L, ufunc, perms)
     file["H"] = H
+
+    file.close()
+
+
+def brickwall_unitary_target_gradient_vector_hessian_matrix_sampling_data():
+
+    # random number generator
+    rng = np.random.default_rng(48)
+
+    # system size
+    L = 6
+
+    # number of layers
+    nlayers = 5
+
+    ctype = "cplx"
+
+    file = h5py.File(f"data/test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling_{ctype}.hdf5", "w")
+
+    # random unitaries (unitary property required for Hessian matrix to be symmetric)
+    Vlist = [unitary_group.rvs(4, random_state=rng) for _ in range(nlayers)]
+    for i in range(nlayers):
+        file[f"V{i}"] = interleave_complex(Vlist[i], ctype)
+
+    # random permutations
+    perms = [rng.permutation(L) for _ in range(nlayers)]
+    for i in range(nlayers):
+        file[f"perm{i}"] = perms[i]
+
+    # random target unitary (unitary property required for sampling statistics)
+    U = ortho_group.rvs(2**L, random_state=rng) if ctype == "real" else unitary_group.rvs(2**L, random_state=rng)
+    file["U"] = interleave_complex(U, ctype)
 
     file.close()
 
@@ -713,12 +805,15 @@ def main():
     circuit_unitary_target_hessian_vector_product_data()
     circuit_unitary_target_projected_hessian_vector_product_data()
     brickwall_unitary_target_data()
+    brickwall_unitary_target_sampling_data()
     brickwall_unitary_target_and_gradient_data()
     brickwall_unitary_target_and_projected_gradient_data()
     brickwall_unitary_target_hessian_vector_product_data()
     brickwall_unitary_target_projected_hessian_vector_product_data()
     brickwall_unitary_target_gradient_hessian_data()
+    brickwall_unitary_target_gradient_hessian_sampling_data()
     brickwall_unitary_target_gradient_vector_hessian_matrix_data()
+    brickwall_unitary_target_gradient_vector_hessian_matrix_sampling_data()
     brickwall_blockenc_target_data()
     brickwall_blockenc_target_and_gradient_data()
     brickwall_blockenc_target_and_gradient_vector_data()

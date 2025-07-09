@@ -77,6 +77,80 @@ int circuit_unitary_target(linear_func ufunc, void* udata, const struct mat4x4 g
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Approximately evaluate target function -tr[U^{\dagger} C],
+/// where C is the quantum circuit constructed from two-qubit gates,
+/// using the provided matrix-free application of U to a state
+/// via random state vector sampling.
+///
+int circuit_unitary_target_sampling(linear_func ufunc, void* udata, const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits, const long nsamples, struct rng_state* rng, numeric* fval)
+{
+	// temporary statevectors
+	struct statevector psi = { 0 };
+	if (allocate_statevector(nqubits, &psi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Upsi = { 0 };
+	if (allocate_statevector(nqubits, &Upsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+	struct statevector Cpsi = { 0 };
+	if (allocate_statevector(nqubits, &Cpsi) < 0) {
+		fprintf(stderr, "memory allocation for a statevector with %i qubits failed\n", nqubits);
+		return -1;
+	}
+
+	const intqs n = (intqs)1 << nqubits;
+
+	numeric f = 0;
+	// approximate trace by sampling random state vectors
+	for (long b = 0; b < nsamples; b++)
+	{
+		int ret;
+
+		haar_random_statevector(&psi, rng);
+
+		ret = ufunc(&psi, udata, &Upsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
+			return -2;
+		}
+		// negate and complex-conjugate entries
+		for (intqs a = 0; a < n; a++)
+		{
+			Upsi.data[a] = -conj(Upsi.data[a]);
+		}
+
+		ret = apply_quantum_circuit(gates, ngates, wires, &psi, &Cpsi);
+		if (ret < 0) {
+			fprintf(stderr, "call of 'apply_quantum_circuit' failed, return value: %i\n", ret);
+			return -1;
+		}
+
+		// f += <Upsi | Wpsi>
+		for (intqs a = 0; a < n; a++)
+		{
+			f += Upsi.data[a] * Cpsi.data[a];
+		}
+	}
+
+	// re-normalize
+	const double scale = (double)n / nsamples;
+	f *= scale;
+
+	free_statevector(&Cpsi);
+	free_statevector(&Upsi);
+	free_statevector(&psi);
+
+	*fval = f;
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Evaluate target function -tr[U^{\dagger} C] and its gate gradients,
 /// where C is the quantum circuit constructed from two-qubit gates,
 /// using the provided matrix-free application of U to a state.
@@ -409,6 +483,30 @@ int brickwall_unitary_target(linear_func ufunc, void* udata, const struct mat4x4
 
 //________________________________________________________________________________________________________________________
 ///
+/// \brief Approximately evaluate target function -tr[U^{\dagger} W],
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state
+/// via random state vector sampling.
+///
+int brickwall_unitary_target_sampling(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], const long nsamples, struct rng_state* rng, numeric* fval)
+{
+	const int ngates = nlayers * (nqubits / 2);
+
+	struct mat4x4* gates = aligned_malloc(ngates * sizeof(struct mat4x4));
+	int* wires = aligned_malloc(2 * ngates * sizeof(int));
+	brickwall_to_sequential(nqubits, nlayers, vlist, perms, gates, wires);
+
+	int ret = circuit_unitary_target_sampling(ufunc, udata, gates, ngates, wires, nqubits, nsamples, rng, fval);
+
+	aligned_free(wires);
+	aligned_free(gates);
+
+	return ret;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
 /// \brief Evaluate target function -tr[U^{\dagger} W] and its gate gradients,
 /// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of U to a state.
@@ -586,7 +684,9 @@ int brickwall_unitary_target_projected_hessian_vector_product(linear_func ufunc,
 /// where W is the brickwall circuit constructed from the gates in vlist,
 /// using the provided matrix-free application of U to a state.
 ///
-int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, struct mat4x4 dvlist[], numeric* hess)
+int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	numeric* fval, struct mat4x4 dvlist[], numeric* hess)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -704,7 +804,10 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata, co
 /// using the provided matrix-free application of U to a state
 /// via random state vector sampling.
 ///
-int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, struct mat4x4 dvlist[], numeric* hess)
+int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	numeric* fval, struct mat4x4 dvlist[], numeric* hess)
 {
 	// temporary statevectors
 	struct statevector psi = { 0 };
@@ -749,17 +852,15 @@ int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* 
 		return -1;
 	}
 
-	numeric f = 0;
-	// implement trace via summation over unit vectors
 	const intqs n = (intqs)1 << nqubits;
-	for (intqs b = 0; b < n; b++)
+
+	numeric f = 0;
+	// approximate trace by sampling random state vectors
+	for (long b = 0; b < nsamples; b++)
 	{
-		int ret;
+		haar_random_statevector(&psi, rng);
 
-		memset(psi.data, 0, n * sizeof(numeric));
-		psi.data[b] = 1;
-
-		ret = ufunc(&psi, udata, &Upsi);
+		int ret = ufunc(&psi, udata, &Upsi);
 		if (ret < 0) {
 			fprintf(stderr, "call of 'ufunc' failed, return value: %i\n", ret);
 			return -2;
@@ -802,6 +903,18 @@ int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* 
 		}
 	}
 
+	// re-normalize
+	const double scale = (double)n / nsamples;
+	f *= scale;
+	for (int i = 0; i < nlayers; i++)
+	{
+		scale_matrix(&dvlist[i], scale);
+	}
+	for (int i = 0; i < m*m; i++)
+	{
+		hess[i] *= scale;
+	}
+
 	aligned_free(hess_unit);
 	aligned_free(dvlist_unit);
 	free_quantum_circuit_cache(&cache);
@@ -819,36 +932,13 @@ int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* 
 
 //________________________________________________________________________________________________________________________
 ///
-/// \brief Evaluate target function -tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
-/// where W is the brickwall circuit constructed from the gates in vlist,
-/// using the provided matrix-free application of U to a state.
+/// \brief Project the Euclidean Hessian according to the unitary Stiefel manifold structure.
 ///
-int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata, const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[], numeric* fval, double* grad_vec, double* H)
+static inline void brickwall_unitary_project_hessian_matrix(const int nlayers, const struct mat4x4* restrict vlist, const struct mat4x4* restrict dvlist, const numeric* restrict hess, double* restrict H)
 {
-	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
-	if (dvlist == NULL)
-	{
-		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
-		return -1;
-	}
-
 	const int m = nlayers * 16;
-	numeric* hess = aligned_malloc(m * m * sizeof(numeric));
 
-	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, vlist, nlayers, nqubits, perms, fval, dvlist, hess);
-	if (ret < 0) {
-		return ret;
-	}
-
-	// project gradient onto unitary manifold, represent as anti-symmetric matrix and then concatenate to a vector
-	for (int i = 0; i < nlayers; i++)
-	{
-		// conjugate gate gradient entries (by derivative convention)
-		conjugate_matrix(&dvlist[i]);
-		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
-	}
-
-	// project blocks of Hessian matrix
+	// project blocks of the Hessian matrix
 	for (int i = 0; i < nlayers; i++)
 	{
 		for (int j = i; j < nlayers; j++)
@@ -901,6 +991,95 @@ int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, v
 			H[i*m + j] = H[j*m + i];
 		}
 	}
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Evaluate target function -tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state.
+///
+int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	numeric* fval, double* grad_vec, double* H)
+{
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL)
+	{
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
+		return -1;
+	}
+
+	const int m = nlayers * 16;
+	numeric* hess = aligned_malloc(m * m * sizeof(numeric));
+	if (hess == NULL) {
+		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
+		return -1;
+	}
+
+	int ret = brickwall_unitary_target_gradient_hessian(ufunc, udata, vlist, nlayers, nqubits, perms, fval, dvlist, hess);
+	if (ret < 0) {
+		return ret;
+	}
+
+	// project gradient onto unitary manifold, represent as anti-symmetric matrix and then concatenate to a vector
+	for (int i = 0; i < nlayers; i++)
+	{
+		// conjugate gate gradient entries (by derivative convention)
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
+	}
+
+	brickwall_unitary_project_hessian_matrix(nlayers, vlist, dvlist, hess, H);
+
+	aligned_free(hess);
+	aligned_free(dvlist);
+
+	return 0;
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Approximately evaluate target function -tr[U^{\dagger} W], its gate gradient as real vector and Hessian matrix,
+/// where W is the brickwall circuit constructed from the gates in vlist,
+/// using the provided matrix-free application of U to a state
+/// via random state vector sampling.
+///
+int brickwall_unitary_target_gradient_vector_hessian_matrix_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	numeric* fval, double* grad_vec, double* H)
+{
+	struct mat4x4* dvlist = aligned_malloc(nlayers * sizeof(struct mat4x4));
+	if (dvlist == NULL)
+	{
+		fprintf(stderr, "allocating temporary memory for gradient matrices failed\n");
+		return -1;
+	}
+
+	const int m = nlayers * 16;
+	numeric* hess = aligned_malloc(m * m * sizeof(numeric));
+	if (hess == NULL) {
+		fprintf(stderr, "memory allocation for temporary Hessian matrix failed\n");
+		return -1;
+	}
+
+	int ret = brickwall_unitary_target_gradient_hessian_sampling(ufunc, udata, vlist, nlayers, nqubits, perms, nsamples, rng, fval, dvlist, hess);
+	if (ret < 0) {
+		return ret;
+	}
+
+	// project gradient onto unitary manifold, represent as anti-symmetric matrix and then concatenate to a vector
+	for (int i = 0; i < nlayers; i++)
+	{
+		// conjugate gate gradient entries (by derivative convention)
+		conjugate_matrix(&dvlist[i]);
+		tangent_to_real(&vlist[i], &dvlist[i], &grad_vec[i * 16]);
+	}
+
+	brickwall_unitary_project_hessian_matrix(nlayers, vlist, dvlist, hess, H);
 
 	aligned_free(hess);
 	aligned_free(dvlist);

@@ -34,6 +34,26 @@ static int ufunc(const struct statevector* restrict psi, void* udata, struct sta
 }
 
 
+static int ufunc_mat(const struct statevector* restrict psi, void* fdata, struct statevector* restrict psi_out)
+{
+	assert(psi->nqubits == psi_out->nqubits);
+
+	const intqs n = (intqs)1 << psi->nqubits;
+	const numeric* U = (numeric*)fdata;
+
+	// apply U
+	#ifdef COMPLEX_CIRCUIT
+	numeric alpha = 1;
+	numeric beta  = 0;
+	cblas_zgemv(CblasRowMajor, CblasNoTrans, n, n, &alpha, U, n, psi->data, 1, &beta, psi_out->data, 1);
+	#else
+	cblas_dgemv(CblasRowMajor, CblasNoTrans, n, n, 1., U, n, psi->data, 1, 0., psi_out->data, 1);
+	#endif
+
+	return 0;
+}
+
+
 char* test_circuit_unitary_target()
 {
 	const int nqubits = 7;
@@ -533,6 +553,76 @@ char* test_brickwall_unitary_target()
 			return "computed target function value does not match reference";
 		}
 	}
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
+char* test_brickwall_unitary_target_sampling()
+{
+	const int nqubits = 8;
+	const int nlayers = 3;
+
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_sampling" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_target_sampling failed";
+	}
+
+	struct mat4x4 vlist[3];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[3][8];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2] };
+
+	const intqs n = (intqs)1 << nqubits;
+
+	// target unitary
+	numeric* u = aligned_malloc(n * n * sizeof(numeric));
+	if (u == NULL) {
+		return "memory allocation for target unitary failed";
+	}
+	if (read_hdf5_dataset(file, "U", H5T_NATIVE_DOUBLE, u) < 0) {
+		return "reading target unitary from disk failed";
+	}
+
+	const long nsamples = 10000;
+	struct rng_state rng;
+	seed_rng_state(677, &rng);
+
+	numeric f;
+	if (brickwall_unitary_target_sampling(ufunc_mat, u, vlist, nlayers, nqubits, pperms, nsamples, &rng, &f) < 0) {
+		return "'brickwall_unitary_target_sampling' failed internally";
+	}
+
+	// reference calculation
+	numeric f_ref;
+	if (brickwall_unitary_target(ufunc_mat, u, vlist, nlayers, nqubits, pperms, &f_ref) < 0) {
+		return "'brickwall_unitary_target' failed internally";
+	}
+
+	// compare with reference
+	if (_abs(f - f_ref) / _abs(f_ref) > 0.2) {
+		return "approximate target function value (from sampling) is not close to reference";
+	}
+
+	aligned_free(u);
 
 	H5Fclose(file);
 
@@ -1065,7 +1155,7 @@ char* test_brickwall_unitary_target_gradient_hessian()
 		}
 	}
 
-	int perms[5][8];
+	int perms[5][6];
 	for (int i = 0; i < 5; i++)
 	{
 		char varname[32];
@@ -1199,6 +1289,103 @@ char* test_brickwall_unitary_target_gradient_hessian()
 }
 
 
+char* test_brickwall_unitary_target_gradient_hessian_sampling()
+{
+	const int nqubits = 6;
+	const int nlayers = 3;
+
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_gradient_hessian_sampling" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_target_gradient_hessian_sampling failed";
+	}
+
+	struct mat4x4 vlist[3];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[3][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2] };
+
+	const intqs n = (intqs)1 << nqubits;
+
+	// target unitary
+	numeric* u = aligned_malloc(n * n * sizeof(numeric));
+	if (u == NULL) {
+		return "memory allocation for target unitary failed";
+	}
+	if (read_hdf5_dataset(file, "U", H5T_NATIVE_DOUBLE, u) < 0) {
+		return "reading target unitary from disk failed";
+	}
+
+	const long nsamples = 10000;
+	struct rng_state rng;
+	seed_rng_state(823, &rng);
+
+	const int m = nlayers * 16;
+
+	numeric f;
+	struct mat4x4 dvlist[3];
+	numeric* hess = aligned_malloc(m * m * sizeof(numeric));
+	if (brickwall_unitary_target_gradient_hessian_sampling(ufunc_mat, u, vlist, nlayers, nqubits, pperms, nsamples, &rng, &f, dvlist, hess) < 0) {
+		return "'brickwall_unitary_target_gradient_hessian_sampling' failed internally";
+	}
+
+	// check symmetry of Hessian matrix
+	double err_symm = 0;
+	for (int j = 0; j < m; j++) {
+		for (int k = 0; k < m; k++) {
+			err_symm = fmax(err_symm, _abs(hess[j*m + k] - hess[k*m + j]));
+		}
+	}
+	if (err_symm > 1e-12) {
+		return "Hessian matrix is not symmetric";
+	}
+
+	// reference calculation
+	numeric f_ref;
+	struct mat4x4 dvlist_ref[3];
+	numeric* hess_ref = aligned_malloc(m * m * sizeof(numeric));
+	if (brickwall_unitary_target_gradient_hessian(ufunc_mat, u, vlist, nlayers, nqubits, pperms, &f_ref, dvlist_ref, hess_ref) < 0) {
+		return "'brickwall_unitary_target_gradient_hessian' failed internally";
+	}
+
+	// compare with reference
+	if (_abs(f - f_ref) / _abs(f_ref) > 0.2) {
+		return "approximate target function value (from sampling) is not close to reference";
+	}
+	for (int j = 0; j < nlayers; j++) {
+		if (uniform_distance(16, dvlist[j].data, dvlist_ref[j].data) > 0.2) {
+			return "approximate brickwall circuit gradient (from sampling) is not close to reference";
+		}
+	}
+	if (uniform_distance(m * m, hess, hess_ref) > 0.4) {
+		return "approximate brickwall circuit Hessian matrix (from sampling) is not close to reference";
+	}
+
+	aligned_free(u);
+	aligned_free(hess_ref);
+	aligned_free(hess);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
 #ifdef COMPLEX_CIRCUIT
 
 char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
@@ -1263,13 +1450,13 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 	}
 
 	// check symmetry
-	double es = 0;
+	double err_symm = 0;
 	for (int i = 0; i < m; i++) {
 		for (int j = 0; j < m; j++) {
-			es = fmax(es, fabs(H[i * m + j] - H[j * m + i]));
+			err_symm = fmax(err_symm, fabs(H[i * m + j] - H[j * m + i]));
 		}
 	}
-	if (es > 1e-14) {
+	if (err_symm > 1e-14) {
 		return "computed gate Hessian matrix is not symmetric";
 	}
 
@@ -1284,6 +1471,91 @@ char* test_brickwall_unitary_target_gradient_vector_hessian_matrix()
 	// compare with reference
 	if (uniform_distance_real(m * m, H, H_ref) > 1e-13) {
 		return "computed unitary target Hessian matrix does not match reference";
+	}
+
+	aligned_free(H_ref);
+	aligned_free(grad_ref);
+	aligned_free(H);
+	aligned_free(grad);
+
+	H5Fclose(file);
+
+	return 0;
+}
+
+
+char* test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling()
+{
+	const int nqubits = 6;
+	const int nlayers = 5;
+
+	hid_t file = H5Fopen("../test/data/test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling" CDATA_LABEL ".hdf5", H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file < 0) {
+		return "'H5Fopen' in test_brickwall_unitary_target_gradient_vector_hessian_matrix_sampling failed";
+	}
+
+	struct mat4x4 vlist[5];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "V%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_DOUBLE, vlist[i].data) < 0) {
+			return "reading two-qubit quantum gate entries from disk failed";
+		}
+	}
+
+	int perms[5][6];
+	for (int i = 0; i < nlayers; i++)
+	{
+		char varname[32];
+		sprintf(varname, "perm%i", i);
+		if (read_hdf5_dataset(file, varname, H5T_NATIVE_INT, perms[i]) < 0) {
+			return "reading permutation data from disk failed";
+		}
+	}
+	const int* pperms[] = { perms[0], perms[1], perms[2], perms[3], perms[4] };
+
+	const long nsamples = 10000;
+	struct rng_state rng;
+	seed_rng_state(401, &rng);
+
+	const int m = nlayers * 16;
+
+	numeric f;
+	double* grad = aligned_malloc(m * sizeof(double));
+	double* H = aligned_malloc(m * m * sizeof(double));
+	if (brickwall_unitary_target_gradient_vector_hessian_matrix_sampling(ufunc, NULL, vlist, nlayers, nqubits, pperms, nsamples, &rng, &f, grad, H) < 0) {
+		return "'brickwall_unitary_target_gradient_vector_hessian_matrix_sampling' failed internally";
+	}
+
+	// check symmetry
+	double err_symm = 0;
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < m; j++) {
+			err_symm = fmax(err_symm, fabs(H[i * m + j] - H[j * m + i]));
+		}
+	}
+	if (err_symm > 1e-14) {
+		return "computed gate Hessian matrix is not symmetric";
+	}
+
+	// reference calculation
+	numeric f_ref;
+	double* grad_ref = aligned_malloc(m * sizeof(double));
+	double* H_ref = aligned_malloc(m * m * sizeof(double));
+	if (brickwall_unitary_target_gradient_vector_hessian_matrix(ufunc, NULL, vlist, nlayers, nqubits, pperms, &f_ref, grad_ref, H_ref) < 0) {
+		return "'brickwall_unitary_target_gradient_vector_hessian_matrix' failed internally";
+	}
+
+	// compare with reference
+	if (_abs(f - f_ref) / _abs(f_ref) > 0.2) {
+		return "approximate target function value (from sampling) is not close to reference";
+	}
+	if (uniform_distance_real(m, grad, grad_ref) > 0.3) {
+		return "approximate brickwall circuit gradient vector (from sampling) is not close to reference";
+	}
+	if (uniform_distance_real(m * m, H, H_ref) > 0.4) {
+		return "approximate brickwall circuit Hessian matrix (from sampling) is not close to reference";
 	}
 
 	aligned_free(H_ref);

@@ -11,6 +11,11 @@ int circuit_unitary_target(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
 	numeric* fval);
 
+int circuit_unitary_target_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
+	const long nsamples, struct rng_state* rng,
+	numeric* fval);
+
 
 int circuit_unitary_target_and_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 gates[], const int ngates, const int wires[], const int nqubits,
@@ -38,6 +43,11 @@ int brickwall_unitary_target(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval);
 
+int brickwall_unitary_target_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	numeric* fval);
+
 
 int brickwall_unitary_target_and_gradient(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
@@ -61,10 +71,22 @@ int brickwall_unitary_target_gradient_hessian(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval, struct mat4x4 dvlist[], numeric* hess);
 
+	int brickwall_unitary_target_gradient_hessian_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	numeric* fval, struct mat4x4 dvlist[], numeric* hess);
+
 #ifdef COMPLEX_CIRCUIT
+
 int brickwall_unitary_target_gradient_vector_hessian_matrix(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
 	numeric* fval, double* grad_vec, double* H);
+
+int brickwall_unitary_target_gradient_vector_hessian_matrix_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	numeric* fval, double* grad_vec, double* H);
+
 #endif
 
 
