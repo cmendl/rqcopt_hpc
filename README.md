@@ -21,6 +21,9 @@ cmake --build .
 
 References
 ----------
+-  Fabian Putterer, Max M. Zumpe, Isabel Nha Minh Le, Qunsheng Huang, Christian B. Mendl  
+   _High-performance contraction of quantum circuits for Riemannian optimization_  
+   ([arXiv:2506.23775](https://arxiv.org/abs/2506.23775))
 -  Ayse Kotil, Rahul Banerjee, Qunsheng Huang, Christian B. Mendl  
    _Riemannian quantum circuit optimization for Hamiltonian simulation_  
    [J. Phys. A: Math. Theor. 57, 135303 (2024)](https://doi.org/10.1088/1751-8121/ad2d6e)
