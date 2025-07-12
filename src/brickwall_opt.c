@@ -122,7 +122,7 @@ static void retract_unitary_list(const double* restrict x, const double* restric
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
-/// a unitary matrix `U` using a trust-region method.
+/// a unitary matrix `U` using the Riemannian trust-region method.
 ///
 void optimize_brickwall_circuit_hvp(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist_start[], const int nlayers, const int nqubits, const int* perms[],
@@ -154,7 +154,7 @@ void optimize_brickwall_circuit_hvp(linear_func ufunc, void* udata,
 //________________________________________________________________________________________________________________________
 ///
 /// \brief Optimize the quantum gates in a brickwall layout to approximate
-/// a unitary matrix `U` using a trust-region method.
+/// a unitary matrix `U` using the Riemannian trust-region method.
 ///
 void optimize_brickwall_circuit_hmat(linear_func ufunc, void* udata,
 	const struct mat4x4 vlist_start[], const int nlayers, const int nqubits, const int* perms[],
@@ -177,6 +177,92 @@ void optimize_brickwall_circuit_hmat(linear_func ufunc, void* udata,
 	// perform optimization
 	int rdata = nlayers;
 	riemannian_trust_region_optimize_hmat(f, f_deriv_hess, &fdata, retract_unitary_list, &rdata,
+		nlayers * 16, (const double*)vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)vlist_opt);
+}
+
+#endif
+
+
+#ifdef COMPLEX_CIRCUIT
+
+
+struct f_target_data_sampling
+{
+	linear_func ufunc;
+	void* udata;
+	const int** perms;
+	struct rng_state* rng;
+	long nsamples;
+	int nlayers;
+	int nqubits;
+};
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Wrapper of target function evaluation using state vector sampling.
+///
+static double f_sampling(const double* x, void* fdata)
+{
+	struct f_target_data_sampling* data = fdata;
+
+	numeric f;
+	if (brickwall_unitary_target_sampling(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, data->nsamples, data->rng, &f) < 0) {
+		fprintf(stderr, "target function evaluation failed internally\n");
+		return -1;
+	}
+
+	return creal(f);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Wrapper of brickwall circuit target function, gradient and Hessian evaluation using state vector sampling.
+///
+static double f_deriv_hess_sampling(const double* restrict x, void* fdata, double* restrict grad, double* restrict hess)
+{
+	struct f_target_data_sampling* data = fdata;
+
+	numeric f;
+	if (brickwall_unitary_target_gradient_vector_hessian_matrix_sampling(data->ufunc, data->udata, (const struct mat4x4*)x, data->nlayers, data->nqubits, data->perms, data->nsamples, data->rng, &f, grad, hess) < 0) {
+		fprintf(stderr, "target function and derivative evaluation failed internally\n");
+		return -1;
+	}
+
+	return creal(f);
+}
+
+
+//________________________________________________________________________________________________________________________
+///
+/// \brief Optimize the quantum gates in a brickwall layout to approximate
+/// a unitary matrix `U` using the Riemannian trust-region method using state vector sampling.
+///
+void optimize_brickwall_circuit_hmat_sampling(linear_func ufunc, void* udata,
+	const struct mat4x4 vlist_start[], const int nlayers, const int nqubits, const int* perms[],
+	const long nsamples, struct rng_state* rng,
+	struct rtr_params* params, const int niter, double* f_iter, struct mat4x4 vlist_opt[])
+{
+	// target function data
+	struct f_target_data_sampling fdata = {
+		.ufunc    = ufunc,
+		.udata    = udata,
+		.perms    = perms,
+		.rng      = rng,
+		.nsamples = nsamples,
+		.nlayers  = nlayers,
+		.nqubits  = nqubits,
+	};
+
+	// TODO: quantify error by spectral norm
+	params->g_func = NULL;
+	params->g_data = NULL;
+	params->g_iter = NULL;
+
+	// perform optimization
+	int rdata = nlayers;
+	riemannian_trust_region_optimize_hmat(f_sampling, f_deriv_hess_sampling, &fdata, retract_unitary_list, &rdata,
 		nlayers * 16, (const double*)vlist_start, nlayers * 16 * 2, params, niter, f_iter, (double*)vlist_opt);
 }
 
