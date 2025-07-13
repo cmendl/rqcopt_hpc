@@ -22,6 +22,10 @@ add_executable(            rqcopt_ising1d ${RQCOPT_SOURCES} "examples/ising1d/is
 target_include_directories(rqcopt_ising1d PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
 target_link_libraries(     rqcopt_ising1d PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
 
+add_executable(            rqcopt_ising1d_sampling ${RQCOPT_SOURCES} "examples/ising1d/ising1d_dynamics_opt_sampling.c" "examples/timing/timing.c")
+target_include_directories(rqcopt_ising1d_sampling PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
+target_link_libraries(     rqcopt_ising1d_sampling PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})
+
 add_executable(            rqcopt_molecular ${RQCOPT_SOURCES} "examples/molecular/molecular_dynamics_opt.c" "examples/timing/timing.c")
 target_include_directories(rqcopt_molecular PRIVATE ${BLAS_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS} "src" "examples/timing")
 target_link_libraries(     rqcopt_molecular PRIVATE ${BLAS_LIBRARIES} ${HDF5_LIBRARIES})

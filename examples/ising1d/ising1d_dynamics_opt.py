@@ -24,7 +24,7 @@ def construct_ising_local_term(J, g):
     return J*np.kron(Z, Z) + g*0.5*(np.kron(X, I) + np.kron(I, X))
 
 
-def ising1d_dynamics_opt(nlayers: int, bootstrap: bool, coeffs_start=None, niter=20):
+def ising1d_dynamics_opt(nlayers: int, bootstrap: bool, coeffs_start=None, niter=20, nsamples=0):
     """
     Optimize the quantum gates in a brickwall layout to approximate
     the time evolution governed by an Ising Hamiltonian.
@@ -70,7 +70,7 @@ def ising1d_dynamics_opt(nlayers: int, bootstrap: bool, coeffs_start=None, niter
         perms = [np.arange(L) if i % 2 == 0 else np.roll(range(L), 1) for i in range(len(Vlist_start))]
     # perform optimization
     t_start = time.perf_counter()
-    Vlist, f_iter = oc_hpc.optimize_brickwall_circuit(L, expiH, Vlist_start, perms, niter)
+    Vlist, f_iter = oc_hpc.optimize_brickwall_circuit(L, expiH, Vlist_start, perms, niter, nsamples, seed=42)
     print(f"Completed optimization in {time.perf_counter() - t_start:g} seconds")
 
     # visualize optimization progress
@@ -101,6 +101,8 @@ def main():
     # use a single Strang splitting step as starting point for optimization
     strang = oc.SplittingMethod.suzuki(2, 1)
     ising1d_dynamics_opt(3, False, strang.coeffs, niter=10)
+    # to enable state vector sampling (instead of exact computation), uncomment the following line:
+    # ising1d_dynamics_opt(3, False, strang.coeffs, niter=10, nsamples=16)
 
     # # 5 layers
     # # use two Strang splitting steps as starting point for optimization

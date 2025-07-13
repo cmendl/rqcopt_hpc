@@ -270,7 +270,7 @@ static PyObject* optimize_quantum_circuit_py(PyObject* self, PyObject* args)
 
 #ifdef COMPLEX_CIRCUIT
 
-static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
+static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args, PyObject* kwargs)
 {
 	// suppress "unused parameter" warning
 	(void)self;
@@ -285,9 +285,16 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	PyObject* perms_obj;
 	// number of iterations
 	int niter;
+	// number of samples (if using sampling)
+	long nsamples = 0;
+	// random number generator seed
+	uint64_t seed = 42;
 
-	if (!PyArg_ParseTuple(args, "iOOOi", &L, &U_obj, &Vlist_start_obj, &perms_obj, &niter)) {
-		PyErr_SetString(PyExc_SyntaxError, "error parsing input; syntax: optimize_brickwall_circuit(L, U, Vlist_start, perms, niter)");
+	// parse input arguments
+	char* kwlist[] = { "", "", "", "", "", "nsamples", "seed", NULL };
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iOOOi|lk", kwlist,
+		&L, &U_obj, &Vlist_start_obj, &perms_obj, &niter, &nsamples, &seed)) {
+		PyErr_SetString(PyExc_SyntaxError, "error parsing input; syntax: optimize_brickwall_circuit(L, U, Vlist_start, perms, niter, nsamples=0, seed=42)");
 		return NULL;
 	}
 
@@ -350,6 +357,11 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 		char msg[1024];
 		sprintf(msg, "'niter' must be a positive integer, received %i", niter);
 		PyErr_SetString(PyExc_ValueError, msg);
+		return NULL;
+	}
+
+	if (nsamples < 0) {
+		PyErr_SetString(PyExc_ValueError, "'nsamples' cannot be negative");
 		return NULL;
 	}
 
@@ -480,7 +492,17 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 	struct mat4x4* Vlist_opt = aligned_malloc(nlayers * sizeof(struct mat4x4));
 
 	// perform optimization
-	optimize_brickwall_circuit_hmat(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, &params, niter, f_iter, Vlist_opt);
+	if (nsamples == 0)
+	{
+		// without sampling
+		optimize_brickwall_circuit_hmat(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, &params, niter, f_iter, Vlist_opt);
+	}
+	else
+	{
+		struct rng_state rng;
+		seed_rng_state(seed, &rng);
+		optimize_brickwall_circuit_hmat_sampling(ufunc, U, Vlist_start, nlayers, L, (const int**)perms, nsamples, &rng, &params, niter, f_iter, Vlist_opt);
+	}
 
 	// construct return value
 	// f_iter
@@ -530,11 +552,12 @@ static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
 
 #else
 
-static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args)
+static PyObject* optimize_brickwall_circuit_py(PyObject* self, PyObject* args, PyObject* kwargs)
 {
 	// suppress "unused parameter" warning
 	(void)self;
 	(void)args;
+	(void)kwargs;
 
 	PyErr_SetString(PyExc_RuntimeError, "cannot perform optimization - please re-build with support for complex numbers enabled");
 
@@ -553,8 +576,8 @@ static PyMethodDef methods[] = {
 	},
 	{
 		.ml_name  = "optimize_brickwall_circuit",
-		.ml_meth  = optimize_brickwall_circuit_py,
-		.ml_flags = METH_VARARGS,
+		.ml_meth  = (PyCFunction)optimize_brickwall_circuit_py,
+		.ml_flags = METH_VARARGS | METH_KEYWORDS,
 		.ml_doc   = "Optimize the quantum gates in a brickwall layout to approximate a unitary matrix using a trust-region method."
 	},
 	{
